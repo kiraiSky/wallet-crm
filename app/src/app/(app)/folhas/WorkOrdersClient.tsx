@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   DndContext,
@@ -9,14 +9,24 @@ import {
   useSensor,
   useSensors,
   useDroppable,
-  useDraggable,
+  closestCorners,
+  pointerWithin,
+  rectIntersection,
+  type CollisionDetection,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
   Plus, Search, ClipboardList, Car as CarIcon,
-  LayoutList, Columns2, ArrowRight, GripVertical,
+  LayoutList, Columns2, ArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatEUR, formatDate } from '@/lib/format'
@@ -53,7 +63,25 @@ const KANBAN_COL_OVER: Record<WorkOrderStatus, string> = {
   CANCELADA: 'ring-2 ring-zinc-400',
 }
 
-const KANBAN_COLS = [...STATUS_FLOW, 'CANCELADA' as WorkOrderStatus]
+const KANBAN_COLS: WorkOrderStatus[] = [...STATUS_FLOW, 'CANCELADA']
+const VIEW_KEY = 'carteira.folhas.view'
+
+type Columns = Record<WorkOrderStatus, string[]>
+
+function buildColumns(workOrders: WorkOrderRow[]): Columns {
+  return STATUS_LIST.reduce((acc, s) => {
+    acc[s] = workOrders.filter((w) => w.estado === s).map((w) => w.id)
+    return acc
+  }, {} as Columns)
+}
+
+function findColumn(columns: Columns, id: string): WorkOrderStatus | null {
+  if ((STATUS_LIST as string[]).includes(id)) return id as WorkOrderStatus
+  for (const status of STATUS_LIST) {
+    if (columns[status].includes(id)) return status
+  }
+  return null
+}
 
 export function WorkOrdersClient({
   workOrders,
@@ -65,10 +93,39 @@ export function WorkOrdersClient({
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [modalOpen, setModalOpen] = useState(false)
-  const [view, setView] = useState<'list' | 'kanban'>('list')
+  const [view, setView] = useState<'list' | 'kanban'>('kanban')
+  const [mounted, setMounted] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
-  // Optimistic overrides: id → new status (before server confirms)
-  const [pendingStatus, setPendingStatus] = useState<Record<string, WorkOrderStatus>>({})
+  const [columns, setColumns] = useState<Columns>(() => buildColumns(workOrders))
+
+  // Hydrate persisted view on mount (avoid SSR mismatch)
+  useEffect(() => {
+    setMounted(true)
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem(VIEW_KEY) : null
+    if (stored === 'list' || stored === 'kanban') setView(stored)
+  }, [])
+
+  function changeView(v: 'list' | 'kanban') {
+    setView(v)
+    try {
+      window.localStorage.setItem(VIEW_KEY, v)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Sync columns from props (but skip while a drag is in flight to avoid jumps).
+  const dragInProgress = useRef(false)
+  useEffect(() => {
+    if (dragInProgress.current) return
+    setColumns(buildColumns(workOrders))
+  }, [workOrders])
+
+  const wosById = useMemo(() => {
+    const m: Record<string, WorkOrderRow> = {}
+    for (const w of workOrders) m[w.id] = w
+    return m
+  }, [workOrders])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -83,49 +140,104 @@ export function WorkOrdersClient({
 
   function handleAdvanceStatus(wo: WorkOrderRow, e: React.MouseEvent) {
     e.stopPropagation()
-    const current = (pendingStatus[wo.id] ?? wo.estado) as WorkOrderStatus
-    const next = nextStatus(current)
+    const fromCol = findColumn(columns, wo.id) ?? wo.estado
+    const next = nextStatus(fromCol)
     if (!next) return
-    applyStatusChange(wo.id, next)
+    moveCard(wo.id, fromCol, next)
+    commitStatus(wo.id, next)
   }
 
-  function applyStatusChange(woId: string, newStatus: WorkOrderStatus) {
-    setPendingStatus((prev) => ({ ...prev, [woId]: newStatus }))
-    startTransition(async () => {
-      await changeStatus(woId, newStatus)
-      router.refresh()
-      setPendingStatus((prev) => {
-        const copy = { ...prev }
-        delete copy[woId]
-        return copy
-      })
+  function moveCard(cardId: string, from: WorkOrderStatus, to: WorkOrderStatus, toIndex?: number) {
+    setColumns((prev) => {
+      const fromArr = prev[from].filter((id) => id !== cardId)
+      const toArr = prev[to].filter((id) => id !== cardId)
+      const insertAt = toIndex === undefined ? toArr.length : Math.max(0, Math.min(toIndex, toArr.length))
+      toArr.splice(insertAt, 0, cardId)
+      return { ...prev, [from]: fromArr, [to]: toArr }
     })
   }
 
+  function commitStatus(woId: string, newStatus: WorkOrderStatus) {
+    startTransition(async () => {
+      await changeStatus(woId, newStatus)
+      router.refresh()
+    })
+  }
+
+  // ── DnD handlers ─────────────────────────────────────────────────────────
   function handleDragStart({ active }: DragStartEvent) {
+    dragInProgress.current = true
     setActiveId(active.id as string)
+  }
+
+  function handleDragOver({ active, over }: DragOverEvent) {
+    if (!over) return
+    const activeCol = findColumn(columns, active.id as string)
+    const overCol = findColumn(columns, over.id as string)
+    if (!activeCol || !overCol) return
+    if (activeCol === overCol) return
+
+    setColumns((prev) => {
+      const fromArr = prev[activeCol].filter((id) => id !== active.id)
+      const toArr = prev[overCol].filter((id) => id !== active.id)
+      // Insert near the over target; if hovering on column itself, append.
+      const overIsColumn = (STATUS_LIST as string[]).includes(over.id as string)
+      const overIndex = overIsColumn ? toArr.length : toArr.indexOf(over.id as string)
+      const insertAt = overIndex < 0 ? toArr.length : overIndex
+      toArr.splice(insertAt, 0, active.id as string)
+      return { ...prev, [activeCol]: fromArr, [overCol]: toArr }
+    })
   }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
     setActiveId(null)
-    if (!over) return
-    const newStatus = over.id as WorkOrderStatus
-    const wo = workOrders.find((w) => w.id === active.id)
-    if (!wo) return
-    const currentStatus = (pendingStatus[wo.id] ?? wo.estado) as WorkOrderStatus
-    if (currentStatus === newStatus) return
-    applyStatusChange(wo.id, newStatus)
+    if (!over) {
+      dragInProgress.current = false
+      return
+    }
+
+    const fromOriginalStatus = wosById[active.id as string]?.estado
+    const endCol = findColumn(columns, active.id as string)
+
+    // In-column reorder (no status change to commit, just adjust local order)
+    if (endCol && endCol === findColumn(columns, over.id as string) && active.id !== over.id) {
+      setColumns((prev) => {
+        const arr = prev[endCol]
+        const oldIndex = arr.indexOf(active.id as string)
+        const newIndex = arr.indexOf(over.id as string)
+        if (oldIndex < 0 || newIndex < 0) return prev
+        return { ...prev, [endCol]: arrayMove(arr, oldIndex, newIndex) }
+      })
+    }
+
+    // Cross-column → commit status change
+    if (endCol && fromOriginalStatus && endCol !== fromOriginalStatus) {
+      commitStatus(active.id as string, endCol)
+    }
+
+    // Release sync gate after a tick so the next props update (from refresh) doesn't snap
+    requestAnimationFrame(() => {
+      dragInProgress.current = false
+    })
   }
 
-  const effectiveStatus = (wo: WorkOrderRow): WorkOrderStatus =>
-    (pendingStatus[wo.id] ?? wo.estado) as WorkOrderStatus
+  function handleDragCancel() {
+    setActiveId(null)
+    setColumns(buildColumns(workOrders))
+    dragInProgress.current = false
+  }
 
-  const byStatus = STATUS_LIST.reduce((acc, s) => {
-    acc[s] = workOrders.filter((wo) => effectiveStatus(wo) === s)
-    return acc
-  }, {} as Record<WorkOrderStatus, WorkOrderRow[]>)
+  // Custom collision detection: prefer pointer-within for the column,
+  // then closest corners for cards inside.
+  const collisionDetection: CollisionDetection = (args) => {
+    const pointerCollisions = pointerWithin(args)
+    if (pointerCollisions.length > 0) return pointerCollisions
+    const rectCollisions = rectIntersection(args)
+    if (rectCollisions.length > 0) return rectCollisions
+    return closestCorners(args)
+  }
 
-  const activeWO = activeId ? workOrders.find((w) => w.id === activeId) ?? null : null
+  const activeWO = activeId ? wosById[activeId] ?? null : null
   const emCurso = counts.ABERTA + counts.EM_DIAGNOSTICO + counts.AGUARDA_PECAS + counts.EM_REPARACAO
 
   return (
@@ -138,7 +250,7 @@ export function WorkOrdersClient({
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-zinc-200 overflow-hidden">
             <button
-              onClick={() => setView('list')}
+              onClick={() => changeView('list')}
               className={cn(
                 'px-3 py-1.5 flex items-center text-sm font-medium transition',
                 view === 'list' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:bg-zinc-50'
@@ -148,7 +260,7 @@ export function WorkOrdersClient({
               <LayoutList className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setView('kanban')}
+              onClick={() => changeView('kanban')}
               className={cn(
                 'px-3 py-1.5 flex items-center text-sm font-medium transition border-l border-zinc-200',
                 view === 'kanban' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:bg-zinc-50'
@@ -158,7 +270,7 @@ export function WorkOrdersClient({
               <Columns2 className="w-4 h-4" />
             </button>
           </div>
-          <button onClick={() => setModalOpen(true)} className="btn-primary">
+          <button onClick={() => setModalOpen(true)} className="btn-primary active:scale-[0.97] ease-apple">
             <Plus className="w-4 h-4" />
             <span>Nova folha</span>
           </button>
@@ -270,7 +382,7 @@ export function WorkOrdersClient({
                         )}
                       </td>
                       <td className="px-4 py-3 text-zinc-700 max-w-xs truncate">{wo.problema}</td>
-                      <td className="px-4 py-3"><StatusChip estado={effectiveStatus(wo)} /></td>
+                      <td className="px-4 py-3"><StatusChip estado={wo.estado} /></td>
                       <td className="px-4 py-3 text-zinc-500 text-xs whitespace-nowrap">{formatDate(wo.dataAbertura)}</td>
                       <td className="px-4 py-3 text-right font-bold text-zinc-900 whitespace-nowrap">{formatEUR(wo.total)}</td>
                     </tr>
@@ -282,7 +394,7 @@ export function WorkOrdersClient({
                   <div key={wo.id} onClick={() => router.push(`/folhas/${wo.id}`)} className="p-4 hover:bg-zinc-50 cursor-pointer">
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-mono font-semibold text-zinc-700 text-xs">#{wo.numero}</span>
-                      <StatusChip estado={effectiveStatus(wo)} />
+                      <StatusChip estado={wo.estado} />
                     </div>
                     <div className="font-medium text-zinc-900 text-sm">{wo.customer.nome}</div>
                     {wo.vehicle && (
@@ -306,11 +418,14 @@ export function WorkOrdersClient({
       )}
 
       {/* ─── Kanban ─── */}
-      {view === 'kanban' && (
+      {view === 'kanban' && mounted && (
         <DndContext
           sensors={sensors}
+          collisionDetection={collisionDetection}
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
           <div className="overflow-x-auto pb-4 -mx-4 px-4">
             <div
@@ -318,12 +433,14 @@ export function WorkOrdersClient({
               style={{ minWidth: `${KANBAN_COLS.length * 272 + (KANBAN_COLS.length - 1) * 12}px` }}
             >
               {KANBAN_COLS.map((status) => {
-                const cards = byStatus[status] ?? []
+                const ids = columns[status] ?? []
+                const cards = ids.map((id) => wosById[id]).filter(Boolean) as WorkOrderRow[]
                 const colTotal = cards.reduce((s, c) => s + c.total, 0)
                 return (
                   <KanbanColumn
                     key={status}
                     status={status}
+                    ids={ids}
                     cards={cards}
                     colTotal={colTotal}
                     activeId={activeId}
@@ -335,10 +452,8 @@ export function WorkOrdersClient({
             </div>
           </div>
 
-          <DragOverlay dropAnimation={{ duration: 150, easing: 'ease' }}>
-            {activeWO ? (
-              <CardContent wo={activeWO} isDragOverlay />
-            ) : null}
+          <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }}>
+            {activeWO ? <CardContent wo={activeWO} isDragOverlay /> : null}
           </DragOverlay>
         </DndContext>
       )}
@@ -357,6 +472,7 @@ export function WorkOrdersClient({
 /* ─── Droppable column ─── */
 function KanbanColumn({
   status,
+  ids,
   cards,
   colTotal,
   activeId,
@@ -364,6 +480,7 @@ function KanbanColumn({
   onCardClick,
 }: {
   status: WorkOrderStatus
+  ids: string[]
   cards: WorkOrderRow[]
   colTotal: number
   activeId: string | null
@@ -376,7 +493,7 @@ function KanbanColumn({
   return (
     <div
       className={cn(
-        'flex flex-col rounded-2xl p-3 w-[268px] flex-shrink-0 transition',
+        'flex flex-col rounded-2xl p-3 w-[268px] flex-shrink-0 transition-[box-shadow,background-color] duration-200 ease-apple',
         KANBAN_COL_BG[status],
         isOver && KANBAN_COL_OVER[status]
       )}
@@ -392,33 +509,35 @@ function KanbanColumn({
         <div className="text-xs text-zinc-500 mb-2.5 px-1 font-medium">{formatEUR(colTotal)}</div>
       )}
 
-      <div
-        ref={setNodeRef}
-        className="space-y-2.5 overflow-y-auto flex-1"
-        style={{ maxHeight: 'calc(100vh - 380px)', minHeight: 80 }}
-      >
-        {cards.length === 0 ? (
-          <div className="flex items-center justify-center h-20 text-xs text-zinc-400">
-            Sem folhas
-          </div>
-        ) : (
-          cards.map((wo) => (
-            <DraggableCard
-              key={wo.id}
-              wo={wo}
-              isBeingDragged={wo.id === activeId}
-              onAdvance={onAdvance}
-              onCardClick={onCardClick}
-            />
-          ))
-        )}
-      </div>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <div
+          ref={setNodeRef}
+          className="space-y-2.5 overflow-y-auto flex-1"
+          style={{ maxHeight: 'calc(100vh - 380px)', minHeight: 80 }}
+        >
+          {cards.length === 0 ? (
+            <div className="flex items-center justify-center h-20 text-xs text-zinc-400 border-2 border-dashed border-zinc-200/60 rounded-lg">
+              Largar aqui
+            </div>
+          ) : (
+            cards.map((wo) => (
+              <SortableCard
+                key={wo.id}
+                wo={wo}
+                isBeingDragged={wo.id === activeId}
+                onAdvance={onAdvance}
+                onCardClick={onCardClick}
+              />
+            ))
+          )}
+        </div>
+      </SortableContext>
     </div>
   )
 }
 
-/* ─── Draggable card wrapper ─── */
-function DraggableCard({
+/* ─── Sortable card wrapper (smooth FLIP transitions via dnd-kit/sortable) ─── */
+function SortableCard({
   wo,
   isBeingDragged,
   onAdvance,
@@ -429,26 +548,35 @@ function DraggableCard({
   onAdvance: (wo: WorkOrderRow, e: React.MouseEvent) => void
   onCardClick: (id: string) => void
 }) {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: wo.id,
-    data: { status: wo.estado },
-  })
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: wo.id })
 
-  const style = transform
-    ? { transform: CSS.Translate.toString(transform) }
-    : undefined
+  const style: React.CSSProperties = {
+    transform: CSS.Translate.toString(transform),
+    transition: transition ?? undefined,
+  }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={cn('touch-none', isBeingDragged && 'opacity-30')}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        'touch-none',
+        isDragging || isBeingDragged ? 'cursor-grabbing-hc opacity-30' : 'cursor-grab-hc'
+      )}
     >
       <CardContent
         wo={wo}
         onAdvance={onAdvance}
         onCardClick={onCardClick}
-        dragHandleProps={{ ...attributes, ...listeners }}
       />
     </div>
   )
@@ -459,13 +587,11 @@ function CardContent({
   wo,
   onAdvance,
   onCardClick,
-  dragHandleProps,
   isDragOverlay,
 }: {
   wo: WorkOrderRow
   onAdvance?: (wo: WorkOrderRow, e: React.MouseEvent) => void
   onCardClick?: (id: string) => void
-  dragHandleProps?: React.HTMLAttributes<HTMLElement>
   isDragOverlay?: boolean
 }) {
   const next = nextStatus(wo.estado)
@@ -485,17 +611,8 @@ function CardContent({
           : 'hover:border-emerald-400 hover:shadow-md transition group'
       )}
     >
-      {/* Drag handle bar */}
       <div
-        {...dragHandleProps}
-        className="flex items-center justify-center py-1.5 cursor-grab active:cursor-grabbing text-zinc-300 hover:text-zinc-400 transition"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <GripVertical className="w-4 h-4" />
-      </div>
-
-      <div
-        className="px-3 pb-3 cursor-pointer"
+        className="p-3"
         onClick={() => onCardClick?.(wo.id)}
       >
         <div className="flex items-center justify-between mb-2">

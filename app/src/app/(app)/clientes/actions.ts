@@ -191,3 +191,89 @@ export async function deleteVehicle(id: string, customerId: string): Promise<Veh
     return { ok: false, message: 'Erro ao eliminar viatura' }
   }
 }
+
+// === Quick summary (for the customer modal opened from any page) ===
+
+export type CustomerQuickSummary = {
+  id: string
+  nome: string
+  telefone: string | null
+  email: string | null
+  nif: string | null
+  morada: string | null
+  observacoes: string | null
+  tag: 'VIP' | 'RECORRENTE' | 'NOVO' | 'INATIVO'
+  vehicles: { id: string; matricula: string; marca: string; modelo: string; ano: number | null }[]
+  recentWorkOrders: {
+    id: string
+    numero: number
+    estado: string
+    problema: string
+    total: number
+    dataAbertura: string
+  }[]
+  totalReceitas: number
+  totalDespesas: number
+  contagemFolhas: number
+}
+
+export async function getCustomerSummary(id: string): Promise<CustomerQuickSummary | null> {
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+    include: {
+      vehicles: { orderBy: { createdAt: 'desc' }, take: 10 },
+      _count: { select: { workOrders: true } },
+    },
+  })
+  if (!customer || customer.archived) return null
+
+  const [recentWOs, txAgg] = await Promise.all([
+    prisma.workOrder.findMany({
+      where: { customerId: id },
+      orderBy: { dataAbertura: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        numero: true,
+        estado: true,
+        problema: true,
+        total: true,
+        dataAbertura: true,
+      },
+    }),
+    prisma.transaction.groupBy({
+      by: ['tipo'],
+      where: { customerId: id },
+      _sum: { valor: true },
+    }),
+  ])
+
+  return {
+    id: customer.id,
+    nome: customer.nome,
+    telefone: customer.telefone,
+    email: customer.email,
+    nif: customer.nif,
+    morada: customer.morada,
+    observacoes: customer.observacoes,
+    tag: customer.tag as CustomerQuickSummary['tag'],
+    vehicles: customer.vehicles.map((v) => ({
+      id: v.id,
+      matricula: v.matricula,
+      marca: v.marca,
+      modelo: v.modelo,
+      ano: v.ano,
+    })),
+    recentWorkOrders: recentWOs.map((wo) => ({
+      id: wo.id,
+      numero: wo.numero,
+      estado: wo.estado as string,
+      problema: wo.problema,
+      total: Number(wo.total),
+      dataAbertura: wo.dataAbertura.toISOString(),
+    })),
+    totalReceitas: Number(txAgg.find((a) => a.tipo === 'ENTRADA')?._sum.valor ?? 0),
+    totalDespesas: Number(txAgg.find((a) => a.tipo === 'SAIDA')?._sum.valor ?? 0),
+    contagemFolhas: customer._count.workOrders,
+  }
+}

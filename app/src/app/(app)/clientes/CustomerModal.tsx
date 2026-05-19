@@ -3,8 +3,10 @@
 import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Modal } from '@/components/Modal'
+import { PhoneInput } from '@/components/PhoneInput'
 import { cn } from '@/lib/utils'
 import { saveCustomer } from './actions'
+import { parsePhone, joinPhone, type Country } from '@/lib/countries'
 import type { CustomerTag } from './page'
 
 export type CustomerForModal = {
@@ -41,9 +43,11 @@ function isoToDateInput(iso: string | null): string {
 }
 
 function initialState(c: CustomerForModal | null) {
+  const parsed = parsePhone(c?.telefone ?? null)
   return {
     nome: c?.nome ?? '',
-    telefone: c?.telefone ?? '',
+    telefoneCountry: parsed.country,
+    telefoneLocal: parsed.local,
     email: c?.email ?? '',
     nif: c?.nif ?? '',
     morada: c?.morada ?? '',
@@ -58,7 +62,8 @@ export function CustomerModal({ open, onClose, customer, onSaved }: Props) {
   const [pending, startTransition] = useTransition()
   const init = initialState(customer)
   const [nome, setNome] = useState(init.nome)
-  const [telefone, setTelefone] = useState(init.telefone)
+  const [telefoneCountry, setTelefoneCountry] = useState<Country>(init.telefoneCountry)
+  const [telefoneLocal, setTelefoneLocal] = useState(init.telefoneLocal)
   const [email, setEmail] = useState(init.email)
   const [nif, setNif] = useState(init.nif)
   const [morada, setMorada] = useState(init.morada)
@@ -72,7 +77,8 @@ export function CustomerModal({ open, onClose, customer, onSaved }: Props) {
     if (!open) return
     const s = initialState(customer)
     setNome(s.nome)
-    setTelefone(s.telefone)
+    setTelefoneCountry(s.telefoneCountry)
+    setTelefoneLocal(s.telefoneLocal)
     setEmail(s.email)
     setNif(s.nif)
     setMorada(s.morada)
@@ -90,6 +96,7 @@ export function CustomerModal({ open, onClose, customer, onSaved }: Props) {
     const fd = new FormData()
     if (customer) fd.set('id', customer.id)
     fd.set('nome', nome)
+    const telefone = joinPhone(telefoneCountry, telefoneLocal)
     if (telefone) fd.set('telefone', telefone)
     if (email) fd.set('email', email)
     if (nif) fd.set('nif', nif)
@@ -132,14 +139,13 @@ export function CustomerModal({ open, onClose, customer, onSaved }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="label">Telefone</label>
-            <input
-              type="tel"
-              value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
-              placeholder="912 345 678"
-              className="input-base"
+            <PhoneInput
+              country={telefoneCountry}
+              local={telefoneLocal}
+              onCountryChange={setTelefoneCountry}
+              onLocalChange={setTelefoneLocal}
+              error={errors.telefone}
             />
-            {errors.telefone && <p className="text-xs text-red-500 mt-1">{errors.telefone}</p>}
           </div>
           <div>
             <label className="label">Email</label>

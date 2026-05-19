@@ -36,3 +36,19 @@ export function timeAgo(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
   return formatDistanceToNow(d, { locale: pt, addSuffix: true })
 }
+
+/**
+ * Converte um número de telefone para o formato internacional usado no wa.me.
+ * Aceita formatos pt-PT comuns ("932 555 666", "+351 932 555 666", "00351...").
+ * Default country code: Portugal (351). Devolve `null` se não der para extrair dígitos.
+ */
+export function whatsappUrl(phone: string | null | undefined, defaultCountryCode = '351'): string | null {
+  if (!phone) return null
+  let digits = phone.replace(/\D/g, '')
+  if (!digits) return null
+  // Drop leading 00 (international prefix)
+  if (digits.startsWith('00')) digits = digits.slice(2)
+  // Add default country code if missing (PT mobile/fixed numbers are 9 digits)
+  if (digits.length === 9) digits = defaultCountryCode + digits
+  return `https://wa.me/${digits}`
+}

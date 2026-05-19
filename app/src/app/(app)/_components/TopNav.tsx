@@ -6,6 +6,7 @@ import { Wallet, Plus, LogOut, User as UserIcon, Users, ChevronDown } from 'luci
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { logoutAction } from '@/app/login/actions'
+import { dispatchNewTx } from '@/lib/newTxBus'
 
 const navItems = [
   { href: '/dashboard', label: 'Painel' },
@@ -77,10 +78,14 @@ export function TopNav({
           </div>
 
           <div className="flex items-center gap-3">
-            <Link href="/lancamentos?new=despesa" className="hidden sm:inline-flex btn-primary">
+            <button
+              type="button"
+              onClick={() => dispatchNewTx('SAIDA')}
+              className="hidden sm:inline-flex btn-primary active:scale-[0.97] ease-apple"
+            >
               <Plus className="w-4 h-4" />
               <span>Nova despesa</span>
-            </Link>
+            </button>
 
             <div className="relative" ref={menuRef}>
               <button

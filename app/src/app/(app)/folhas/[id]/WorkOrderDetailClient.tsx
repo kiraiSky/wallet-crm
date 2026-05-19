@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Pencil, Trash2, Plus, Package, Wrench, Car,
   ChevronRight, CheckCircle2, TrendingUp, TrendingDown, Paperclip,
+  MessageCircle, Phone,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatEUR, formatDate, formatDateTime } from '@/lib/format'
+import { formatEUR, formatDate, formatDateTime, whatsappUrl } from '@/lib/format'
 import { colorIconBg } from '@/lib/colors'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { STATUS_LIST, STATUS_META, nextStatus, type WorkOrderStatus } from '../status'
@@ -21,6 +22,7 @@ import {
   deleteWorkOrderItem,
 } from '../actions'
 import type { WorkOrderDetail, WorkOrderItemRow, WorkOrderTransactionRow } from './page'
+import { openCustomerQuickView } from '@/lib/customerBus'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string }
 type CategoryOption = { id: string; nome: string; tipo: 'ENTRADA' | 'SAIDA'; cor: string; icone: string }
@@ -187,20 +189,41 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
         <div className="lg:col-span-1 space-y-4">
           <div className="card p-5">
             <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Cliente</h2>
-            <Link
-              href={`/clientes/${workOrder.customer.id}`}
-              className="text-base font-semibold text-zinc-900 hover:text-emerald-600"
+            <button
+              type="button"
+              onClick={() => openCustomerQuickView(workOrder.customer.id)}
+              className="text-base font-semibold text-zinc-900 hover:text-emerald-600 text-left"
             >
               {workOrder.customer.nome}
-            </Link>
-            {workOrder.customer.telefone && (
-              <a
-                href={`tel:${workOrder.customer.telefone}`}
-                className="block text-sm text-zinc-500 hover:text-zinc-700 mt-0.5"
-              >
-                {workOrder.customer.telefone}
-              </a>
-            )}
+            </button>
+            {workOrder.customer.telefone && (() => {
+              const wa = whatsappUrl(workOrder.customer.telefone)
+              return (
+                <div className="inline-flex items-center gap-1 mt-1">
+                  {wa ? (
+                    <a
+                      href={wa}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm text-zinc-600 hover:text-emerald-600"
+                      title="Abrir no WhatsApp"
+                    >
+                      <MessageCircle className="w-4 h-4 text-emerald-500" />
+                      {workOrder.customer.telefone}
+                    </a>
+                  ) : (
+                    <span className="text-sm text-zinc-500">{workOrder.customer.telefone}</span>
+                  )}
+                  <a
+                    href={`tel:${workOrder.customer.telefone}`}
+                    className="inline-flex items-center justify-center w-6 h-6 text-zinc-400 hover:text-zinc-700"
+                    title="Chamar"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              )
+            })()}
           </div>
 
           {workOrder.vehicle && (

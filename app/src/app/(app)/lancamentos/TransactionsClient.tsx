@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import { TransactionModal } from './TransactionModal'
 import { deleteTransaction, duplicateTransaction } from './actions'
 import type { TransactionRow, WorkOrderOption } from './page'
+import { dispatchNewTx } from '@/lib/newTxBus'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string; tipo: string }
 type CategoryOption = { id: string; nome: string; cor: string; icone: string; tipo: 'ENTRADA' | 'SAIDA' }
@@ -44,10 +45,26 @@ export function TransactionsClient({
 }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
-  const [modalOpen, setModalOpen] = useState(openNew !== null)
-  const [modalTipo, setModalTipo] = useState<'ENTRADA' | 'SAIDA'>(openNew ?? 'SAIDA')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalTipo, setModalTipo] = useState<'ENTRADA' | 'SAIDA'>('SAIDA')
   const [editing, setEditing] = useState<TransactionRow | null>(null)
   const [menuOpen, setMenuOpen] = useState<{ id: string; x: number; y: number } | null>(null)
+
+  useEffect(() => {
+    if (openNew !== null) {
+      dispatchNewTx(openNew)
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('new')
+        router.replace(url.pathname + (url.search || ''), { scroll: false })
+      }
+    }
+  }, [openNew, router])
+
+  function closeModal() {
+    setModalOpen(false)
+    setEditing(null)
+  }
 
   function toggleMenu(id: string, e: React.MouseEvent<HTMLButtonElement>) {
     if (menuOpen?.id === id) {
@@ -66,9 +83,7 @@ export function TransactionsClient({
   }
 
   function openNewTx(tipo: 'ENTRADA' | 'SAIDA') {
-    setEditing(null)
-    setModalTipo(tipo)
-    setModalOpen(true)
+    dispatchNewTx(tipo)
   }
 
   function openEdit(tx: TransactionRow) {
@@ -301,10 +316,7 @@ export function TransactionsClient({
 
       <TransactionModal
         open={modalOpen}
-        onClose={() => {
-          setModalOpen(false)
-          setEditing(null)
-        }}
+        onClose={closeModal}
         tipo={modalTipo}
         transaction={editing}
         accounts={accounts}

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, List, Plus, Wallet, Users, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { dispatchNewTx } from '@/lib/newTxBus'
 
 export function MobileBottomNav() {
   const pathname = usePathname()
@@ -32,14 +33,16 @@ export function MobileBottomNav() {
           <ClipboardList className="w-5 h-5" />
           <span className="text-[10px] font-medium">Folhas</span>
         </Link>
-        <Link
-          href="/lancamentos?new=despesa"
+        <button
+          type="button"
+          onClick={() => dispatchNewTx('SAIDA')}
           className="flex flex-col items-center justify-center"
+          aria-label="Nova despesa"
         >
-          <div className="w-12 h-12 -mt-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white">
+          <div className="w-12 h-12 -mt-4 bg-emerald-500 hover:bg-emerald-600 active:scale-95 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white transition-[transform,background-color] duration-200 ease-apple">
             <Plus className="w-6 h-6" />
           </div>
-        </Link>
+        </button>
         <Link
           href="/clientes"
           className={cn(

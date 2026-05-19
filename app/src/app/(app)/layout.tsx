@@ -1,6 +1,9 @@
 import { TopNav } from './_components/TopNav'
 import { MobileBottomNav } from './_components/MobileBottomNav'
+import { GlobalNewTxModal } from './_components/GlobalNewTxModal'
+import { CustomerQuickModal } from './_components/CustomerQuickModal'
 import { getCurrentUser } from '@/lib/current-user'
+import { prisma } from '@/lib/prisma'
 
 function initialsOf(name: string) {
   const parts = name.trim().split(/\s+/)
@@ -10,6 +13,40 @@ function initialsOf(name: string) {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser()
+
+  const [accounts, categories, workOrders] = await Promise.all([
+    prisma.account.findMany({
+      where: { archived: false },
+      orderBy: { nome: 'asc' },
+      select: { id: true, nome: true, cor: true, icone: true },
+    }),
+    prisma.category.findMany({
+      where: { archived: false },
+      orderBy: { nome: 'asc' },
+      select: { id: true, nome: true, cor: true, icone: true, tipo: true },
+    }),
+    prisma.workOrder.findMany({
+      where: { estado: { notIn: ['CANCELADA'] } },
+      orderBy: { numero: 'desc' },
+      take: 200,
+      select: {
+        id: true,
+        numero: true,
+        problema: true,
+        customerId: true,
+        customer: { select: { nome: true } },
+      },
+    }),
+  ])
+
+  const workOrderOptions = workOrders.map((wo) => ({
+    id: wo.id,
+    numero: wo.numero,
+    customerNome: wo.customer.nome,
+    problema: wo.problema,
+    customerId: wo.customerId,
+  }))
+
   return (
     <>
       <TopNav
@@ -21,6 +58,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {children}
       </main>
       <MobileBottomNav />
+      <GlobalNewTxModal
+        accounts={accounts}
+        categories={categories}
+        workOrderOptions={workOrderOptions}
+      />
+      <CustomerQuickModal />
     </>
   )
 }
