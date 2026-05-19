@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export type AccountWithBalance = {
   id: string
   nome: string
-  tipo: 'DINHEIRO' | 'BANCO' | 'PIX' | 'CARTAO'
+  tipo: 'DINHEIRO' | 'BANCO' | 'CARTAO'
   saldoInicial: number
   saldoAtual: number
   entradasMes: number

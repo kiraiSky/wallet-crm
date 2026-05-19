@@ -50,7 +50,7 @@ export async function saveCategory(
     if (e?.code === 'P2002') {
       return { ok: false, message: 'Já existe uma categoria com esse nome e tipo.' }
     }
-    return { ok: false, message: 'Erro ao salvar categoria' }
+    return { ok: false, message: 'Erro ao guardar categoria' }
   }
 }
 
@@ -59,7 +59,7 @@ export async function deleteCategory(id: string): Promise<CategoryFormState> {
   if (count > 0) {
     await prisma.category.update({ where: { id }, data: { archived: true } })
     revalidatePath('/categorias')
-    return { ok: true, message: `Categoria arquivada (${count} lançamentos vinculados).` }
+    return { ok: true, message: `Categoria arquivada (${count} movimentos associados).` }
   }
   await prisma.category.delete({ where: { id } })
   revalidatePath('/categorias')

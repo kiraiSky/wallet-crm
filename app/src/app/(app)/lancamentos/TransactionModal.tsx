@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { UploadCloud, X as XIcon } from 'lucide-react'
 import { Modal } from '@/components/Modal'
@@ -51,6 +51,22 @@ export function TransactionModal({
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const filteredCategories = categories.filter((c) => c.tipo === tipo)
+
+  // Sincroniza o formulário sempre que o modal abre ou muda o movimento a editar
+  useEffect(() => {
+    if (!open) return
+    setTipo(transaction?.tipo ?? initialTipo)
+    setValor(transaction ? transaction.valor.toFixed(2).replace('.', ',') : '')
+    setDescricao(transaction?.descricao ?? '')
+    setCategoryId(transaction?.categoryId ?? '')
+    setAccountId(transaction?.accountId ?? (accounts[0]?.id ?? ''))
+    setData(isoToLocalDatetimeInput(transaction?.data))
+    setObservacao(transaction?.observacao ?? '')
+    setFile(null)
+    setError(null)
+    setErrors({})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, transaction?.id])
 
   function reset() {
     setTipo(transaction?.tipo ?? initialTipo)
@@ -109,7 +125,7 @@ export function TransactionModal({
         onClose()
         reset()
       }}
-      title={transaction ? 'Editar lançamento' : tipo === 'SAIDA' ? 'Nova despesa' : 'Nova receita'}
+      title={transaction ? 'Editar movimento' : tipo === 'SAIDA' ? 'Nova despesa' : 'Nova receita'}
     >
       <form onSubmit={handleSubmit} className="p-5 space-y-4">
         {/* Toggle tipo */}
@@ -140,7 +156,7 @@ export function TransactionModal({
         <div>
           <label className="label">Valor *</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-semibold">R$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-semibold">€</span>
             <input
               type="text"
               value={valor}
@@ -149,7 +165,7 @@ export function TransactionModal({
               placeholder="0,00"
               required
               autoFocus
-              className="input-base !text-2xl !font-bold !py-3 pl-12"
+              className="input-base !text-2xl !font-bold !py-3 pl-10"
             />
           </div>
           {errors.valor && <p className="text-xs text-red-500 mt-1">{errors.valor}</p>}
@@ -162,7 +178,7 @@ export function TransactionModal({
             type="text"
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
-            placeholder={tipo === 'SAIDA' ? 'Ex: Conta de energia · CPFL' : 'Ex: Troca de óleo · Civic ABC-1234'}
+            placeholder={tipo === 'SAIDA' ? 'Ex: Fatura da luz · EDP' : 'Ex: Salário · Empresa XYZ'}
             required
             className="input-base"
           />
@@ -179,34 +195,34 @@ export function TransactionModal({
               required
               className="input-base"
             >
-              <option value="">Selecione...</option>
+              <option value="">Seleciona...</option>
               {filteredCategories.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
               ))}
             </select>
             {filteredCategories.length === 0 && (
               <p className="text-xs text-amber-600 mt-1">
-                Nenhuma categoria de {tipo === 'SAIDA' ? 'despesa' : 'receita'} cadastrada.
+                Sem categorias de {tipo === 'SAIDA' ? 'despesa' : 'receita'} registadas.
               </p>
             )}
             {errors.categoryId && <p className="text-xs text-red-500 mt-1">{errors.categoryId}</p>}
           </div>
           <div>
-            <label className="label">Caixa *</label>
+            <label className="label">Conta *</label>
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
               required
               className="input-base"
             >
-              <option value="">Selecione...</option>
+              <option value="">Seleciona...</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.nome}</option>
               ))}
             </select>
             {accounts.length === 0 && (
               <p className="text-xs text-amber-600 mt-1">
-                Cadastre um caixa primeiro.
+                Cria uma conta primeiro.
               </p>
             )}
             {errors.accountId && <p className="text-xs text-red-500 mt-1">{errors.accountId}</p>}
@@ -226,7 +242,7 @@ export function TransactionModal({
 
         {/* Upload */}
         <div>
-          <label className="label">Comprovante (opcional)</label>
+          <label className="label">Comprovativo (opcional)</label>
           {file ? (
             <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg p-3">
               <div className="text-sm text-emerald-900 truncate">{file.name}</div>
@@ -245,7 +261,7 @@ export function TransactionModal({
           ) : (
             <label className="flex flex-col items-center justify-center gap-1.5 px-3 py-4 bg-zinc-50 border-2 border-dashed border-zinc-200 hover:border-emerald-400 hover:bg-emerald-50/30 rounded-lg cursor-pointer transition">
               <UploadCloud className="w-6 h-6 text-zinc-400" />
-              <span className="text-sm font-medium text-zinc-600">Clique pra anexar</span>
+              <span className="text-sm font-medium text-zinc-600">Clica para anexar</span>
               <span className="text-[11px] text-zinc-400">JPG, PNG, WebP ou PDF · até 5MB</span>
               <input
                 ref={fileRef}
@@ -293,7 +309,7 @@ export function TransactionModal({
             disabled={pending || accounts.length === 0 || filteredCategories.length === 0}
             className="btn-primary flex-1"
           >
-            {pending ? 'Salvando...' : 'Salvar'}
+            {pending ? 'A guardar...' : 'Guardar'}
           </button>
         </div>
       </form>

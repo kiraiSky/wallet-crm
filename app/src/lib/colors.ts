@@ -81,3 +81,17 @@ export const colorBgSolid: Record<string, string> = {
   cyan: 'bg-cyan-500',
   zinc: 'bg-zinc-500',
 }
+
+// Valores hex (para SVG charts)
+export const colorHex: Record<string, string> = {
+  emerald: '#10b981',
+  violet: '#8b5cf6',
+  orange: '#f97316',
+  sky: '#0ea5e9',
+  rose: '#f43f5e',
+  amber: '#f59e0b',
+  teal: '#14b8a6',
+  pink: '#ec4899',
+  cyan: '#06b6d4',
+  zinc: '#a1a1aa',
+}

@@ -1,51 +1,66 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { formatBRL, formatDateTime } from '@/lib/format'
+import { formatEUR, formatDateTime } from '@/lib/format'
+import { getCurrentUser } from '@/lib/current-user'
 import { DynamicIcon } from '@/components/DynamicIcon'
-import { colorIconBg, colorGradient, colorBgSolid } from '@/lib/colors'
-import { TrendingDown, TrendingUp, ArrowRight, Wallet, Plus, Paperclip } from 'lucide-react'
+import { Gauge, Sparkline, Donut } from '@/components/Charts'
+import { colorGradient, colorHex, colorIconBg } from '@/lib/colors'
+import { ArrowRight, Plus, Paperclip } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
+const DAYS_IN_SERIES = 30
+
 export default async function DashboardPage() {
   const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const seriesStart = new Date(today)
+  seriesStart.setDate(seriesStart.getDate() - (DAYS_IN_SERIES - 1))
 
-  const [accounts, monthAgg, lastMonthAgg, recentTxs, expensesByCategory, totalAgg] = await Promise.all([
-    prisma.account.findMany({ where: { archived: false }, orderBy: { createdAt: 'asc' } }),
-    prisma.transaction.groupBy({
-      by: ['tipo'],
-      where: { data: { gte: startOfMonth } },
-      _sum: { valor: true },
-    }),
-    prisma.transaction.groupBy({
-      by: ['tipo'],
-      where: { data: { gte: startOfLastMonth, lt: startOfMonth } },
-      _sum: { valor: true },
-    }),
-    prisma.transaction.findMany({
-      orderBy: { data: 'desc' },
-      take: 8,
-      include: {
-        account: { select: { nome: true } },
-        category: { select: { nome: true, cor: true, icone: true } },
-        user: { select: { nome: true } },
-        _count: { select: { attachments: true } },
-      },
-    }),
-    prisma.transaction.groupBy({
-      by: ['categoryId'],
-      where: { tipo: 'SAIDA', data: { gte: startOfMonth } },
-      _sum: { valor: true },
-      orderBy: { _sum: { valor: 'desc' } },
-      take: 5,
-    }),
-    prisma.transaction.groupBy({ by: ['tipo', 'accountId'], _sum: { valor: true } }),
-  ])
+  const user = await getCurrentUser()
+  const primeiroNome = user.nome.split(' ')[0]
 
-  // Saldo por caixa
+  const [accounts, monthAgg, lastMonthAgg, recentTxs, expensesByCategory, totalAgg, allTxs] =
+    await Promise.all([
+      prisma.account.findMany({ where: { archived: false }, orderBy: { createdAt: 'asc' } }),
+      prisma.transaction.groupBy({
+        by: ['tipo'],
+        where: { data: { gte: startOfMonth } },
+        _sum: { valor: true },
+      }),
+      prisma.transaction.groupBy({
+        by: ['tipo'],
+        where: { data: { gte: startOfLastMonth, lt: startOfMonth } },
+        _sum: { valor: true },
+      }),
+      prisma.transaction.findMany({
+        orderBy: { data: 'desc' },
+        take: 8,
+        include: {
+          account: { select: { nome: true } },
+          category: { select: { nome: true, cor: true, icone: true } },
+          user: { select: { nome: true } },
+          _count: { select: { attachments: true } },
+        },
+      }),
+      prisma.transaction.groupBy({
+        by: ['categoryId'],
+        where: { tipo: 'SAIDA', data: { gte: startOfMonth } },
+        _sum: { valor: true },
+        orderBy: { _sum: { valor: 'desc' } },
+        take: 5,
+      }),
+      prisma.transaction.groupBy({ by: ['tipo', 'accountId'], _sum: { valor: true } }),
+      prisma.transaction.findMany({
+        orderBy: { data: 'asc' },
+        select: { tipo: true, valor: true, data: true },
+      }),
+    ])
+
+  // Saldo por conta
   const balancesByAccount = new Map<string, number>()
   for (const acc of accounts) {
     const entradas = Number(
@@ -62,42 +77,108 @@ export default async function DashboardPage() {
   const saidasMes = Number(monthAgg.find((g) => g.tipo === 'SAIDA')?._sum.valor ?? 0)
   const resultadoMes = entradasMes - saidasMes
 
+  const entradasMesAnterior = Number(lastMonthAgg.find((g) => g.tipo === 'ENTRADA')?._sum.valor ?? 0)
   const saidasMesAnterior = Number(lastMonthAgg.find((g) => g.tipo === 'SAIDA')?._sum.valor ?? 0)
-  const varDespesa =
-    saidasMesAnterior > 0 ? ((saidasMes - saidasMesAnterior) / saidasMesAnterior) * 100 : 0
 
-  // Top categorias de despesa
+  // Série de saldo dos últimos 30 dias
+  const initialAccountsSaldo = accounts.reduce((s, a) => s + Number(a.saldoInicial), 0)
+  let cumulative = initialAccountsSaldo
+  let txIdx = 0
+  // Adiciona transações anteriores ao início da série
+  while (txIdx < allTxs.length && allTxs[txIdx].data < seriesStart) {
+    const t = allTxs[txIdx]
+    cumulative += t.tipo === 'ENTRADA' ? Number(t.valor) : -Number(t.valor)
+    txIdx++
+  }
+  const series: number[] = []
+  for (let i = 0; i < DAYS_IN_SERIES; i++) {
+    const dayEnd = new Date(seriesStart)
+    dayEnd.setDate(dayEnd.getDate() + i)
+    dayEnd.setHours(23, 59, 59, 999)
+    while (txIdx < allTxs.length && allTxs[txIdx].data <= dayEnd) {
+      const t = allTxs[txIdx]
+      cumulative += t.tipo === 'ENTRADA' ? Number(t.valor) : -Number(t.valor)
+      txIdx++
+    }
+    series.push(cumulative)
+  }
+  const saldoInicioSerie = series[0]
+  const variacaoSerie =
+    saldoInicioSerie !== 0
+      ? ((saldoTotal - saldoInicioSerie) / Math.abs(saldoInicioSerie)) * 100
+      : 0
+
+  // Gauges (% normalizadas)
+  const gaugeSaldo =
+    saldoTotal > 0
+      ? Math.min(100, Math.max(0, (saldoTotal / Math.max(saldoTotal + saidasMes, 1)) * 100))
+      : 0
+  const gaugeEntradas =
+    entradasMes === 0 && entradasMesAnterior === 0
+      ? 0
+      : Math.min(
+          100,
+          (entradasMes / Math.max(entradasMes, entradasMesAnterior, 1)) * 100
+        )
+  const gaugeSaidas =
+    entradasMes === 0
+      ? saidasMes > 0
+        ? 100
+        : 0
+      : Math.min(100, (saidasMes / Math.max(entradasMes, 1)) * 100)
+
+  // Donut de categorias (top 4 + Outros)
   const categoryIds = expensesByCategory.map((e) => e.categoryId)
   const categories = await prisma.category.findMany({ where: { id: { in: categoryIds } } })
   const totalDespesasMes = expensesByCategory.reduce((s, e) => s + Number(e._sum.valor ?? 0), 0)
-  const topCats = expensesByCategory.map((e) => {
+  const allExpensesAgg = await prisma.transaction.groupBy({
+    by: ['categoryId'],
+    where: { tipo: 'SAIDA', data: { gte: startOfMonth } },
+    _sum: { valor: true },
+  })
+  const totalMesGeral = allExpensesAgg.reduce((s, e) => s + Number(e._sum.valor ?? 0), 0)
+  const top4 = expensesByCategory.slice(0, 4).map((e) => {
     const cat = categories.find((c) => c.id === e.categoryId)
     const valor = Number(e._sum.valor ?? 0)
     return {
       id: e.categoryId,
       nome: cat?.nome ?? '?',
       cor: cat?.cor ?? 'zinc',
-      icone: cat?.icone ?? 'package',
       valor,
-      pct: totalDespesasMes > 0 ? (valor / totalDespesasMes) * 100 : 0,
+      pct: totalMesGeral > 0 ? (valor / totalMesGeral) * 100 : 0,
     }
   })
+  const outrosValor = Math.max(0, totalMesGeral - top4.reduce((s, c) => s + c.valor, 0))
+  const donutSegments = [
+    ...top4.map((c) => ({ value: c.valor, color: colorHex[c.cor] || colorHex.zinc })),
+    ...(outrosValor > 0 ? [{ value: outrosValor, color: colorHex.zinc }] : []),
+  ]
+  const legenda = [
+    ...top4.map((c) => ({
+      nome: c.nome,
+      cor: colorHex[c.cor] || colorHex.zinc,
+      pct: totalMesGeral > 0 ? (c.valor / totalMesGeral) * 100 : 0,
+    })),
+    ...(outrosValor > 0
+      ? [{ nome: 'Outros', cor: colorHex.zinc, pct: (outrosValor / totalMesGeral) * 100 }]
+      : []),
+  ]
 
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-zinc-900">Olá, João 👋</h1>
+        <h1 className="text-2xl font-bold text-zinc-900">Olá, {primeiroNome} 👋</h1>
         <p className="text-zinc-500 text-sm">
-          Resumo do caixa da oficina em {now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}.
+          Resumo das tuas finanças em {now.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}.
         </p>
       </div>
 
-      {/* Caixas */}
+      {/* Contas */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide">Caixas</h2>
+          <h2 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide">Contas</h2>
           <Link href="/caixas" className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">
-            Gerenciar →
+            Gerir →
           </Link>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -106,7 +187,7 @@ export default async function DashboardPage() {
               href="/caixas?new=1"
               className="flex-shrink-0 w-56 border-2 border-dashed border-zinc-300 rounded-2xl p-4 text-zinc-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50/50 transition flex items-center justify-center gap-2 font-medium text-sm min-h-[100px]"
             >
-              <Plus className="w-4 h-4" /> Criar primeiro caixa
+              <Plus className="w-4 h-4" /> Criar primeira conta
             </Link>
           ) : (
             <>
@@ -128,69 +209,122 @@ export default async function DashboardPage() {
                     </span>
                   </div>
                   <div className="text-xs text-white/80 mb-0.5">{acc.nome}</div>
-                  <div className="text-xl font-bold">{formatBRL(balancesByAccount.get(acc.id) ?? 0)}</div>
+                  <div className="text-xl font-bold">{formatEUR(balancesByAccount.get(acc.id) ?? 0)}</div>
                 </Link>
               ))}
               <Link
                 href="/caixas?new=1"
                 className="flex-shrink-0 w-56 border-2 border-dashed border-zinc-300 rounded-2xl p-4 text-zinc-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50/50 transition flex items-center justify-center gap-2 font-medium text-sm"
               >
-                <Plus className="w-4 h-4" /> Adicionar caixa
+                <Plus className="w-4 h-4" /> Adicionar conta
               </Link>
             </>
           )}
         </div>
       </div>
 
-      {/* KPIs do mês */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <div className="card p-4">
-          <div className="flex items-center gap-2 text-xs text-zinc-500 mb-1.5">
-            <Wallet className="w-3.5 h-3.5 text-zinc-500" /> Saldo total
+      {/* Linha de widgets: gauges + sparkline + fluxo */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-zinc-900">Resumo do mês</h3>
           </div>
-          <div className="text-lg font-bold text-zinc-900">{formatBRL(saldoTotal)}</div>
-          <div className="text-xs text-zinc-500 mt-0.5">{accounts.length} caixas</div>
-        </div>
-        <div className="card p-4">
-          <div className="flex items-center gap-2 text-xs text-zinc-500 mb-1.5">
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-500" /> Entradas (mês)
-          </div>
-          <div className="text-lg font-bold text-emerald-600">{formatBRL(entradasMes)}</div>
-        </div>
-        <div className="card p-4">
-          <div className="flex items-center gap-2 text-xs text-zinc-500 mb-1.5">
-            <TrendingDown className="w-3.5 h-3.5 text-red-500" /> Despesas (mês)
-          </div>
-          <div className="text-lg font-bold text-red-500">{formatBRL(saidasMes)}</div>
-          {saidasMesAnterior > 0 && (
-            <div
-              className={cn(
-                'text-xs mt-0.5',
-                varDespesa > 0 ? 'text-red-600' : 'text-emerald-600'
-              )}
-            >
-              {varDespesa > 0 ? '↑' : '↓'} {Math.abs(varDespesa).toFixed(0)}% vs mês anterior
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <div className="flex justify-center"><Gauge value={gaugeSaldo} color="#10b981" /></div>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wide mt-1 font-medium">Saldo</div>
+              <div className="text-sm font-bold text-zinc-900">{formatEUR(saldoTotal)}</div>
             </div>
-          )}
+            <div>
+              <div className="flex justify-center"><Gauge value={gaugeEntradas} color="#10b981" /></div>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wide mt-1 font-medium">Entradas</div>
+              <div className="text-sm font-bold text-emerald-600">{formatEUR(entradasMes)}</div>
+            </div>
+            <div>
+              <div className="flex justify-center"><Gauge value={gaugeSaidas} color="#ef4444" /></div>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wide mt-1 font-medium">Saídas</div>
+              <div className="text-sm font-bold text-red-500">{formatEUR(saidasMes)}</div>
+            </div>
+          </div>
         </div>
-        <div className="card p-4">
-          <div className="text-xs text-zinc-500 mb-1.5">Resultado (mês)</div>
-          <div
-            className={cn(
-              'text-lg font-bold',
-              resultadoMes >= 0 ? 'text-zinc-900' : 'text-red-500'
+
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-zinc-900">Evolução do saldo</h3>
+            {variacaoSerie !== 0 && (
+              <span
+                className={cn(
+                  'text-xs px-2 py-0.5 rounded-full font-semibold',
+                  variacaoSerie >= 0
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'bg-red-50 text-red-600'
+                )}
+              >
+                {variacaoSerie >= 0 ? '+' : ''}
+                {variacaoSerie.toFixed(0)}%
+              </span>
             )}
-          >
-            {formatBRL(resultadoMes)}
+          </div>
+          <div className="text-2xl font-bold text-zinc-900 mb-0.5">{formatEUR(saldoTotal)}</div>
+          <div className="text-xs text-zinc-500 mb-3">últimos 30 dias</div>
+          <Sparkline data={series} color="#10b981" height={96} />
+        </div>
+
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-zinc-900">Fluxo do mês</h3>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-zinc-500">Entradas</span>
+                <span className="font-semibold text-emerald-600">+ {formatEUR(entradasMes)}</span>
+              </div>
+              <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full"
+                  style={{
+                    width: `${entradasMes === 0 && saidasMes === 0 ? 0 : (entradasMes / Math.max(entradasMes, saidasMes, 1)) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-zinc-500">Saídas</span>
+                <span className="font-semibold text-red-500">- {formatEUR(saidasMes)}</span>
+              </div>
+              <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-red-500 rounded-full"
+                  style={{
+                    width: `${entradasMes === 0 && saidasMes === 0 ? 0 : (saidasMes / Math.max(entradasMes, saidasMes, 1)) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="pt-3 border-t border-zinc-100">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-zinc-500">Resultado líquido</span>
+                <span
+                  className={cn(
+                    'text-lg font-bold',
+                    resultadoMes >= 0 ? 'text-zinc-900' : 'text-red-500'
+                  )}
+                >
+                  {formatEUR(resultadoMes)}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Linha inferior: donut + últimos movimentos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Top despesas */}
         <div className="card p-5 lg:col-span-1">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-zinc-900">Top despesas do mês</h3>
+            <h3 className="font-semibold text-zinc-900">Despesas por categoria</h3>
             <Link
               href="/lancamentos?tipo=SAIDA"
               className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
@@ -198,44 +332,34 @@ export default async function DashboardPage() {
               Ver →
             </Link>
           </div>
-          {topCats.length === 0 ? (
-            <div className="text-center text-sm text-zinc-400 py-8">Nenhuma despesa este mês.</div>
+          {donutSegments.length === 0 ? (
+            <div className="text-center text-sm text-zinc-400 py-8">Sem despesas este mês.</div>
           ) : (
-            <div className="space-y-3">
-              {topCats.map((c) => (
-                <div key={c.id}>
-                  <div className="flex justify-between text-sm mb-1 items-center">
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0">
+                <Donut segments={donutSegments} size={128} />
+              </div>
+              <div className="flex-1 space-y-2 text-sm">
+                {legenda.map((l) => (
+                  <div key={l.nome} className="flex items-center justify-between">
                     <span className="flex items-center gap-2 min-w-0">
-                      <div
-                        className={cn(
-                          'w-6 h-6 rounded flex items-center justify-center flex-shrink-0',
-                          colorIconBg[c.cor] || colorIconBg.violet
-                        )}
-                      >
-                        <DynamicIcon name={c.icone} className="w-3 h-3" />
-                      </div>
-                      <span className="text-zinc-700 font-medium truncate">{c.nome}</span>
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: l.cor }}
+                      />
+                      <span className="truncate">{l.nome}</span>
                     </span>
-                    <span className="font-semibold text-zinc-900 text-xs whitespace-nowrap ml-2">
-                      {formatBRL(c.valor)}
-                    </span>
+                    <span className="font-semibold text-zinc-700">{l.pct.toFixed(0)}%</span>
                   </div>
-                  <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                    <div
-                      className={cn('h-full rounded-full', colorBgSolid[c.cor])}
-                      style={{ width: `${c.pct}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Últimos lançamentos */}
         <div className="card p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-zinc-900">Últimos lançamentos</h3>
+            <h3 className="font-semibold text-zinc-900">Últimos movimentos</h3>
             <Link
               href="/lancamentos"
               className="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1"
@@ -245,7 +369,7 @@ export default async function DashboardPage() {
           </div>
           {recentTxs.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-sm text-zinc-500 mb-3">Nenhum lançamento ainda.</p>
+              <p className="text-sm text-zinc-500 mb-3">Sem movimentos ainda.</p>
               <Link href="/lancamentos?new=despesa" className="btn-primary inline-flex">
                 <Plus className="w-4 h-4" /> Primeira despesa
               </Link>
@@ -257,7 +381,7 @@ export default async function DashboardPage() {
                   <div
                     className={cn(
                       'w-9 h-9 rounded-lg flex items-center justify-center',
-                      colorIconBg[tx.category.cor] || colorIconBg.violet
+                      colorIconBg[tx.category.cor] || colorIconBg.zinc
                     )}
                   >
                     <DynamicIcon name={tx.category.icone} className="w-4 h-4" />
@@ -278,7 +402,7 @@ export default async function DashboardPage() {
                     )}
                   >
                     {tx.tipo === 'ENTRADA' ? '+ ' : '- '}
-                    {formatBRL(Number(tx.valor))}
+                    {formatEUR(Number(tx.valor))}
                   </div>
                 </div>
               ))}

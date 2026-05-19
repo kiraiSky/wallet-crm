@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, List, Plus, Wallet, Tags } from 'lucide-react'
+import { LayoutDashboard, List, Plus, Wallet, Users, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function MobileBottomNav() {
@@ -11,7 +11,7 @@ export function MobileBottomNav() {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30">
-      <div className="grid grid-cols-5 h-16">
+      <div className="grid grid-cols-6 h-16">
         <Link
           href="/dashboard"
           className={cn(
@@ -20,19 +20,17 @@ export function MobileBottomNav() {
           )}
         >
           <LayoutDashboard className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Home</span>
+          <span className="text-[10px] font-medium">Painel</span>
         </Link>
         <Link
-          href="/lancamentos"
+          href="/folhas"
           className={cn(
             'flex flex-col items-center justify-center gap-0.5',
-            isActive('/lancamentos') && pathname !== '/lancamentos?new=despesa'
-              ? 'text-emerald-600'
-              : 'text-zinc-500'
+            isActive('/folhas') ? 'text-emerald-600' : 'text-zinc-500'
           )}
         >
-          <List className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Lançamentos</span>
+          <ClipboardList className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Folhas</span>
         </Link>
         <Link
           href="/lancamentos?new=despesa"
@@ -43,6 +41,26 @@ export function MobileBottomNav() {
           </div>
         </Link>
         <Link
+          href="/clientes"
+          className={cn(
+            'flex flex-col items-center justify-center gap-0.5',
+            isActive('/clientes') ? 'text-emerald-600' : 'text-zinc-500'
+          )}
+        >
+          <Users className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Clientes</span>
+        </Link>
+        <Link
+          href="/lancamentos"
+          className={cn(
+            'flex flex-col items-center justify-center gap-0.5',
+            isActive('/lancamentos') ? 'text-emerald-600' : 'text-zinc-500'
+          )}
+        >
+          <List className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Movim.</span>
+        </Link>
+        <Link
           href="/caixas"
           className={cn(
             'flex flex-col items-center justify-center gap-0.5',
@@ -50,17 +68,7 @@ export function MobileBottomNav() {
           )}
         >
           <Wallet className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Caixas</span>
-        </Link>
-        <Link
-          href="/categorias"
-          className={cn(
-            'flex flex-col items-center justify-center gap-0.5',
-            isActive('/categorias') ? 'text-emerald-600' : 'text-zinc-500'
-          )}
-        >
-          <Tags className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Categorias</span>
+          <span className="text-[10px] font-medium">Contas</span>
         </Link>
       </div>
     </nav>

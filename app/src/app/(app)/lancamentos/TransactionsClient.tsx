@@ -1,14 +1,15 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Search, Download, FileText, Calendar, Pencil, Copy, Paperclip, Trash2,
-  MoreVertical, TrendingUp, TrendingDown,
+  Plus, Search, FileText, Pencil, Copy, Paperclip, Trash2,
+  MoreVertical,
 } from 'lucide-react'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { colorIconBg } from '@/lib/colors'
-import { formatBRL, formatDateTime } from '@/lib/format'
+import { formatEUR, formatDateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { TransactionModal } from './TransactionModal'
 import { deleteTransaction, duplicateTransaction } from './actions'
@@ -44,7 +45,16 @@ export function TransactionsClient({
   const [modalOpen, setModalOpen] = useState(openNew !== null)
   const [modalTipo, setModalTipo] = useState<'ENTRADA' | 'SAIDA'>(openNew ?? 'SAIDA')
   const [editing, setEditing] = useState<TransactionRow | null>(null)
-  const [menuOpen, setMenuOpen] = useState<string | null>(null)
+  const [menuOpen, setMenuOpen] = useState<{ id: string; x: number; y: number } | null>(null)
+
+  function toggleMenu(id: string, e: React.MouseEvent<HTMLButtonElement>) {
+    if (menuOpen?.id === id) {
+      setMenuOpen(null)
+      return
+    }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setMenuOpen({ id, x: rect.right, y: rect.bottom + 4 })
+  }
 
   function setQuery(key: string, value: string | null) {
     const url = new URL(window.location.href)
@@ -67,7 +77,7 @@ export function TransactionsClient({
   }
 
   function handleDelete(tx: TransactionRow) {
-    if (!confirm(`Excluir "${tx.descricao}"?`)) return
+    if (!confirm(`Eliminar "${tx.descricao}"?`)) return
     startTransition(async () => {
       await deleteTransaction(tx.id)
       setMenuOpen(null)
@@ -89,8 +99,8 @@ export function TransactionsClient({
     <>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Lançamentos</h1>
-          <p className="text-zinc-500 text-sm">Todas as entradas e saídas do caixa.</p>
+          <h1 className="text-2xl font-bold text-zinc-900">Movimentos</h1>
+          <p className="text-zinc-500 text-sm">Todas as entradas e saídas das tuas contas.</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => openNewTx('SAIDA')} className="btn-primary">
@@ -105,7 +115,7 @@ export function TransactionsClient({
         <KPI title="Saídas (filtradas)" value={kpis.totalSaidas} color="red" prefix="- " />
         <KPI title="Resultado" value={resultado} color="zinc" />
         <div className="card p-4">
-          <div className="text-xs text-zinc-500 mb-1">Nº lançamentos</div>
+          <div className="text-xs text-zinc-500 mb-1">Nº movimentos</div>
           <div className="text-lg font-bold text-zinc-900">{kpis.count}</div>
         </div>
       </div>
@@ -117,7 +127,7 @@ export function TransactionsClient({
           <input
             type="search"
             defaultValue={filters.search ?? ''}
-            placeholder="Buscar por descrição ou observação..."
+            placeholder="Pesquisar por descrição ou observação..."
             onKeyDown={(e) => {
               if (e.key === 'Enter') setQuery('q', (e.target as HTMLInputElement).value)
             }}
@@ -150,7 +160,7 @@ export function TransactionsClient({
           onChange={(e) => setQuery('account', e.target.value || null)}
           className="input-base !w-auto"
         >
-          <option value="">Todos os caixas</option>
+          <option value="">Todas as contas</option>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>{a.nome}</option>
           ))}
@@ -162,9 +172,9 @@ export function TransactionsClient({
         {transactions.length === 0 ? (
           <div className="p-12 text-center">
             <FileText className="w-12 h-12 mx-auto text-zinc-300 mb-3" />
-            <p className="text-sm text-zinc-500">Nenhum lançamento ainda.</p>
+            <p className="text-sm text-zinc-500">Sem movimentos ainda.</p>
             <button onClick={() => openNewTx('SAIDA')} className="btn-primary mt-4">
-              <Plus className="w-4 h-4" /> Registrar primeira despesa
+              <Plus className="w-4 h-4" /> Registar primeira despesa
             </button>
           </div>
         ) : (
@@ -176,7 +186,7 @@ export function TransactionsClient({
                   <th className="px-4 py-3 font-semibold">Data</th>
                   <th className="px-4 py-3 font-semibold">Descrição</th>
                   <th className="px-4 py-3 font-semibold">Categoria</th>
-                  <th className="px-4 py-3 font-semibold">Caixa</th>
+                  <th className="px-4 py-3 font-semibold">Conta</th>
                   <th className="px-4 py-3 font-semibold text-right">Valor</th>
                   <th className="px-4 py-3 w-10"></th>
                 </tr>
@@ -212,18 +222,20 @@ export function TransactionsClient({
                       'px-4 py-3 text-right font-bold whitespace-nowrap',
                       tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'
                     )}>
-                      {tx.tipo === 'ENTRADA' ? '+ ' : '- '}{formatBRL(tx.valor)}
+                      {tx.tipo === 'ENTRADA' ? '+ ' : '- '}{formatEUR(tx.valor)}
                     </td>
-                    <td className="px-4 py-3 relative">
+                    <td className="px-4 py-3">
                       <button
-                        onClick={() => setMenuOpen(menuOpen === tx.id ? null : tx.id)}
+                        onClick={(e) => toggleMenu(tx.id, e)}
                         className="text-zinc-400 hover:text-zinc-700"
                         aria-label="Ações"
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
-                      {menuOpen === tx.id && (
+                      {menuOpen?.id === tx.id && (
                         <RowMenu
+                          x={menuOpen.x}
+                          y={menuOpen.y}
                           onEdit={() => openEdit(tx)}
                           onDuplicate={() => handleDuplicate(tx)}
                           onDelete={() => handleDelete(tx)}
@@ -259,17 +271,19 @@ export function TransactionsClient({
                     'text-sm font-bold whitespace-nowrap',
                     tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'
                   )}>
-                    {tx.tipo === 'ENTRADA' ? '+ ' : '- '}{formatBRL(tx.valor)}
+                    {tx.tipo === 'ENTRADA' ? '+ ' : '- '}{formatEUR(tx.valor)}
                   </div>
                   <button
-                    onClick={() => setMenuOpen(menuOpen === tx.id ? null : tx.id)}
+                    onClick={(e) => toggleMenu(tx.id, e)}
                     className="text-zinc-400"
                     aria-label="Ações"
                   >
                     <MoreVertical className="w-4 h-4" />
                   </button>
-                  {menuOpen === tx.id && (
+                  {menuOpen?.id === tx.id && (
                     <RowMenu
+                      x={menuOpen.x}
+                      y={menuOpen.y}
                       onEdit={() => openEdit(tx)}
                       onDuplicate={() => handleDuplicate(tx)}
                       onDelete={() => handleDelete(tx)}
@@ -314,27 +328,42 @@ function KPI({
     <div className="card p-4">
       <div className="text-xs text-zinc-500 mb-1">{title}</div>
       <div className={cn('text-lg font-bold', colorClass)}>
-        {prefix}{formatBRL(value)}
+        {prefix}{formatEUR(value)}
       </div>
     </div>
   )
 }
 
 function RowMenu({
+  x,
+  y,
   onEdit,
   onDuplicate,
   onDelete,
   onClose,
 }: {
+  x: number
+  y: number
   onEdit: () => void
   onDuplicate: () => void
   onDelete: () => void
   onClose: () => void
 }) {
-  return (
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  if (!mounted) return null
+
+  const MENU_WIDTH = 176
+  const left = Math.max(8, Math.min(x - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8))
+  const top = Math.min(y, window.innerHeight - 140)
+
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-10" onClick={onClose} />
-      <div className="absolute right-2 top-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg w-44 py-1 z-20">
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div
+        className="fixed bg-white border border-zinc-200 rounded-xl shadow-lg w-44 py-1 z-50"
+        style={{ left, top }}
+      >
         <button
           onClick={onEdit}
           className="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-sm text-zinc-700"
@@ -352,9 +381,10 @@ function RowMenu({
           onClick={onDelete}
           className="w-full text-left px-3 py-2 hover:bg-red-50 flex items-center gap-2 text-sm text-red-600"
         >
-          <Trash2 className="w-4 h-4" /> Excluir
+          <Trash2 className="w-4 h-4" /> Eliminar
         </button>
       </div>
-    </>
+    </>,
+    document.body
   )
 }

@@ -9,7 +9,7 @@ export async function getCurrentUser() {
     orderBy: { createdAt: 'asc' },
   })
   if (!user) {
-    throw new Error('Nenhum OWNER encontrado. Rode "pnpm prisma db seed" primeiro.')
+    throw new Error('Nenhum OWNER encontrado. Corre "pnpm prisma db seed" primeiro.')
   }
   return user
 }

@@ -2,17 +2,19 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Wallet, LayoutDashboard, List, Wallet as WalletIcon, Tags, BarChart3, Users, Plus } from 'lucide-react'
+import { Wallet, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/lancamentos', label: 'Lançamentos' },
-  { href: '/caixas', label: 'Caixas' },
+  { href: '/dashboard', label: 'Painel' },
+  { href: '/lancamentos', label: 'Movimentos' },
+  { href: '/clientes', label: 'Clientes' },
+  { href: '/folhas', label: 'Folhas' },
+  { href: '/caixas', label: 'Contas' },
   { href: '/categorias', label: 'Categorias' },
 ]
 
-export function TopNav() {
+export function TopNav({ userInitials }: { userInitials: string }) {
   const pathname = usePathname()
 
   return (
@@ -24,7 +26,7 @@ export function TopNav() {
               <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-zinc-900 hidden sm:inline">Marcola</span>
+              <span className="font-bold text-zinc-900 hidden sm:inline">Carteira</span>
             </Link>
             <div className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {
@@ -53,7 +55,7 @@ export function TopNav() {
               <span>Nova despesa</span>
             </Link>
             <div className="w-9 h-9 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-              JC
+              {userInitials}
             </div>
           </div>
         </div>

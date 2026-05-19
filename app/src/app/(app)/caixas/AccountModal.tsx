@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Banknote, Landmark, Smartphone, CreditCard } from 'lucide-react'
+import { Banknote, Landmark, CreditCard } from 'lucide-react'
 import { Modal } from '@/components/Modal'
-import { ColorPicker, COLOR_OPTIONS } from '@/components/ColorPicker'
+import { ColorPicker } from '@/components/ColorPicker'
 import { cn } from '@/lib/utils'
 import { saveAccount } from './actions'
 import type { AccountWithBalance } from './page'
@@ -15,37 +15,47 @@ interface Props {
   account?: AccountWithBalance | null
 }
 
+function initialState(account: AccountWithBalance | null | undefined) {
+  return {
+    nome: account?.nome ?? '',
+    tipo: account?.tipo ?? 'DINHEIRO',
+    saldoInicial: account ? account.saldoInicial.toFixed(2).replace('.', ',') : '0,00',
+    cor: account?.cor ?? 'emerald',
+  }
+}
+
 const tipos = [
   { value: 'DINHEIRO', label: 'Dinheiro', Icon: Banknote, defaultIcon: 'banknote', defaultColor: 'emerald' },
   { value: 'BANCO', label: 'Banco', Icon: Landmark, defaultIcon: 'landmark', defaultColor: 'violet' },
-  { value: 'PIX', label: 'Pix', Icon: Smartphone, defaultIcon: 'smartphone', defaultColor: 'orange' },
   { value: 'CARTAO', label: 'Cartão', Icon: CreditCard, defaultIcon: 'credit-card', defaultColor: 'sky' },
 ] as const
 
 export function AccountModal({ open, onClose, account }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
-  const [nome, setNome] = useState(account?.nome ?? '')
-  const [tipo, setTipo] = useState<string>(account?.tipo ?? 'DINHEIRO')
-  const [saldoInicial, setSaldoInicial] = useState(
-    account ? account.saldoInicial.toFixed(2).replace('.', ',') : '0,00'
-  )
-  const [cor, setCor] = useState(account?.cor ?? 'emerald')
+  const init = initialState(account)
+  const [nome, setNome] = useState(init.nome)
+  const [tipo, setTipo] = useState<string>(init.tipo)
+  const [saldoInicial, setSaldoInicial] = useState(init.saldoInicial)
+  const [cor, setCor] = useState(init.cor)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Reset state quando reabrir
+  useEffect(() => {
+    if (!open) return
+    const s = initialState(account)
+    setNome(s.nome)
+    setTipo(s.tipo)
+    setSaldoInicial(s.saldoInicial)
+    setCor(s.cor)
+    setErrors({})
+  }, [open, account?.id])
+
   function reset() {
-    if (account) {
-      setNome(account.nome)
-      setTipo(account.tipo)
-      setSaldoInicial(account.saldoInicial.toFixed(2).replace('.', ','))
-      setCor(account.cor)
-    } else {
-      setNome('')
-      setTipo('DINHEIRO')
-      setSaldoInicial('0,00')
-      setCor('emerald')
-    }
+    const s = initialState(account)
+    setNome(s.nome)
+    setTipo(s.tipo)
+    setSaldoInicial(s.saldoInicial)
+    setCor(s.cor)
     setErrors({})
   }
 
@@ -84,16 +94,16 @@ export function AccountModal({ open, onClose, account }: Props) {
         onClose()
         reset()
       }}
-      title={account ? 'Editar caixa' : 'Novo caixa'}
+      title={account ? 'Editar conta' : 'Nova conta'}
     >
       <form onSubmit={handleSubmit} className="p-5 space-y-4">
         <div>
-          <label className="label">Nome do caixa *</label>
+          <label className="label">Nome da conta *</label>
           <input
             type="text"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex: Conta Itaú, Dinheiro, Pix..."
+            placeholder="Ex: Carteira, Conta CGD, Cartão Millennium..."
             required
             autoFocus
             className="input-base"
@@ -103,7 +113,7 @@ export function AccountModal({ open, onClose, account }: Props) {
 
         <div>
           <label className="label">Tipo</label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {tipos.map((t) => {
               const active = tipo === t.value
               return (
@@ -129,16 +139,16 @@ export function AccountModal({ open, onClose, account }: Props) {
         <div>
           <label className="label">Saldo inicial</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-semibold">R$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-semibold">€</span>
             <input
               type="text"
               value={saldoInicial}
               onChange={(e) => setSaldoInicial(e.target.value)}
               inputMode="decimal"
-              className="input-base pl-12"
+              className="input-base pl-8"
             />
           </div>
-          <p className="text-[11px] text-zinc-400 mt-1">Quanto já tem nesse caixa agora.</p>
+          <p className="text-[11px] text-zinc-400 mt-1">Quanto tens nesta conta agora.</p>
         </div>
 
         <div>
@@ -158,7 +168,7 @@ export function AccountModal({ open, onClose, account }: Props) {
             Cancelar
           </button>
           <button type="submit" disabled={pending} className="btn-primary flex-1">
-            {pending ? 'Salvando...' : 'Salvar caixa'}
+            {pending ? 'A guardar...' : 'Guardar conta'}
           </button>
         </div>
       </form>

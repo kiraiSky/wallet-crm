@@ -3,12 +3,12 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { parseBRLToCents } from '@/lib/format'
+import { parseEURToCents } from '@/lib/format'
 
 const AccountSchema = z.object({
   id: z.string().optional(),
   nome: z.string().min(1, 'Nome é obrigatório').max(50),
-  tipo: z.enum(['DINHEIRO', 'BANCO', 'PIX', 'CARTAO']),
+  tipo: z.enum(['DINHEIRO', 'BANCO', 'CARTAO']),
   saldoInicial: z.string().default('0,00'),
   cor: z.string().default('emerald'),
   icone: z.string().default('banknote'),
@@ -31,7 +31,7 @@ export async function saveAccount(prevState: AccountFormState, formData: FormDat
     return { ok: false, errors }
   }
   const data = parsed.data
-  const saldoInicial = parseBRLToCents(data.saldoInicial) / 100
+  const saldoInicial = parseEURToCents(data.saldoInicial) / 100
 
   try {
     if (data.id) {
@@ -60,17 +60,17 @@ export async function saveAccount(prevState: AccountFormState, formData: FormDat
     revalidatePath('/dashboard')
     return { ok: true }
   } catch (e) {
-    return { ok: false, message: 'Erro ao salvar caixa' }
+    return { ok: false, message: 'Erro ao guardar conta' }
   }
 }
 
 export async function deleteAccount(id: string): Promise<AccountFormState> {
   const count = await prisma.transaction.count({ where: { accountId: id } })
   if (count > 0) {
-    // Não excluir, apenas arquivar — preserva integridade dos lançamentos
+    // Não eliminar, apenas arquivar — preserva integridade dos movimentos
     await prisma.account.update({ where: { id }, data: { archived: true } })
     revalidatePath('/caixas')
-    return { ok: true, message: `Caixa arquivado (${count} lançamentos vinculados).` }
+    return { ok: true, message: `Conta arquivada (${count} movimentos associados).` }
   }
   await prisma.account.delete({ where: { id } })
   revalidatePath('/caixas')

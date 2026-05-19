@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { parseBRLToCents } from '@/lib/format'
+import { parseEURToCents } from '@/lib/format'
 import { getCurrentUser } from '@/lib/current-user'
 import { saveUpload, deleteUpload } from '@/lib/uploads'
 
@@ -13,7 +13,7 @@ const TransactionSchema = z.object({
   valor: z.string().min(1, 'Valor é obrigatório'),
   descricao: z.string().min(1, 'Descrição é obrigatória').max(200),
   data: z.string().min(1, 'Data é obrigatória'),
-  accountId: z.string().min(1, 'Caixa é obrigatório'),
+  accountId: z.string().min(1, 'Conta é obrigatória'),
   categoryId: z.string().min(1, 'Categoria é obrigatória'),
   observacao: z.string().optional(),
 })
@@ -51,7 +51,7 @@ export async function saveTransaction(
   }
 
   const data = parsed.data
-  const valorCents = parseBRLToCents(data.valor)
+  const valorCents = parseEURToCents(data.valor)
   if (valorCents <= 0) {
     return { ok: false, errors: { valor: 'Valor deve ser maior que zero' } }
   }
@@ -61,7 +61,7 @@ export async function saveTransaction(
   // Validar coerência: tipo da categoria deve casar com tipo do lançamento
   const category = await prisma.category.findUnique({ where: { id: data.categoryId } })
   if (!category || category.tipo !== data.tipo) {
-    return { ok: false, errors: { categoryId: 'Categoria não corresponde ao tipo do lançamento' } }
+    return { ok: false, errors: { categoryId: 'Categoria não corresponde ao tipo do movimento' } }
   }
 
   // Anexo (opcional)
@@ -69,10 +69,10 @@ export async function saveTransaction(
   let savedFile: Awaited<ReturnType<typeof saveUpload>> | null = null
   if (file && file.size > 0) {
     if (file.size > MAX_UPLOAD_SIZE) {
-      return { ok: false, errors: { attachment: 'Arquivo maior que 5MB' } }
+      return { ok: false, errors: { attachment: 'Ficheiro maior que 5MB' } }
     }
     if (!ALLOWED_MIME.includes(file.type)) {
-      return { ok: false, errors: { attachment: 'Formato não suportado (use JPG, PNG, WebP ou PDF)' } }
+      return { ok: false, errors: { attachment: 'Formato não suportado (usa JPG, PNG, WebP ou PDF)' } }
     }
     savedFile = await saveUpload(file)
   }
@@ -132,7 +132,7 @@ export async function saveTransaction(
   } catch (e) {
     console.error(e)
     if (savedFile) await deleteUpload(savedFile.storagePath).catch(() => {})
-    return { ok: false, message: 'Erro ao salvar lançamento' }
+    return { ok: false, message: 'Erro ao guardar movimento' }
   }
 }
 
@@ -141,7 +141,7 @@ export async function deleteTransaction(id: string): Promise<TransactionFormStat
     where: { id },
     include: { attachments: true },
   })
-  if (!tx) return { ok: false, message: 'Lançamento não encontrado' }
+  if (!tx) return { ok: false, message: 'Movimento não encontrado' }
 
   // Apaga anexos do disco
   for (const att of tx.attachments) {
@@ -157,7 +157,7 @@ export async function deleteTransaction(id: string): Promise<TransactionFormStat
 
 export async function duplicateTransaction(id: string): Promise<TransactionFormState> {
   const tx = await prisma.transaction.findUnique({ where: { id } })
-  if (!tx) return { ok: false, message: 'Lançamento não encontrado' }
+  if (!tx) return { ok: false, message: 'Movimento não encontrado' }
   const user = await getCurrentUser()
 
   await prisma.transaction.create({

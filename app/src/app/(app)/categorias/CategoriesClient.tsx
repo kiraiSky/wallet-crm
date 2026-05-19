@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, TrendingUp, TrendingDown, Pencil, Trash2 } from 'lucide-react'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { colorIconBg } from '@/lib/colors'
-import { formatBRL } from '@/lib/format'
+import { formatEUR } from '@/lib/format'
 import { CategoryModal } from './CategoryModal'
 import { deleteCategory } from './actions'
 import type { CategoryWithStats } from './page'
@@ -32,7 +32,7 @@ export function CategoriesClient({ categories }: { categories: CategoryWithStats
   }
 
   function handleDelete(cat: CategoryWithStats) {
-    if (!confirm(`Excluir a categoria "${cat.nome}"?${cat.count > 0 ? `\nHá ${cat.count} lançamento(s) vinculado(s). A categoria será arquivada.` : ''}`)) return
+    if (!confirm(`Eliminar a categoria "${cat.nome}"?${cat.count > 0 ? `\nHá ${cat.count} movimento(s) associado(s). A categoria será arquivada.` : ''}`)) return
     startTransition(async () => {
       await deleteCategory(cat.id)
       router.refresh()
@@ -44,7 +44,7 @@ export function CategoriesClient({ categories }: { categories: CategoryWithStats
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">Categorias</h1>
-          <p className="text-zinc-500 text-sm">Organize seus lançamentos com categorias customizadas.</p>
+          <p className="text-zinc-500 text-sm">Organiza os teus movimentos com categorias personalizadas.</p>
         </div>
         <button onClick={() => openNew('SAIDA')} className="btn-primary">
           <Plus className="w-4 h-4" />
@@ -128,7 +128,7 @@ function CategoryColumn({
       <div className="divide-y divide-zinc-100">
         {items.length === 0 && (
           <div className="p-8 text-center text-sm text-zinc-400">
-            Nenhuma categoria cadastrada
+            Sem categorias registadas
           </div>
         )}
         {items.map((cat) => (
@@ -139,7 +139,7 @@ function CategoryColumn({
             <div className="flex-1">
               <div className="text-sm font-semibold text-zinc-900">{cat.nome}</div>
               <div className="text-xs text-zinc-500">
-                {cat.count} {cat.count === 1 ? 'lançamento' : 'lançamentos'} · {formatBRL(cat.total)}
+                {cat.count} {cat.count === 1 ? 'movimento' : 'movimentos'} · {formatEUR(cat.total)}
               </div>
             </div>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
@@ -153,7 +153,7 @@ function CategoryColumn({
               <button
                 onClick={() => onDelete(cat)}
                 className="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"
-                aria-label="Excluir"
+                aria-label="Eliminar"
               >
                 <Trash2 className="w-3.5 h-3.5 mx-auto" />
               </button>

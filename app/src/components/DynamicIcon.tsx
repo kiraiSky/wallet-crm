@@ -5,25 +5,44 @@ import { LucideProps } from 'lucide-react'
 
 // Mapa de ícones suportados (limitamos pra reduzir bundle size)
 const iconMap: Record<string, React.ComponentType<LucideProps>> = {
+  // Contas
   banknote: Icons.Banknote,
   landmark: Icons.Landmark,
-  smartphone: Icons.Smartphone,
+  wallet: Icons.Wallet,
   'credit-card': Icons.CreditCard,
+  // Oficina mecânica
   wrench: Icons.Wrench,
+  hammer: Icons.Hammer,
   package: Icons.Package,
   'package-2': Icons.Package2,
+  users: Icons.Users,
+  user: Icons.User,
+  'user-plus': Icons.UserPlus,
+  fuel: Icons.Fuel,
   car: Icons.Car,
+  'car-front': Icons.CarFront,
   'circle-dot': Icons.CircleDot,
+  cog: Icons.Cog,
+  activity: Icons.Activity,
+  'clipboard-check': Icons.ClipboardCheck,
+  mail: Icons.Mail,
+  'map-pin': Icons.MapPin,
+  cake: Icons.Cake,
+  'phone-call': Icons.PhoneCall,
+  // Casa / utilities
+  home: Icons.Home,
   zap: Icons.Zap,
   droplet: Icons.Droplet,
-  home: Icons.Home,
+  droplets: Icons.Droplets,
   phone: Icons.Phone,
-  users: Icons.Users,
-  fuel: Icons.Fuel,
-  'shopping-bag': Icons.ShoppingBag,
-  hammer: Icons.Hammer,
-  settings: Icons.Settings,
+  // Negócio
+  megaphone: Icons.Megaphone,
+  shield: Icons.Shield,
+  receipt: Icons.Receipt,
   briefcase: Icons.Briefcase,
+  'trending-up': Icons.TrendingUp,
+  'shopping-bag': Icons.ShoppingBag,
+  settings: Icons.Settings,
   'more-horizontal': Icons.MoreHorizontal,
 }
 

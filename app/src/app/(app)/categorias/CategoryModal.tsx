@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { Modal } from '@/components/Modal'
@@ -25,6 +25,15 @@ export function CategoryModal({ open, onClose, category, defaultTipo }: Props) {
   const [cor, setCor] = useState(category?.cor ?? 'violet')
   const [icone, setIcone] = useState(category?.icone ?? 'package')
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    setNome(category?.nome ?? '')
+    setTipo(category?.tipo ?? defaultTipo)
+    setCor(category?.cor ?? 'violet')
+    setIcone(category?.icone ?? 'package')
+    setError(null)
+  }, [open, category?.id, defaultTipo])
 
   function reset() {
     if (category) {
@@ -58,7 +67,7 @@ export function CategoryModal({ open, onClose, category, defaultTipo }: Props) {
         router.refresh()
         reset()
       } else {
-        setError(res.message ?? Object.values(res.errors ?? {})[0] ?? 'Erro ao salvar')
+        setError(res.message ?? Object.values(res.errors ?? {})[0] ?? 'Erro ao guardar')
       }
     })
   }
@@ -105,7 +114,7 @@ export function CategoryModal({ open, onClose, category, defaultTipo }: Props) {
             type="text"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex: Peças, Aluguel, Serviço..."
+            placeholder="Ex: Alimentação, Renda, Salário..."
             required
             autoFocus
             className="input-base"
@@ -157,7 +166,7 @@ export function CategoryModal({ open, onClose, category, defaultTipo }: Props) {
             Cancelar
           </button>
           <button type="submit" disabled={pending} className="btn-primary flex-1">
-            {pending ? 'Salvando...' : 'Salvar categoria'}
+            {pending ? 'A guardar...' : 'Guardar categoria'}
           </button>
         </div>
       </form>
