@@ -2,22 +2,38 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { UploadCloud, X as XIcon } from 'lucide-react'
+import { UploadCloud, X as XIcon, ClipboardList, ChevronDown } from 'lucide-react'
 import { Modal } from '@/components/Modal'
+import { DynamicIcon } from '@/components/DynamicIcon'
+import { colorIconBg } from '@/lib/colors'
 import { cn } from '@/lib/utils'
 import { saveTransaction } from './actions'
-import type { TransactionRow } from './page'
+import type { WorkOrderOption } from './page'
 
-type Account = { id: string; nome: string }
-type Category = { id: string; nome: string; tipo: 'ENTRADA' | 'SAIDA' }
+type Account = { id: string; nome: string; cor: string; icone: string }
+type Category = { id: string; nome: string; tipo: 'ENTRADA' | 'SAIDA'; cor: string; icone: string }
+
+export type TransactionForModal = {
+  id: string
+  tipo: 'ENTRADA' | 'SAIDA'
+  valor: number
+  descricao: string
+  data: string
+  observacao: string | null
+  accountId: string
+  categoryId: string
+  workOrderId: string | null
+}
 
 interface Props {
   open: boolean
   onClose: () => void
   tipo: 'ENTRADA' | 'SAIDA'
-  transaction?: TransactionRow | null
+  transaction?: TransactionForModal | null
   accounts: Account[]
   categories: Category[]
+  workOrderOptions?: WorkOrderOption[]
+  defaultWorkOrderId?: string
 }
 
 function isoToLocalDatetimeInput(iso: string | undefined): string {
@@ -33,6 +49,8 @@ export function TransactionModal({
   transaction,
   accounts,
   categories,
+  workOrderOptions = [],
+  defaultWorkOrderId,
 }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -46,11 +64,27 @@ export function TransactionModal({
   const [accountId, setAccountId] = useState(transaction?.accountId ?? (accounts[0]?.id ?? ''))
   const [data, setData] = useState(isoToLocalDatetimeInput(transaction?.data))
   const [observacao, setObservacao] = useState(transaction?.observacao ?? '')
+  const [workOrderId, setWorkOrderId] = useState(transaction?.workOrderId ?? defaultWorkOrderId ?? '')
+  const [woSearch, setWoSearch] = useState('')
+  const [categoryOpen, setCategoryOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  const selectedWO = workOrderOptions.find((wo) => wo.id === workOrderId) ?? null
+  const filteredWOs = woSearch
+    ? workOrderOptions.filter(
+        (wo) =>
+          wo.customerNome.toLowerCase().includes(woSearch.toLowerCase()) ||
+          wo.problema.toLowerCase().includes(woSearch.toLowerCase()) ||
+          String(wo.numero).includes(woSearch)
+      )
+    : workOrderOptions
+
   const filteredCategories = categories.filter((c) => c.tipo === tipo)
+  const selectedCategory = filteredCategories.find((c) => c.id === categoryId) ?? null
+  const selectedAccount = accounts.find((a) => a.id === accountId) ?? null
 
   // Sincroniza o formulário sempre que o modal abre ou muda o movimento a editar
   useEffect(() => {
@@ -62,6 +96,10 @@ export function TransactionModal({
     setAccountId(transaction?.accountId ?? (accounts[0]?.id ?? ''))
     setData(isoToLocalDatetimeInput(transaction?.data))
     setObservacao(transaction?.observacao ?? '')
+    setWorkOrderId(transaction?.workOrderId ?? defaultWorkOrderId ?? '')
+    setWoSearch('')
+    setCategoryOpen(false)
+    setAccountOpen(false)
     setFile(null)
     setError(null)
     setErrors({})
@@ -76,6 +114,10 @@ export function TransactionModal({
     setAccountId(transaction?.accountId ?? (accounts[0]?.id ?? ''))
     setData(isoToLocalDatetimeInput(transaction?.data))
     setObservacao(transaction?.observacao ?? '')
+    setWorkOrderId(transaction?.workOrderId ?? defaultWorkOrderId ?? '')
+    setWoSearch('')
+    setCategoryOpen(false)
+    setAccountOpen(false)
     setFile(null)
     setError(null)
     setErrors({})
@@ -102,6 +144,11 @@ export function TransactionModal({
     fd.set('accountId', accountId)
     fd.set('categoryId', categoryId)
     if (observacao) fd.set('observacao', observacao)
+    if (workOrderId) {
+      fd.set('workOrderId', workOrderId)
+      const wo = workOrderOptions.find((w) => w.id === workOrderId)
+      if (wo) fd.set('customerId', wo.customerId)
+    }
     if (file) fd.set('attachment', file)
 
     startTransition(async () => {
@@ -189,17 +236,63 @@ export function TransactionModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Categoria *</label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              required
-              className="input-base"
-            >
-              <option value="">Seleciona...</option>
-              {filteredCategories.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setCategoryOpen((v) => !v)}
+                className={cn(
+                  'input-base text-left flex items-center gap-2 w-full',
+                  !categoryId && 'text-zinc-400'
+                )}
+              >
+                {selectedCategory ? (
+                  <>
+                    <span className={cn(
+                      'w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0',
+                      colorIconBg[selectedCategory.cor] || colorIconBg.violet
+                    )}>
+                      <DynamicIcon name={selectedCategory.icone} className="w-3 h-3" />
+                    </span>
+                    <span className="flex-1 truncate">{selectedCategory.nome}</span>
+                  </>
+                ) : (
+                  <span className="flex-1">Seleciona...</span>
+                )}
+                <ChevronDown className="w-4 h-4 text-zinc-400 flex-shrink-0" />
+              </button>
+              {categoryOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setCategoryOpen(false)} />
+                  <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+                    {filteredCategories.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-zinc-400">
+                        Sem categorias de {tipo === 'SAIDA' ? 'despesa' : 'receita'}.
+                      </div>
+                    ) : (
+                      filteredCategories.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => { setCategoryId(c.id); setCategoryOpen(false) }}
+                          className={cn(
+                            'w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2.5 text-sm transition',
+                            c.id === categoryId && 'bg-zinc-50 font-semibold'
+                          )}
+                        >
+                          <span className={cn(
+                            'w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0',
+                            colorIconBg[c.cor] || colorIconBg.violet
+                          )}>
+                            <DynamicIcon name={c.icone} className="w-3.5 h-3.5" />
+                          </span>
+                          {c.nome}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
             {filteredCategories.length === 0 && (
               <p className="text-xs text-amber-600 mt-1">
                 Sem categorias de {tipo === 'SAIDA' ? 'despesa' : 'receita'} registadas.
@@ -209,17 +302,57 @@ export function TransactionModal({
           </div>
           <div>
             <label className="label">Conta *</label>
-            <select
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              required
-              className="input-base"
-            >
-              <option value="">Seleciona...</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.nome}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setAccountOpen((v) => !v)}
+                className={cn(
+                  'input-base text-left flex items-center gap-2 w-full',
+                  !accountId && 'text-zinc-400'
+                )}
+              >
+                {selectedAccount ? (
+                  <>
+                    <span className={cn(
+                      'w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0',
+                      colorIconBg[selectedAccount.cor] || colorIconBg.zinc
+                    )}>
+                      <DynamicIcon name={selectedAccount.icone} className="w-3 h-3" />
+                    </span>
+                    <span className="flex-1 truncate">{selectedAccount.nome}</span>
+                  </>
+                ) : (
+                  <span className="flex-1">Seleciona...</span>
+                )}
+                <ChevronDown className="w-4 h-4 text-zinc-400 flex-shrink-0" />
+              </button>
+              {accountOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setAccountOpen(false)} />
+                  <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden">
+                    {accounts.map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => { setAccountId(a.id); setAccountOpen(false) }}
+                        className={cn(
+                          'w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2.5 text-sm transition',
+                          a.id === accountId && 'bg-zinc-50 font-semibold'
+                        )}
+                      >
+                        <span className={cn(
+                          'w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0',
+                          colorIconBg[a.cor] || colorIconBg.zinc
+                        )}>
+                          <DynamicIcon name={a.icone} className="w-3.5 h-3.5" />
+                        </span>
+                        {a.nome}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
             {accounts.length === 0 && (
               <p className="text-xs text-amber-600 mt-1">
                 Cria uma conta primeiro.
@@ -239,6 +372,67 @@ export function TransactionModal({
             className="input-base"
           />
         </div>
+
+        {/* Folha de obra */}
+        {workOrderOptions.length > 0 && (
+          <div>
+            <label className="label">Folha de obra (opcional)</label>
+            {selectedWO ? (
+              <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ClipboardList className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-emerald-900 truncate">
+                      #{selectedWO.numero} · {selectedWO.customerNome}
+                    </div>
+                    <div className="text-xs text-emerald-700 truncate">{selectedWO.problema}</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setWorkOrderId(''); setWoSearch('') }}
+                  className="text-emerald-600 hover:text-red-500 ml-2 flex-shrink-0"
+                >
+                  <XIcon className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  type="text"
+                  value={woSearch}
+                  onChange={(e) => setWoSearch(e.target.value)}
+                  placeholder="Pesquisar por cliente ou descrição..."
+                  className="input-base"
+                />
+                {woSearch && (
+                  <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                    {filteredWOs.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-zinc-400">Sem resultados</div>
+                    ) : (
+                      filteredWOs.slice(0, 8).map((wo) => (
+                        <button
+                          key={wo.id}
+                          type="button"
+                          onClick={() => { setWorkOrderId(wo.id); setWoSearch('') }}
+                          className="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2"
+                        >
+                          <ClipboardList className="w-4 h-4 text-zinc-400 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-zinc-800">
+                              #{wo.numero} · {wo.customerNome}
+                            </div>
+                            <div className="text-xs text-zinc-500 truncate">{wo.problema}</div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Upload */}
         <div>

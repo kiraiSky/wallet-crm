@@ -12,7 +12,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await getCurrentUser()
   return (
     <>
-      <TopNav userInitials={initialsOf(user.nome)} />
+      <TopNav
+        userName={user.nome}
+        userInitials={initialsOf(user.nome)}
+        userRole={user.role}
+      />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">
         {children}
       </main>

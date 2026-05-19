@@ -16,6 +16,8 @@ const TransactionSchema = z.object({
   accountId: z.string().min(1, 'Conta é obrigatória'),
   categoryId: z.string().min(1, 'Categoria é obrigatória'),
   observacao: z.string().optional(),
+  workOrderId: z.string().optional(),
+  customerId: z.string().optional(),
 })
 
 export type TransactionFormState = {
@@ -40,6 +42,8 @@ export async function saveTransaction(
     accountId: formData.get('accountId'),
     categoryId: formData.get('categoryId'),
     observacao: formData.get('observacao') || undefined,
+    workOrderId: formData.get('workOrderId') || undefined,
+    customerId: formData.get('customerId') || undefined,
   })
 
   if (!parsed.success) {
@@ -78,56 +82,52 @@ export async function saveTransaction(
   }
 
   try {
-    if (data.id) {
-      await prisma.transaction.update({
-        where: { id: data.id },
-        data: {
-          tipo: data.tipo,
-          valor: valorCents / 100,
-          descricao: data.descricao,
-          data: new Date(data.data),
-          accountId: data.accountId,
-          categoryId: data.categoryId,
-          observacao: data.observacao || null,
-          ...(savedFile && {
-            attachments: {
-              create: {
-                filename: savedFile.filename,
-                storagePath: savedFile.storagePath,
-                mimeType: savedFile.mimeType,
-                size: savedFile.size,
-              },
-            },
-          }),
+    const baseData = {
+      tipo: data.tipo,
+      valor: valorCents / 100,
+      descricao: data.descricao,
+      data: new Date(data.data),
+      accountId: data.accountId,
+      categoryId: data.categoryId,
+      observacao: data.observacao || null,
+      workOrderId: data.workOrderId || null,
+      customerId: data.customerId || null,
+      ...(savedFile && {
+        attachments: {
+          create: {
+            filename: savedFile.filename,
+            storagePath: savedFile.storagePath,
+            mimeType: savedFile.mimeType,
+            size: savedFile.size,
+          },
         },
-      })
-    } else {
-      await prisma.transaction.create({
-        data: {
-          tipo: data.tipo,
-          valor: valorCents / 100,
-          descricao: data.descricao,
-          data: new Date(data.data),
-          accountId: data.accountId,
-          categoryId: data.categoryId,
-          observacao: data.observacao || null,
-          userId: user.id,
-          ...(savedFile && {
-            attachments: {
-              create: {
-                filename: savedFile.filename,
-                storagePath: savedFile.storagePath,
-                mimeType: savedFile.mimeType,
-                size: savedFile.size,
-              },
-            },
-          }),
-        },
+      }),
+    }
+
+    let workOrder: { customerId: string } | null = null
+    if (data.workOrderId) {
+      workOrder = await prisma.workOrder.findUnique({
+        where: { id: data.workOrderId },
+        select: { customerId: true },
       })
     }
+
+    if (data.id) {
+      await prisma.transaction.update({ where: { id: data.id }, data: baseData })
+    } else {
+      await prisma.transaction.create({
+        data: { ...baseData, userId: user.id },
+      })
+    }
+
     revalidatePath('/lancamentos')
     revalidatePath('/dashboard')
     revalidatePath('/caixas')
+    if (workOrder) {
+      revalidatePath(`/folhas`)
+      revalidatePath(`/clientes/${workOrder.customerId}`)
+    }
+    if (data.customerId) revalidatePath(`/clientes/${data.customerId}`)
     return { ok: true }
   } catch (e) {
     console.error(e)

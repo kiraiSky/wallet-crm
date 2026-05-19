@@ -1,12 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, ClipboardList, Car as CarIcon } from 'lucide-react'
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  useDraggable,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  Plus, Search, ClipboardList, Car as CarIcon,
+  LayoutList, Columns2, ArrowRight, GripVertical,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatEUR, formatDate } from '@/lib/format'
-import { STATUS_LIST, STATUS_META, type WorkOrderStatus } from './status'
+import { STATUS_LIST, STATUS_META, STATUS_FLOW, nextStatus, type WorkOrderStatus } from './status'
 import { WorkOrderModal } from './WorkOrderModal'
+import { changeStatus } from './actions'
 import type { WorkOrderRow, CustomerOption } from './page'
 
 interface Props {
@@ -17,6 +33,28 @@ interface Props {
   filters: { search?: string; estado?: WorkOrderStatus; customerId?: string }
 }
 
+const KANBAN_COL_BG: Record<WorkOrderStatus, string> = {
+  ABERTA: 'bg-sky-50',
+  EM_DIAGNOSTICO: 'bg-violet-50',
+  AGUARDA_PECAS: 'bg-amber-50',
+  EM_REPARACAO: 'bg-orange-50',
+  CONCLUIDA: 'bg-emerald-50',
+  FATURADA: 'bg-teal-50',
+  CANCELADA: 'bg-zinc-100',
+}
+
+const KANBAN_COL_OVER: Record<WorkOrderStatus, string> = {
+  ABERTA: 'ring-2 ring-sky-400',
+  EM_DIAGNOSTICO: 'ring-2 ring-violet-400',
+  AGUARDA_PECAS: 'ring-2 ring-amber-400',
+  EM_REPARACAO: 'ring-2 ring-orange-400',
+  CONCLUIDA: 'ring-2 ring-emerald-400',
+  FATURADA: 'ring-2 ring-teal-400',
+  CANCELADA: 'ring-2 ring-zinc-400',
+}
+
+const KANBAN_COLS = [...STATUS_FLOW, 'CANCELADA' as WorkOrderStatus]
+
 export function WorkOrdersClient({
   workOrders,
   customers,
@@ -25,7 +63,16 @@ export function WorkOrdersClient({
   filters,
 }: Props) {
   const router = useRouter()
+  const [, startTransition] = useTransition()
   const [modalOpen, setModalOpen] = useState(false)
+  const [view, setView] = useState<'list' | 'kanban'>('list')
+  const [activeId, setActiveId] = useState<string | null>(null)
+  // Optimistic overrides: id → new status (before server confirms)
+  const [pendingStatus, setPendingStatus] = useState<Record<string, WorkOrderStatus>>({})
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  )
 
   function setQuery(key: string, value: string | null) {
     const url = new URL(window.location.href)
@@ -34,6 +81,51 @@ export function WorkOrdersClient({
     router.push(url.pathname + url.search)
   }
 
+  function handleAdvanceStatus(wo: WorkOrderRow, e: React.MouseEvent) {
+    e.stopPropagation()
+    const current = (pendingStatus[wo.id] ?? wo.estado) as WorkOrderStatus
+    const next = nextStatus(current)
+    if (!next) return
+    applyStatusChange(wo.id, next)
+  }
+
+  function applyStatusChange(woId: string, newStatus: WorkOrderStatus) {
+    setPendingStatus((prev) => ({ ...prev, [woId]: newStatus }))
+    startTransition(async () => {
+      await changeStatus(woId, newStatus)
+      router.refresh()
+      setPendingStatus((prev) => {
+        const copy = { ...prev }
+        delete copy[woId]
+        return copy
+      })
+    })
+  }
+
+  function handleDragStart({ active }: DragStartEvent) {
+    setActiveId(active.id as string)
+  }
+
+  function handleDragEnd({ active, over }: DragEndEvent) {
+    setActiveId(null)
+    if (!over) return
+    const newStatus = over.id as WorkOrderStatus
+    const wo = workOrders.find((w) => w.id === active.id)
+    if (!wo) return
+    const currentStatus = (pendingStatus[wo.id] ?? wo.estado) as WorkOrderStatus
+    if (currentStatus === newStatus) return
+    applyStatusChange(wo.id, newStatus)
+  }
+
+  const effectiveStatus = (wo: WorkOrderRow): WorkOrderStatus =>
+    (pendingStatus[wo.id] ?? wo.estado) as WorkOrderStatus
+
+  const byStatus = STATUS_LIST.reduce((acc, s) => {
+    acc[s] = workOrders.filter((wo) => effectiveStatus(wo) === s)
+    return acc
+  }, {} as Record<WorkOrderStatus, WorkOrderRow[]>)
+
+  const activeWO = activeId ? workOrders.find((w) => w.id === activeId) ?? null : null
   const emCurso = counts.ABERTA + counts.EM_DIAGNOSTICO + counts.AGUARDA_PECAS + counts.EM_REPARACAO
 
   return (
@@ -43,10 +135,34 @@ export function WorkOrdersClient({
           <h1 className="text-2xl font-bold text-zinc-900">Folhas de obra</h1>
           <p className="text-zinc-500 text-sm">Trabalhos abertos, em curso e concluídos.</p>
         </div>
-        <button onClick={() => setModalOpen(true)} className="btn-primary">
-          <Plus className="w-4 h-4" />
-          <span>Nova folha</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border border-zinc-200 overflow-hidden">
+            <button
+              onClick={() => setView('list')}
+              className={cn(
+                'px-3 py-1.5 flex items-center text-sm font-medium transition',
+                view === 'list' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:bg-zinc-50'
+              )}
+              title="Vista em lista"
+            >
+              <LayoutList className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setView('kanban')}
+              className={cn(
+                'px-3 py-1.5 flex items-center text-sm font-medium transition border-l border-zinc-200',
+                view === 'kanban' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:bg-zinc-50'
+              )}
+              title="Vista em kanban"
+            >
+              <Columns2 className="w-4 h-4" />
+            </button>
+          </div>
+          <button onClick={() => setModalOpen(true)} className="btn-primary">
+            <Plus className="w-4 h-4" />
+            <span>Nova folha</span>
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -83,18 +199,18 @@ export function WorkOrdersClient({
             className="input-base pl-10"
           />
         </div>
-        <select
-          value={filters.estado ?? ''}
-          onChange={(e) => setQuery('estado', e.target.value || null)}
-          className="input-base !w-auto"
-        >
-          <option value="">Todos os estados</option>
-          {STATUS_LIST.map((s) => (
-            <option key={s} value={s}>
-              {STATUS_META[s].label}
-            </option>
-          ))}
-        </select>
+        {view === 'list' && (
+          <select
+            value={filters.estado ?? ''}
+            onChange={(e) => setQuery('estado', e.target.value || null)}
+            className="input-base !w-auto"
+          >
+            <option value="">Todos os estados</option>
+            {STATUS_LIST.map((s) => (
+              <option key={s} value={s}>{STATUS_META[s].label}</option>
+            ))}
+          </select>
+        )}
         <select
           value={filters.customerId ?? ''}
           onChange={(e) => setQuery('customer', e.target.value || null)}
@@ -102,111 +218,130 @@ export function WorkOrdersClient({
         >
           <option value="">Todos os clientes</option>
           {customers.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nome}
-            </option>
+            <option key={c.id} value={c.id}>{c.nome}</option>
           ))}
         </select>
       </div>
 
-      {/* Lista */}
-      <div className="card overflow-hidden">
-        {workOrders.length === 0 ? (
-          <div className="p-12 text-center">
-            <ClipboardList className="w-12 h-12 mx-auto text-zinc-300 mb-3" />
-            <p className="text-sm text-zinc-500">
-              {filters.search || filters.estado || filters.customerId
-                ? 'Nenhuma folha encontrada para este filtro.'
-                : 'Ainda não há folhas de obra abertas.'}
-            </p>
-            <button onClick={() => setModalOpen(true)} className="btn-primary mt-4">
-              <Plus className="w-4 h-4" /> Abrir primeira folha
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* Desktop table */}
-            <table className="hidden md:table w-full text-sm">
-              <thead className="bg-zinc-50 border-b border-zinc-200">
-                <tr className="text-left text-xs uppercase tracking-wide text-zinc-500">
-                  <th className="px-4 py-3 font-semibold">Nº</th>
-                  <th className="px-4 py-3 font-semibold">Cliente · Viatura</th>
-                  <th className="px-4 py-3 font-semibold">Problema</th>
-                  <th className="px-4 py-3 font-semibold">Estado</th>
-                  <th className="px-4 py-3 font-semibold">Data</th>
-                  <th className="px-4 py-3 font-semibold text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {workOrders.map((wo) => (
-                  <tr
-                    key={wo.id}
-                    onClick={() => router.push(`/folhas/${wo.id}`)}
-                    className="hover:bg-zinc-50 cursor-pointer"
-                  >
-                    <td className="px-4 py-3 font-mono font-semibold text-zinc-700">
-                      #{wo.numero}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm font-medium text-zinc-900">{wo.customer.nome}</div>
-                      {wo.vehicle && (
-                        <div className="text-xs text-zinc-500 inline-flex items-center gap-1.5">
-                          <CarIcon className="w-3 h-3 text-zinc-400" />
-                          <span className="font-mono tracking-wider">{wo.vehicle.matricula}</span>
-                          <span>· {wo.vehicle.marca} {wo.vehicle.modelo}</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-700 max-w-xs truncate" title={wo.problema}>
-                      {wo.problema}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusChip estado={wo.estado} />
-                    </td>
-                    <td className="px-4 py-3 text-zinc-500 text-xs whitespace-nowrap">
-                      {formatDate(wo.dataAbertura)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-zinc-900 whitespace-nowrap">
-                      {formatEUR(wo.total)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Mobile list */}
-            <div className="md:hidden divide-y divide-zinc-100">
-              {workOrders.map((wo) => (
-                <div
-                  key={wo.id}
-                  onClick={() => router.push(`/folhas/${wo.id}`)}
-                  className="p-4 hover:bg-zinc-50 cursor-pointer"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-mono font-semibold text-zinc-700 text-xs">
-                      #{wo.numero}
-                    </span>
-                    <StatusChip estado={wo.estado} />
-                  </div>
-                  <div className="font-medium text-zinc-900 text-sm">{wo.customer.nome}</div>
-                  {wo.vehicle && (
-                    <div className="text-xs text-zinc-500 inline-flex items-center gap-1.5 mt-0.5">
-                      <CarIcon className="w-3 h-3 text-zinc-400" />
-                      <span className="font-mono tracking-wider">{wo.vehicle.matricula}</span>
-                      <span>· {wo.vehicle.marca} {wo.vehicle.modelo}</span>
-                    </div>
-                  )}
-                  <div className="text-xs text-zinc-600 mt-1 truncate">{wo.problema}</div>
-                  <div className="flex items-center justify-between mt-2 text-xs">
-                    <span className="text-zinc-500">{formatDate(wo.dataAbertura)}</span>
-                    <span className="font-bold text-zinc-900">{formatEUR(wo.total)}</span>
-                  </div>
-                </div>
-              ))}
+      {/* ─── Lista ─── */}
+      {view === 'list' && (
+        <div className="card overflow-hidden">
+          {workOrders.length === 0 ? (
+            <div className="p-12 text-center">
+              <ClipboardList className="w-12 h-12 mx-auto text-zinc-300 mb-3" />
+              <p className="text-sm text-zinc-500">
+                {filters.search || filters.estado || filters.customerId
+                  ? 'Nenhuma folha encontrada para este filtro.'
+                  : 'Ainda não há folhas de obra abertas.'}
+              </p>
+              <button onClick={() => setModalOpen(true)} className="btn-primary mt-4">
+                <Plus className="w-4 h-4" /> Abrir primeira folha
+              </button>
             </div>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <table className="hidden md:table w-full text-sm">
+                <thead className="bg-zinc-50 border-b border-zinc-200">
+                  <tr className="text-left text-xs uppercase tracking-wide text-zinc-500">
+                    <th className="px-4 py-3 font-semibold">Nº</th>
+                    <th className="px-4 py-3 font-semibold">Cliente · Viatura</th>
+                    <th className="px-4 py-3 font-semibold">Problema</th>
+                    <th className="px-4 py-3 font-semibold">Estado</th>
+                    <th className="px-4 py-3 font-semibold">Data</th>
+                    <th className="px-4 py-3 font-semibold text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {workOrders.map((wo) => (
+                    <tr
+                      key={wo.id}
+                      onClick={() => router.push(`/folhas/${wo.id}`)}
+                      className="hover:bg-zinc-50 cursor-pointer"
+                    >
+                      <td className="px-4 py-3 font-mono font-semibold text-zinc-700">#{wo.numero}</td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-medium text-zinc-900">{wo.customer.nome}</div>
+                        {wo.vehicle && (
+                          <div className="text-xs text-zinc-500 inline-flex items-center gap-1.5">
+                            <CarIcon className="w-3 h-3 text-zinc-400" />
+                            <span className="font-mono tracking-wider">{wo.vehicle.matricula}</span>
+                            <span>· {wo.vehicle.marca} {wo.vehicle.modelo}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-700 max-w-xs truncate">{wo.problema}</td>
+                      <td className="px-4 py-3"><StatusChip estado={effectiveStatus(wo)} /></td>
+                      <td className="px-4 py-3 text-zinc-500 text-xs whitespace-nowrap">{formatDate(wo.dataAbertura)}</td>
+                      <td className="px-4 py-3 text-right font-bold text-zinc-900 whitespace-nowrap">{formatEUR(wo.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="md:hidden divide-y divide-zinc-100">
+                {workOrders.map((wo) => (
+                  <div key={wo.id} onClick={() => router.push(`/folhas/${wo.id}`)} className="p-4 hover:bg-zinc-50 cursor-pointer">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-mono font-semibold text-zinc-700 text-xs">#{wo.numero}</span>
+                      <StatusChip estado={effectiveStatus(wo)} />
+                    </div>
+                    <div className="font-medium text-zinc-900 text-sm">{wo.customer.nome}</div>
+                    {wo.vehicle && (
+                      <div className="text-xs text-zinc-500 inline-flex items-center gap-1.5 mt-0.5">
+                        <CarIcon className="w-3 h-3 text-zinc-400" />
+                        <span className="font-mono tracking-wider">{wo.vehicle.matricula}</span>
+                        <span>· {wo.vehicle.marca} {wo.vehicle.modelo}</span>
+                      </div>
+                    )}
+                    <div className="text-xs text-zinc-600 mt-1 truncate">{wo.problema}</div>
+                    <div className="flex items-center justify-between mt-2 text-xs">
+                      <span className="text-zinc-500">{formatDate(wo.dataAbertura)}</span>
+                      <span className="font-bold text-zinc-900">{formatEUR(wo.total)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ─── Kanban ─── */}
+      {view === 'kanban' && (
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="overflow-x-auto pb-4 -mx-4 px-4">
+            <div
+              className="flex gap-3"
+              style={{ minWidth: `${KANBAN_COLS.length * 272 + (KANBAN_COLS.length - 1) * 12}px` }}
+            >
+              {KANBAN_COLS.map((status) => {
+                const cards = byStatus[status] ?? []
+                const colTotal = cards.reduce((s, c) => s + c.total, 0)
+                return (
+                  <KanbanColumn
+                    key={status}
+                    status={status}
+                    cards={cards}
+                    colTotal={colTotal}
+                    activeId={activeId}
+                    onAdvance={handleAdvanceStatus}
+                    onCardClick={(id) => router.push(`/folhas/${id}`)}
+                  />
+                )
+              })}
+            </div>
+          </div>
+
+          <DragOverlay dropAnimation={{ duration: 150, easing: 'ease' }}>
+            {activeWO ? (
+              <CardContent wo={activeWO} isDragOverlay />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
 
       <WorkOrderModal
         open={modalOpen}
@@ -219,15 +354,198 @@ export function WorkOrdersClient({
   )
 }
 
+/* ─── Droppable column ─── */
+function KanbanColumn({
+  status,
+  cards,
+  colTotal,
+  activeId,
+  onAdvance,
+  onCardClick,
+}: {
+  status: WorkOrderStatus
+  cards: WorkOrderRow[]
+  colTotal: number
+  activeId: string | null
+  onAdvance: (wo: WorkOrderRow, e: React.MouseEvent) => void
+  onCardClick: (id: string) => void
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: status })
+  const meta = STATUS_META[status]
+
+  return (
+    <div
+      className={cn(
+        'flex flex-col rounded-2xl p-3 w-[268px] flex-shrink-0 transition',
+        KANBAN_COL_BG[status],
+        isOver && KANBAN_COL_OVER[status]
+      )}
+    >
+      <div className="flex items-center gap-2 mb-2 px-1">
+        <span className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0', meta.dot)} />
+        <span className="font-semibold text-sm text-zinc-800 flex-1">{meta.label}</span>
+        <span className="text-xs font-semibold text-zinc-500 bg-white/70 px-1.5 py-0.5 rounded-full">
+          {cards.length}
+        </span>
+      </div>
+      {colTotal > 0 && (
+        <div className="text-xs text-zinc-500 mb-2.5 px-1 font-medium">{formatEUR(colTotal)}</div>
+      )}
+
+      <div
+        ref={setNodeRef}
+        className="space-y-2.5 overflow-y-auto flex-1"
+        style={{ maxHeight: 'calc(100vh - 380px)', minHeight: 80 }}
+      >
+        {cards.length === 0 ? (
+          <div className="flex items-center justify-center h-20 text-xs text-zinc-400">
+            Sem folhas
+          </div>
+        ) : (
+          cards.map((wo) => (
+            <DraggableCard
+              key={wo.id}
+              wo={wo}
+              isBeingDragged={wo.id === activeId}
+              onAdvance={onAdvance}
+              onCardClick={onCardClick}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Draggable card wrapper ─── */
+function DraggableCard({
+  wo,
+  isBeingDragged,
+  onAdvance,
+  onCardClick,
+}: {
+  wo: WorkOrderRow
+  isBeingDragged: boolean
+  onAdvance: (wo: WorkOrderRow, e: React.MouseEvent) => void
+  onCardClick: (id: string) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: wo.id,
+    data: { status: wo.estado },
+  })
+
+  const style = transform
+    ? { transform: CSS.Translate.toString(transform) }
+    : undefined
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn('touch-none', isBeingDragged && 'opacity-30')}
+    >
+      <CardContent
+        wo={wo}
+        onAdvance={onAdvance}
+        onCardClick={onCardClick}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  )
+}
+
+/* ─── Card visual ─── */
+function CardContent({
+  wo,
+  onAdvance,
+  onCardClick,
+  dragHandleProps,
+  isDragOverlay,
+}: {
+  wo: WorkOrderRow
+  onAdvance?: (wo: WorkOrderRow, e: React.MouseEvent) => void
+  onCardClick?: (id: string) => void
+  dragHandleProps?: React.HTMLAttributes<HTMLElement>
+  isDragOverlay?: boolean
+}) {
+  const next = nextStatus(wo.estado)
+  const isPastDue =
+    wo.dataPrevista &&
+    new Date(wo.dataPrevista) < new Date() &&
+    wo.estado !== 'CONCLUIDA' &&
+    wo.estado !== 'FATURADA' &&
+    wo.estado !== 'CANCELADA'
+
+  return (
+    <div
+      className={cn(
+        'bg-white rounded-xl border border-zinc-200 shadow-sm select-none',
+        isDragOverlay
+          ? 'shadow-2xl rotate-1 scale-105 border-emerald-300'
+          : 'hover:border-emerald-400 hover:shadow-md transition group'
+      )}
+    >
+      {/* Drag handle bar */}
+      <div
+        {...dragHandleProps}
+        className="flex items-center justify-center py-1.5 cursor-grab active:cursor-grabbing text-zinc-300 hover:text-zinc-400 transition"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="w-4 h-4" />
+      </div>
+
+      <div
+        className="px-3 pb-3 cursor-pointer"
+        onClick={() => onCardClick?.(wo.id)}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-mono text-xs font-bold text-zinc-500">#{wo.numero}</span>
+          <span className={cn('text-xs', isPastDue ? 'text-red-500 font-semibold' : 'text-zinc-400')}>
+            {isPastDue ? '⚠ ' : ''}{formatDate(wo.dataAbertura)}
+          </span>
+        </div>
+        <div className="font-semibold text-sm text-zinc-900 truncate leading-tight">
+          {wo.customer.nome}
+        </div>
+        {wo.vehicle && (
+          <div className="text-xs text-zinc-500 mt-0.5 flex items-center gap-1">
+            <CarIcon className="w-3 h-3 flex-shrink-0" />
+            <span className="font-mono tracking-wider">{wo.vehicle.matricula}</span>
+            <span className="truncate">· {wo.vehicle.marca}</span>
+          </div>
+        )}
+        <p className="text-xs text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
+          {wo.problema}
+        </p>
+        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-zinc-100">
+          {wo.total > 0 ? (
+            <span className="text-xs font-bold text-zinc-800">{formatEUR(wo.total)}</span>
+          ) : (
+            <span />
+          )}
+          {next && onAdvance && (
+            <button
+              onClick={(e) => onAdvance(wo, e)}
+              className={cn(
+                'flex items-center gap-1 text-xs px-2 py-1 rounded-lg font-medium transition opacity-0 group-hover:opacity-100',
+                STATUS_META[next].chip
+              )}
+              title={`Avançar para ${STATUS_META[next].label}`}
+            >
+              {STATUS_META[next].label}
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function StatusChip({ estado }: { estado: WorkOrderStatus }) {
   const meta = STATUS_META[estado]
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
-        meta.chip
-      )}
-    >
+    <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap', meta.chip)}>
       <span className={cn('w-1.5 h-1.5 rounded-full', meta.dot)} />
       {meta.label}
     </span>

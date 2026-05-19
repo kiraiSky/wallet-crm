@@ -13,7 +13,7 @@ import { formatEUR, formatDateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { TransactionModal } from './TransactionModal'
 import { deleteTransaction, duplicateTransaction } from './actions'
-import type { TransactionRow } from './page'
+import type { TransactionRow, WorkOrderOption } from './page'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string; tipo: string }
 type CategoryOption = { id: string; nome: string; cor: string; icone: string; tipo: 'ENTRADA' | 'SAIDA' }
@@ -22,6 +22,7 @@ interface Props {
   transactions: TransactionRow[]
   accounts: AccountOption[]
   categories: CategoryOption[]
+  workOrderOptions: WorkOrderOption[]
   filters: {
     tipo?: 'ENTRADA' | 'SAIDA'
     accountId?: string
@@ -36,6 +37,7 @@ export function TransactionsClient({
   transactions,
   accounts,
   categories,
+  workOrderOptions,
   filters,
   kpis,
   openNew,
@@ -307,6 +309,7 @@ export function TransactionsClient({
         transaction={editing}
         accounts={accounts}
         categories={categories}
+        workOrderOptions={workOrderOptions}
       />
     </>
   )

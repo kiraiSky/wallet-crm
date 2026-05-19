@@ -15,10 +15,21 @@ export type TransactionRow = {
   observacao: string | null
   accountId: string
   categoryId: string
+  workOrderId: string | null
+  customerId: string | null
   account: { nome: string; cor: string }
   category: { nome: string; cor: string; icone: string }
   user: { nome: string }
+  workOrder: { numero: number; customer: { nome: string } } | null
   hasAttachment: boolean
+}
+
+export type WorkOrderOption = {
+  id: string
+  numero: number
+  customerNome: string
+  problema: string
+  customerId: string
 }
 
 export default async function LancamentosPage({
@@ -46,7 +57,7 @@ export default async function LancamentosPage({
     }),
   }
 
-  const [transactions, accounts, categories, agg] = await Promise.all([
+  const [transactions, accounts, categories, agg, workOrders] = await Promise.all([
     prisma.transaction.findMany({
       where,
       orderBy: { data: 'desc' },
@@ -55,6 +66,7 @@ export default async function LancamentosPage({
         account: { select: { nome: true, cor: true } },
         category: { select: { nome: true, cor: true, icone: true } },
         user: { select: { nome: true } },
+        workOrder: { select: { numero: true, customer: { select: { nome: true } } } },
         _count: { select: { attachments: true } },
       },
     }),
@@ -74,6 +86,18 @@ export default async function LancamentosPage({
       _sum: { valor: true },
       _count: true,
     }),
+    prisma.workOrder.findMany({
+      where: { estado: { notIn: ['CANCELADA'] } },
+      orderBy: { numero: 'desc' },
+      take: 200,
+      select: {
+        id: true,
+        numero: true,
+        problema: true,
+        customerId: true,
+        customer: { select: { nome: true } },
+      },
+    }),
   ])
 
   const rows: TransactionRow[] = transactions.map((t) => ({
@@ -85,10 +109,21 @@ export default async function LancamentosPage({
     observacao: t.observacao,
     accountId: t.accountId,
     categoryId: t.categoryId,
+    workOrderId: t.workOrderId,
+    customerId: t.customerId,
     account: t.account,
     category: t.category,
     user: t.user,
+    workOrder: t.workOrder,
     hasAttachment: t._count.attachments > 0,
+  }))
+
+  const workOrderOptions: WorkOrderOption[] = workOrders.map((wo) => ({
+    id: wo.id,
+    numero: wo.numero,
+    customerNome: wo.customer.nome,
+    problema: wo.problema,
+    customerId: wo.customerId,
   }))
 
   const totalEntradas = Number(agg.find((a) => a.tipo === 'ENTRADA')?._sum.valor ?? 0)
@@ -100,6 +135,7 @@ export default async function LancamentosPage({
       transactions={rows}
       accounts={accounts}
       categories={categories}
+      workOrderOptions={workOrderOptions}
       filters={{
         tipo: tipoFilter,
         accountId: accountFilter,

@@ -9,13 +9,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Usuário do sistema. Sem auth por agora — usamos um OWNER padrão criado no seed.
+// Utilizador do sistema (auth via NextAuth Credentials).
 model User {
   id           String        @id @default(cuid())
   nome         String
   email        String        @unique
-  role         UserRole      @default(OWNER)
+  senha        String        // hash bcrypt
+  role         UserRole      @default(EMPLOYEE)
+  active       Boolean       @default(true)
+  lastLoginAt  DateTime?     @map("last_login_at")
   createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
   transactions Transaction[]
 
   @@map("users")
@@ -78,9 +82,13 @@ model Transaction {
   accountId   String                    @map("account_id")
   categoryId  String                    @map("category_id")
   userId      String                    @map("user_id")
+  workOrderId String?                   @map("work_order_id")
+  customerId  String?                   @map("customer_id")
   account     Account                   @relation(fields: [accountId], references: [id], onDelete: Restrict)
   category    Category                  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   user        User                      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  workOrder   WorkOrder?                @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  customer    Customer?                 @relation(fields: [customerId], references: [id], onDelete: SetNull)
   attachments TransactionAttachment[]
   createdAt   DateTime                  @default(now()) @map("created_at")
   updatedAt   DateTime                  @updatedAt @map("updated_at")
@@ -89,6 +97,8 @@ model Transaction {
   @@index([tipo, data])
   @@index([accountId])
   @@index([categoryId])
+  @@index([workOrderId])
+  @@index([customerId])
   @@map("transactions")
 }
 
@@ -107,8 +117,9 @@ model Customer {
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
-  vehicles    Vehicle[]
-  workOrders  WorkOrder[]
+  vehicles     Vehicle[]
+  workOrders   WorkOrder[]
+  transactions Transaction[]
 
   @@index([nome])
   @@index([telefone])
@@ -175,6 +186,7 @@ model WorkOrder {
   customer      Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
   vehicle       Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   items         WorkOrderItem[]
+  transactions  Transaction[]
 
   @@index([estado])
   @@index([customerId])

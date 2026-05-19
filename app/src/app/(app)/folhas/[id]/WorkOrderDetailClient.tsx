@@ -5,25 +5,34 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Pencil, Trash2, Plus, Package, Wrench, Car,
-  ChevronRight, CheckCircle2,
+  ChevronRight, CheckCircle2, TrendingUp, TrendingDown, Paperclip,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatEUR, formatDate } from '@/lib/format'
+import { formatEUR, formatDate, formatDateTime } from '@/lib/format'
+import { colorIconBg } from '@/lib/colors'
+import { DynamicIcon } from '@/components/DynamicIcon'
 import { STATUS_LIST, STATUS_META, nextStatus, type WorkOrderStatus } from '../status'
 import { WorkOrderModal, type WorkOrderForModal } from '../WorkOrderModal'
 import { ItemModal } from './ItemModal'
+import { TransactionModal } from '../../lancamentos/TransactionModal'
 import {
   deleteWorkOrder,
   changeStatus,
   deleteWorkOrderItem,
 } from '../actions'
-import type { WorkOrderDetail, WorkOrderItemRow } from './page'
+import type { WorkOrderDetail, WorkOrderItemRow, WorkOrderTransactionRow } from './page'
+
+type AccountOption = { id: string; nome: string; cor: string; icone: string }
+type CategoryOption = { id: string; nome: string; tipo: 'ENTRADA' | 'SAIDA'; cor: string; icone: string }
 
 interface Props {
   workOrder: WorkOrderDetail
+  transactions: WorkOrderTransactionRow[]
+  accounts: AccountOption[]
+  categories: CategoryOption[]
 }
 
-export function WorkOrderDetailClient({ workOrder }: Props) {
+export function WorkOrderDetailClient({ workOrder, transactions, accounts, categories }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [editOpen, setEditOpen] = useState(false)
@@ -31,6 +40,17 @@ export function WorkOrderDetailClient({ workOrder }: Props) {
   const [editingItem, setEditingItem] = useState<WorkOrderItemRow | null>(null)
   const [itemTipoPadrao, setItemTipoPadrao] = useState<'PECA' | 'MAO_OBRA'>('PECA')
   const [statusOpen, setStatusOpen] = useState(false)
+  const [txModalOpen, setTxModalOpen] = useState(false)
+  const [txModalTipo, setTxModalTipo] = useState<'ENTRADA' | 'SAIDA'>('SAIDA')
+  const [editingTx, setEditingTx] = useState<WorkOrderTransactionRow | null>(null)
+
+  const workOrderOption = [{
+    id: workOrder.id,
+    numero: workOrder.numero,
+    customerNome: workOrder.customer.nome,
+    problema: workOrder.problema,
+    customerId: workOrder.customer.id,
+  }]
 
   const woForModal: WorkOrderForModal = {
     id: workOrder.id,
@@ -285,6 +305,81 @@ export function WorkOrderDetailClient({ workOrder }: Props) {
               </div>
             </div>
           </div>
+
+          {/* Movimentos financeiros */}
+          <div className="card overflow-hidden">
+            <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-zinc-900">Movimentos</h3>
+                <div className="text-xs text-zinc-500 mt-0.5">
+                  {transactions.length} {transactions.length === 1 ? 'lançamento' : 'lançamentos'} associados
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setTxModalTipo('ENTRADA'); setEditingTx(null); setTxModalOpen(true) }}
+                  className="btn-secondary text-emerald-600 hover:bg-emerald-50 text-sm"
+                >
+                  <TrendingUp className="w-4 h-4" /> Receita
+                </button>
+                <button
+                  onClick={() => { setTxModalTipo('SAIDA'); setEditingTx(null); setTxModalOpen(true) }}
+                  className="btn-primary text-sm"
+                >
+                  <TrendingDown className="w-4 h-4" /> Despesa
+                </button>
+              </div>
+            </div>
+
+            {transactions.length === 0 ? (
+              <div className="p-10 text-center text-sm text-zinc-400">
+                Sem movimentos financeiros associados a esta folha.
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-100">
+                {transactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-zinc-50 cursor-pointer"
+                    onClick={() => { setEditingTx(tx); setTxModalTipo(tx.tipo); setTxModalOpen(true) }}
+                  >
+                    <div className={cn(
+                      'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+                      colorIconBg[tx.category.cor] || colorIconBg.violet
+                    )}>
+                      <DynamicIcon name={tx.category.icone} className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-zinc-900 flex items-center gap-1.5">
+                        {tx.descricao}
+                        {tx.hasAttachment && <Paperclip className="w-3 h-3 text-zinc-400" />}
+                      </div>
+                      <div className="text-xs text-zinc-500">
+                        {tx.category.nome} · {tx.account.nome} · {formatDateTime(tx.data)}
+                      </div>
+                    </div>
+                    <div className={cn(
+                      'text-sm font-bold whitespace-nowrap',
+                      tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'
+                    )}>
+                      {tx.tipo === 'ENTRADA' ? '+ ' : '- '}{formatEUR(tx.valor)}
+                    </div>
+                  </div>
+                ))}
+                {/* Resumo */}
+                {transactions.length > 0 && (() => {
+                  const entradas = transactions.filter(t => t.tipo === 'ENTRADA').reduce((s, t) => s + t.valor, 0)
+                  const saidas = transactions.filter(t => t.tipo === 'SAIDA').reduce((s, t) => s + t.valor, 0)
+                  return (
+                    <div className="px-5 py-3 bg-zinc-50 flex items-center justify-end gap-6 text-sm">
+                      <span className="text-zinc-500">Entradas: <strong className="text-emerald-600">+{formatEUR(entradas)}</strong></span>
+                      <span className="text-zinc-500">Saídas: <strong className="text-red-500">-{formatEUR(saidas)}</strong></span>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -303,6 +398,16 @@ export function WorkOrderDetailClient({ workOrder }: Props) {
         workOrderId={workOrder.id}
         item={editingItem}
         defaultTipo={itemTipoPadrao}
+      />
+      <TransactionModal
+        open={txModalOpen}
+        onClose={() => { setTxModalOpen(false); setEditingTx(null) }}
+        tipo={txModalTipo}
+        transaction={editingTx}
+        accounts={accounts}
+        categories={categories}
+        workOrderOptions={workOrderOption}
+        defaultWorkOrderId={workOrder.id}
       />
     </>
   )

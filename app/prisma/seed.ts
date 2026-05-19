@@ -1,19 +1,22 @@
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  // Utilizador OWNER por defeito (enquanto não há auth)
+  // Utilizador OWNER por defeito
+  const senhaHash = await bcrypt.hash('admin123', 10)
   const owner = await prisma.user.upsert({
     where: { email: 'joao@carteira.app' },
-    update: {},
+    update: { senha: senhaHash, role: 'OWNER', active: true },
     create: {
       nome: 'João Cunha',
       email: 'joao@carteira.app',
+      senha: senhaHash,
       role: 'OWNER',
     },
   })
-  console.log('✓ OWNER:', owner.email)
+  console.log('✓ OWNER:', owner.email, '(senha: admin123)')
 
   // Conta inicial: apenas a Carteira
   await prisma.account.upsert({

@@ -5,21 +5,24 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Phone, Mail, Hash, MapPin, Cake, Plus, Pencil, Trash2,
-  Car, ClipboardList,
+  Car, ClipboardList, Paperclip,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatDate, formatEUR } from '@/lib/format'
+import { formatDate, formatDateTime, formatEUR } from '@/lib/format'
+import { colorIconBg } from '@/lib/colors'
+import { DynamicIcon } from '@/components/DynamicIcon'
 import { CustomerModal, type CustomerForModal } from '../CustomerModal'
 import { VehicleModal } from './VehicleModal'
 import { deleteCustomer, deleteVehicle } from '../actions'
 import { STATUS_META } from '../../folhas/status'
-import type { CustomerDetail, VehicleRow, CustomerWorkOrderRow } from './page'
+import type { CustomerDetail, VehicleRow, CustomerWorkOrderRow, CustomerTransactionRow } from './page'
 import type { CustomerTag } from '../page'
 
 interface Props {
   customer: CustomerDetail
   vehicles: VehicleRow[]
   workOrders: CustomerWorkOrderRow[]
+  transactions: CustomerTransactionRow[]
 }
 
 const TAG_META: Record<CustomerTag, { label: string; chip: string }> = {
@@ -29,7 +32,7 @@ const TAG_META: Record<CustomerTag, { label: string; chip: string }> = {
   INATIVO: { label: 'Inativo', chip: 'bg-zinc-100 text-zinc-600' },
 }
 
-export function CustomerDetailClient({ customer, vehicles, workOrders }: Props) {
+export function CustomerDetailClient({ customer, vehicles, workOrders, transactions }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [editOpen, setEditOpen] = useState(false)
@@ -276,6 +279,74 @@ export function CustomerDetailClient({ customer, vehicles, workOrders }: Props) 
                     </Link>
                   )
                 })}
+              </div>
+            )}
+          </div>
+
+          {/* Histórico financeiro */}
+          <div className="card overflow-hidden">
+            <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-zinc-900">
+                  Histórico financeiro{' '}
+                  <span className="text-zinc-400 font-normal">({transactions.length})</span>
+                </h2>
+                {transactions.length > 0 && (() => {
+                  const entradas = transactions.filter(t => t.tipo === 'ENTRADA').reduce((s, t) => s + t.valor, 0)
+                  const saidas = transactions.filter(t => t.tipo === 'SAIDA').reduce((s, t) => s + t.valor, 0)
+                  return (
+                    <div className="text-xs text-zinc-500 mt-0.5 flex gap-3">
+                      <span>Entradas: <strong className="text-emerald-600">+{formatEUR(entradas)}</strong></span>
+                      <span>Saídas: <strong className="text-red-500">-{formatEUR(saidas)}</strong></span>
+                    </div>
+                  )
+                })()}
+              </div>
+              <Link
+                href={`/lancamentos`}
+                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+              >
+                Ver em lançamentos →
+              </Link>
+            </div>
+
+            {transactions.length === 0 ? (
+              <div className="p-10 text-center text-sm text-zinc-400">
+                Sem movimentos financeiros para este cliente.
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-100 max-h-80 overflow-y-auto">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center gap-3 px-5 py-3 hover:bg-zinc-50">
+                    <div className={cn(
+                      'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+                      colorIconBg[tx.category.cor] || colorIconBg.violet
+                    )}>
+                      <DynamicIcon name={tx.category.icone} className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-zinc-900 flex items-center gap-1.5">
+                        {tx.descricao}
+                        {tx.hasAttachment && <Paperclip className="w-3 h-3 text-zinc-400" />}
+                      </div>
+                      <div className="text-xs text-zinc-500">
+                        {tx.category.nome} · {tx.account.nome}
+                        {tx.workOrder && (
+                          <> · <Link href={`/folhas/${tx.workOrderId}`} className="hover:text-emerald-600">
+                            Folha #{tx.workOrder.numero}
+                          </Link></>
+                        )}
+                        {' · '}{formatDateTime(tx.data)}
+                      </div>
+                    </div>
+                    <div className={cn(
+                      'text-sm font-bold whitespace-nowrap',
+                      tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'
+                    )}>
+                      {tx.tipo === 'ENTRADA' ? '+ ' : '- '}{formatEUR(tx.valor)}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

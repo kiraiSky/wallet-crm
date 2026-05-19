@@ -16,6 +16,23 @@ export type CustomerWorkOrderRow = {
   vehicle: { matricula: string; marca: string; modelo: string } | null
 }
 
+export type CustomerTransactionRow = {
+  id: string
+  tipo: 'ENTRADA' | 'SAIDA'
+  valor: number
+  descricao: string
+  data: string
+  observacao: string | null
+  accountId: string
+  categoryId: string
+  workOrderId: string | null
+  customerId: string | null
+  account: { nome: string }
+  category: { nome: string; cor: string; icone: string }
+  workOrder: { numero: number } | null
+  hasAttachment: boolean
+}
+
 export type CustomerDetail = {
   id: string
   nome: string
@@ -46,7 +63,7 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [customer, workOrders] = await Promise.all([
+  const [customer, workOrders, txList] = await Promise.all([
     prisma.customer.findUnique({
       where: { id },
       include: { vehicles: { orderBy: { createdAt: 'desc' } } },
@@ -57,6 +74,17 @@ export default async function CustomerDetailPage({
       take: 50,
       include: {
         vehicle: { select: { matricula: true, marca: true, modelo: true } },
+      },
+    }),
+    prisma.transaction.findMany({
+      where: { customerId: id },
+      orderBy: { data: 'desc' },
+      take: 100,
+      include: {
+        account: { select: { nome: true } },
+        category: { select: { nome: true, cor: true, icone: true } },
+        workOrder: { select: { numero: true } },
+        _count: { select: { attachments: true } },
       },
     }),
   ])
@@ -96,11 +124,29 @@ export default async function CustomerDetailPage({
     vehicle: wo.vehicle,
   }))
 
+  const transactions: CustomerTransactionRow[] = txList.map((t) => ({
+    id: t.id,
+    tipo: t.tipo as 'ENTRADA' | 'SAIDA',
+    valor: Number(t.valor),
+    descricao: t.descricao,
+    data: t.data.toISOString(),
+    observacao: t.observacao,
+    accountId: t.accountId,
+    categoryId: t.categoryId,
+    workOrderId: t.workOrderId,
+    customerId: t.customerId,
+    account: t.account,
+    category: t.category,
+    workOrder: t.workOrder,
+    hasAttachment: t._count.attachments > 0,
+  }))
+
   return (
     <CustomerDetailClient
       customer={detail}
       vehicles={vehicles}
       workOrders={workOrderRows}
+      transactions={transactions}
     />
   )
 }

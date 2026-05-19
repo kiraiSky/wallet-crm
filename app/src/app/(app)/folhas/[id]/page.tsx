@@ -14,6 +14,22 @@ export type WorkOrderItemRow = {
   total: number
 }
 
+export type WorkOrderTransactionRow = {
+  id: string
+  tipo: 'ENTRADA' | 'SAIDA'
+  valor: number
+  descricao: string
+  data: string
+  observacao: string | null
+  accountId: string
+  categoryId: string
+  workOrderId: string | null
+  customerId: string | null
+  account: { nome: string }
+  category: { nome: string; cor: string; icone: string }
+  hasAttachment: boolean
+}
+
 export type WorkOrderDetail = {
   id: string
   numero: number
@@ -48,14 +64,35 @@ export default async function WorkOrderDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const wo = await prisma.workOrder.findUnique({
-    where: { id },
-    include: {
-      customer: { select: { id: true, nome: true, telefone: true } },
-      vehicle: true,
-      items: { orderBy: { createdAt: 'asc' } },
-    },
-  })
+  const [wo, txList, accounts, categories] = await Promise.all([
+    prisma.workOrder.findUnique({
+      where: { id },
+      include: {
+        customer: { select: { id: true, nome: true, telefone: true } },
+        vehicle: true,
+        items: { orderBy: { createdAt: 'asc' } },
+      },
+    }),
+    prisma.transaction.findMany({
+      where: { workOrderId: id },
+      orderBy: { data: 'desc' },
+      include: {
+        account: { select: { nome: true } },
+        category: { select: { nome: true, cor: true, icone: true } },
+        _count: { select: { attachments: true } },
+      },
+    }),
+    prisma.account.findMany({
+      where: { archived: false },
+      orderBy: { nome: 'asc' },
+      select: { id: true, nome: true, cor: true, icone: true },
+    }),
+    prisma.category.findMany({
+      where: { archived: false },
+      orderBy: { nome: 'asc' },
+      select: { id: true, nome: true, tipo: true, cor: true, icone: true },
+    }),
+  ])
   if (!wo) notFound()
 
   const detail: WorkOrderDetail = {
@@ -95,5 +132,28 @@ export default async function WorkOrderDetailPage({
     })),
   }
 
-  return <WorkOrderDetailClient workOrder={detail} />
+  const transactions: WorkOrderTransactionRow[] = txList.map((t) => ({
+    id: t.id,
+    tipo: t.tipo as 'ENTRADA' | 'SAIDA',
+    valor: Number(t.valor),
+    descricao: t.descricao,
+    data: t.data.toISOString(),
+    observacao: t.observacao,
+    accountId: t.accountId,
+    categoryId: t.categoryId,
+    workOrderId: t.workOrderId,
+    customerId: t.customerId,
+    account: t.account,
+    category: t.category,
+    hasAttachment: t._count.attachments > 0,
+  }))
+
+  return (
+    <WorkOrderDetailClient
+      workOrder={detail}
+      transactions={transactions}
+      accounts={accounts}
+      categories={categories.map((c) => ({ ...c, tipo: c.tipo as 'ENTRADA' | 'SAIDA' }))}
+    />
+  )
 }
