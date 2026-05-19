@@ -1,0 +1,43 @@
+# Env / secrets
+.env
+.env.local
+*.local
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Uploads (dados do app)
+uploads/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Claude/agent local config
+.claude/
+
+# Docker (temporariamente fora — voltam na fase de deploy)
+docker-compose.yml
+docker-compose.dev.yml
+Caddyfile
+app/Dockerfile
+app/.dockerignore
+/.env.example
+

@@ -1,0 +1,166 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { Plus, TrendingUp, TrendingDown, Pencil, Trash2 } from 'lucide-react'
+import { DynamicIcon } from '@/components/DynamicIcon'
+import { colorIconBg } from '@/lib/colors'
+import { formatBRL } from '@/lib/format'
+import { CategoryModal } from './CategoryModal'
+import { deleteCategory } from './actions'
+import type { CategoryWithStats } from './page'
+
+export function CategoriesClient({ categories }: { categories: CategoryWithStats[] }) {
+  const router = useRouter()
+  const [editing, setEditing] = useState<CategoryWithStats | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [defaultTipo, setDefaultTipo] = useState<'ENTRADA' | 'SAIDA'>('SAIDA')
+  const [, startTransition] = useTransition()
+
+  const receitas = categories.filter((c) => c.tipo === 'ENTRADA')
+  const despesas = categories.filter((c) => c.tipo === 'SAIDA')
+
+  function openNew(tipo: 'ENTRADA' | 'SAIDA') {
+    setDefaultTipo(tipo)
+    setEditing(null)
+    setModalOpen(true)
+  }
+
+  function openEdit(cat: CategoryWithStats) {
+    setEditing(cat)
+    setModalOpen(true)
+  }
+
+  function handleDelete(cat: CategoryWithStats) {
+    if (!confirm(`Excluir a categoria "${cat.nome}"?${cat.count > 0 ? `\nHá ${cat.count} lançamento(s) vinculado(s). A categoria será arquivada.` : ''}`)) return
+    startTransition(async () => {
+      await deleteCategory(cat.id)
+      router.refresh()
+    })
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900">Categorias</h1>
+          <p className="text-zinc-500 text-sm">Organize seus lançamentos com categorias customizadas.</p>
+        </div>
+        <button onClick={() => openNew('SAIDA')} className="btn-primary">
+          <Plus className="w-4 h-4" />
+          <span>Nova categoria</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <CategoryColumn
+          title="Receitas"
+          tipo="ENTRADA"
+          Icon={TrendingUp}
+          accent="bg-emerald-100 text-emerald-600"
+          items={receitas}
+          onAdd={() => openNew('ENTRADA')}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+        />
+        <CategoryColumn
+          title="Despesas"
+          tipo="SAIDA"
+          Icon={TrendingDown}
+          accent="bg-red-100 text-red-600"
+          items={despesas}
+          onAdd={() => openNew('SAIDA')}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+        />
+      </div>
+
+      <CategoryModal
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false)
+          setEditing(null)
+        }}
+        category={editing}
+        defaultTipo={defaultTipo}
+      />
+    </>
+  )
+}
+
+function CategoryColumn({
+  title,
+  tipo,
+  Icon,
+  accent,
+  items,
+  onAdd,
+  onEdit,
+  onDelete,
+}: {
+  title: string
+  tipo: 'ENTRADA' | 'SAIDA'
+  Icon: React.ComponentType<{ className?: string }>
+  accent: string
+  items: CategoryWithStats[]
+  onAdd: () => void
+  onEdit: (c: CategoryWithStats) => void
+  onDelete: (c: CategoryWithStats) => void
+}) {
+  return (
+    <div className="card overflow-hidden">
+      <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg ${accent} flex items-center justify-center`}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <h3 className="font-semibold text-zinc-900">
+            {title} <span className="text-zinc-400 font-normal">({items.length})</span>
+          </h3>
+        </div>
+        <button
+          onClick={onAdd}
+          className="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1"
+        >
+          <Plus className="w-3.5 h-3.5" /> Adicionar
+        </button>
+      </div>
+      <div className="divide-y divide-zinc-100">
+        {items.length === 0 && (
+          <div className="p-8 text-center text-sm text-zinc-400">
+            Nenhuma categoria cadastrada
+          </div>
+        )}
+        {items.map((cat) => (
+          <div key={cat.id} className="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div className={`w-9 h-9 rounded-lg ${colorIconBg[cat.cor] || colorIconBg.violet} flex items-center justify-center`}>
+              <DynamicIcon name={cat.icone} className="w-4 h-4" />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-zinc-900">{cat.nome}</div>
+              <div className="text-xs text-zinc-500">
+                {cat.count} {cat.count === 1 ? 'lançamento' : 'lançamentos'} · {formatBRL(cat.total)}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button
+                onClick={() => onEdit(cat)}
+                className="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"
+                aria-label="Editar"
+              >
+                <Pencil className="w-3.5 h-3.5 mx-auto" />
+              </button>
+              <button
+                onClick={() => onDelete(cat)}
+                className="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"
+                aria-label="Excluir"
+              >
+                <Trash2 className="w-3.5 h-3.5 mx-auto" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marcola Balancete · Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="min-h-screen bg-zinc-50">
+
+  <!-- TOP NAVBAR -->
+  <nav class="bg-white border-b border-zinc-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo + nav -->
+        <div class="flex items-center gap-8">
+          <a href="dashboard.html" class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+              <i data-lucide="wallet" class="w-5 h-5 text-white"></i>
+            </div>
+            <span class="font-bold text-zinc-900 hidden sm:inline">Marcola</span>
+          </a>
+          <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-medium text-sm">Dashboard</a>
+            <a href="transactions.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Lançamentos</a>
+            <a href="crm.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">CRM</a>
+            <a href="accounts.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Caixas</a>
+            <a href="categories.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Categorias</a>
+            <a href="reports.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Relatórios</a>
+            <a href="users.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Usuários</a>
+          </div>
+        </div>
+        <!-- Actions -->
+        <div class="flex items-center gap-3">
+          <a href="transactions.html?new=1" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg shadow-sm shadow-emerald-500/20 transition">
+            <i data-lucide="plus" class="w-4 h-4"></i> Novo lançamento
+          </a>
+          <div class="relative">
+            <button onclick="toggleDropdown(event, 'notifMenu')" class="relative w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center hover:bg-zinc-200">
+              <i data-lucide="bell" class="w-4 h-4 text-zinc-600"></i>
+              <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+            </button>
+            <div id="notifMenu" class="hidden absolute right-0 top-full mt-2 bg-white border border-zinc-200 rounded-xl shadow-lg w-80 z-40">
+              <div class="p-3 border-b border-zinc-100 flex items-center justify-between">
+                <h4 class="font-semibold text-zinc-900 text-sm">Notificações</h4>
+                <button class="text-xs text-emerald-600 hover:text-emerald-700 font-medium">Marcar todas como lidas</button>
+              </div>
+              <div class="max-h-80 overflow-y-auto">
+                <div class="flex items-start gap-3 p-3 hover:bg-zinc-50 cursor-pointer border-l-2 border-emerald-500 bg-emerald-50/30">
+                  <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center flex-shrink-0"><i data-lucide="alert-circle" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm text-zinc-900"><span class="font-semibold">Paulo Gomes</span> sem retorno há 120 dias</div>
+                    <div class="text-[11px] text-zinc-500 mt-0.5">há 2 horas</div>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 hover:bg-zinc-50 cursor-pointer">
+                  <div class="w-8 h-8 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0"><i data-lucide="cake" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm text-zinc-900">🎂 Aniversário de <span class="font-semibold">Mariana Oliveira</span> amanhã</div>
+                    <div class="text-[11px] text-zinc-500 mt-0.5">há 5 horas</div>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 hover:bg-zinc-50 cursor-pointer">
+                  <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0"><i data-lucide="trending-up" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm text-zinc-900">Mês fechou <span class="font-semibold text-emerald-600">+12%</span> em relação a abril</div>
+                    <div class="text-[11px] text-zinc-500 mt-0.5">ontem</div>
+                  </div>
+                </div>
+              </div>
+              <div class="p-2 border-t border-zinc-100 text-center">
+                <button class="text-xs text-emerald-600 hover:text-emerald-700 font-medium">Ver todas →</button>
+              </div>
+            </div>
+          </div>
+          <div class="relative">
+            <button onclick="toggleDropdown(event, 'avatarMenu')" class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-zinc-100">
+              <div class="w-7 h-7 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">JC</div>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-zinc-500"></i>
+            </button>
+            <div id="avatarMenu" class="hidden absolute right-0 top-full mt-2 bg-white border border-zinc-200 rounded-xl shadow-lg w-56 py-1 z-40">
+              <div class="px-3 py-2 border-b border-zinc-100">
+                <div class="text-sm font-semibold text-zinc-900">João Cunha</div>
+                <div class="text-xs text-zinc-500">joao@marcola.com</div>
+                <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 text-[10px] font-semibold"><i data-lucide="crown" class="w-2.5 h-2.5"></i> OWNER</span>
+              </div>
+              <a href="#" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-50 text-sm text-zinc-700"><i data-lucide="user" class="w-4 h-4"></i> Meu perfil</a>
+              <a href="users.html" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-50 text-sm text-zinc-700"><i data-lucide="users" class="w-4 h-4"></i> Gerenciar usuários</a>
+              <a href="#" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-50 text-sm text-zinc-700"><i data-lucide="settings" class="w-4 h-4"></i> Configurações</a>
+              <a href="#" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-50 text-sm text-zinc-700"><i data-lucide="plug" class="w-4 h-4"></i> Integrações <span class="ml-auto text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded-full font-bold">Moloni</span></a>
+              <div class="border-t border-zinc-100 my-1"></div>
+              <a href="index.html" class="flex items-center gap-2 px-3 py-2 hover:bg-red-50 text-sm text-red-600"><i data-lucide="log-out" class="w-4 h-4"></i> Sair</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">
+
+    <!-- HEADER -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-zinc-900">Olá, João 👋</h1>
+        <p class="text-zinc-500 text-sm">Aqui está o resumo do caixa da oficina.</p>
+      </div>
+      <!-- Period selector -->
+      <div class="inline-flex items-center gap-1 bg-white border border-zinc-200 rounded-lg p-1 shadow-sm">
+        <button class="px-3 py-1.5 text-xs font-medium text-zinc-600 rounded">Hoje</button>
+        <button class="px-3 py-1.5 text-xs font-medium text-zinc-600 rounded">7 dias</button>
+        <button class="px-3 py-1.5 text-xs font-semibold text-white bg-zinc-900 rounded">31 dias</button>
+        <button class="px-3 py-1.5 text-xs font-medium text-zinc-600 rounded">Ano</button>
+        <button class="px-3 py-1.5 text-xs font-medium text-zinc-600 rounded inline-flex items-center gap-1">
+          <i data-lucide="calendar" class="w-3 h-3"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- CAIXAS -->
+    <div class="mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-zinc-700 uppercase tracking-wide">Caixas</h2>
+        <a href="#" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium">Gerenciar →</a>
+      </div>
+      <div class="flex gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <!-- Card 1 -->
+        <div class="flex-shrink-0 w-56 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-4 text-white shadow-lg shadow-emerald-500/20">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+              <i data-lucide="banknote" class="w-4 h-4"></i>
+            </div>
+            <span class="text-xs text-white/70">Dinheiro</span>
+          </div>
+          <div class="text-xs text-white/80 mb-0.5">Caixa físico</div>
+          <div class="text-xl font-bold">R$ 4.320,00</div>
+        </div>
+        <!-- Card 2 -->
+        <div class="flex-shrink-0 w-56 bg-gradient-to-br from-violet-500 to-violet-600 rounded-2xl p-4 text-white shadow-lg shadow-violet-500/20">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+              <i data-lucide="landmark" class="w-4 h-4"></i>
+            </div>
+            <span class="text-xs text-white/70">Banco</span>
+          </div>
+          <div class="text-xs text-white/80 mb-0.5">Conta Itaú</div>
+          <div class="text-xl font-bold">R$ 18.750,40</div>
+        </div>
+        <!-- Card 3 -->
+        <div class="flex-shrink-0 w-56 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 text-white shadow-lg shadow-orange-500/20">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+              <i data-lucide="smartphone" class="w-4 h-4"></i>
+            </div>
+            <span class="text-xs text-white/70">Pix</span>
+          </div>
+          <div class="text-xs text-white/80 mb-0.5">Carteira Pix</div>
+          <div class="text-xl font-bold">R$ 2.180,55</div>
+        </div>
+        <!-- Card 4 -->
+        <div class="flex-shrink-0 w-56 bg-gradient-to-br from-sky-500 to-sky-600 rounded-2xl p-4 text-white shadow-lg shadow-sky-500/20">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+              <i data-lucide="credit-card" class="w-4 h-4"></i>
+            </div>
+            <span class="text-xs text-white/70">Banco</span>
+          </div>
+          <div class="text-xs text-white/80 mb-0.5">Bradesco</div>
+          <div class="text-xl font-bold">R$ 7.105,20</div>
+        </div>
+        <!-- Add -->
+        <a href="accounts.html?new=1" class="flex-shrink-0 w-56 border-2 border-dashed border-zinc-300 rounded-2xl p-4 text-zinc-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50/50 transition flex items-center justify-center gap-2 font-medium text-sm">
+          <i data-lucide="plus" class="w-4 h-4"></i> Adicionar caixa
+        </a>
+      </div>
+    </div>
+
+    <!-- GRID DE WIDGETS -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+
+      <!-- DASHBOARD GAUGES -->
+      <div class="bg-white rounded-2xl border border-zinc-200 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-zinc-900">Resumo do mês</h3>
+          <button class="text-zinc-400 hover:text-zinc-600"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div>
+            <canvas id="gaugeBalance" width="90" height="90"></canvas>
+            <div class="text-[10px] text-zinc-500 uppercase tracking-wide mt-1 font-medium">Saldo</div>
+            <div class="text-sm font-bold text-zinc-900">R$ 32k</div>
+          </div>
+          <div>
+            <canvas id="gaugeIncome" width="90" height="90"></canvas>
+            <div class="text-[10px] text-zinc-500 uppercase tracking-wide mt-1 font-medium">Entradas</div>
+            <div class="text-sm font-bold text-emerald-600">R$ 18,4k</div>
+          </div>
+          <div>
+            <canvas id="gaugeExpense" width="90" height="90"></canvas>
+            <div class="text-[10px] text-zinc-500 uppercase tracking-wide mt-1 font-medium">Saídas</div>
+            <div class="text-sm font-bold text-red-500">R$ 9,2k</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BALANCE TREND -->
+      <div class="bg-white rounded-2xl border border-zinc-200 p-5">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-zinc-900">Evolução do saldo</h3>
+          <span class="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full font-semibold">+12%</span>
+        </div>
+        <div class="text-2xl font-bold text-zinc-900 mb-0.5">R$ 32.356,15</div>
+        <div class="text-xs text-zinc-500 mb-3">vs. período anterior</div>
+        <div class="h-24"><canvas id="balanceChart"></canvas></div>
+      </div>
+
+      <!-- CASH FLOW -->
+      <div class="bg-white rounded-2xl border border-zinc-200 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-zinc-900">Fluxo de caixa</h3>
+          <span class="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full font-semibold">+8%</span>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="text-zinc-500">Entradas</span>
+              <span class="font-semibold text-emerald-600">+ R$ 18.400,00</span>
+            </div>
+            <div class="h-2 bg-zinc-100 rounded-full overflow-hidden">
+              <div class="h-full bg-emerald-500 rounded-full" style="width: 100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="text-zinc-500">Saídas</span>
+              <span class="font-semibold text-red-500">- R$ 9.243,80</span>
+            </div>
+            <div class="h-2 bg-zinc-100 rounded-full overflow-hidden">
+              <div class="h-full bg-red-500 rounded-full" style="width: 50%"></div>
+            </div>
+          </div>
+          <div class="pt-3 border-t border-zinc-100">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-zinc-500">Resultado líquido</span>
+              <span class="text-lg font-bold text-zinc-900">R$ 9.156,20</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRID INFERIOR -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+      <!-- CATEGORIAS DONUT -->
+      <div class="bg-white rounded-2xl border border-zinc-200 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-zinc-900">Despesas por categoria</h3>
+          <button class="text-zinc-400 hover:text-zinc-600"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="w-32 h-32 flex-shrink-0"><canvas id="categoryChart"></canvas></div>
+          <div class="flex-1 space-y-2 text-sm">
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-violet-500"></span> Peças</span>
+              <span class="font-semibold text-zinc-700">38%</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-orange-500"></span> Mão de obra</span>
+              <span class="font-semibold text-zinc-700">25%</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-sky-500"></span> Aluguel</span>
+              <span class="font-semibold text-zinc-700">18%</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Energia</span>
+              <span class="font-semibold text-zinc-700">12%</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-zinc-400"></span> Outros</span>
+              <span class="font-semibold text-zinc-700">7%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÚLTIMOS LANÇAMENTOS -->
+      <div class="bg-white rounded-2xl border border-zinc-200 p-5 lg:col-span-2">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-zinc-900">Últimos lançamentos</h3>
+          <a href="transactions.html" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium">Ver todos →</a>
+        </div>
+        <div class="divide-y divide-zinc-100">
+          <!-- Item -->
+          <div class="flex items-center gap-3 py-2.5">
+            <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <i data-lucide="wrench" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-zinc-900 truncate">Troca de óleo · Civic 2018</div>
+              <div class="text-xs text-zinc-500">Serviço · Hoje, 14:32 · Marcos</div>
+            </div>
+            <div class="text-sm font-bold text-emerald-600">+ R$ 280,00</div>
+          </div>
+          <div class="flex items-center gap-3 py-2.5">
+            <div class="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center">
+              <i data-lucide="package" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-zinc-900 truncate">Pastilhas de freio Bosch</div>
+              <div class="text-xs text-zinc-500">Peças · Hoje, 11:15 · João</div>
+            </div>
+            <div class="text-sm font-bold text-red-500">- R$ 145,00</div>
+          </div>
+          <div class="flex items-center gap-3 py-2.5">
+            <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <i data-lucide="car" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-zinc-900 truncate">Revisão completa · Corolla</div>
+              <div class="text-xs text-zinc-500">Serviço · Ontem, 17:48 · Marcos</div>
+            </div>
+            <div class="text-sm font-bold text-emerald-600">+ R$ 850,00</div>
+          </div>
+          <div class="flex items-center gap-3 py-2.5">
+            <div class="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center">
+              <i data-lucide="zap" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-zinc-900 truncate">Conta de energia · CPFL</div>
+              <div class="text-xs text-zinc-500">Energia · Ontem, 09:30 · João</div>
+            </div>
+            <div class="text-sm font-bold text-red-500">- R$ 432,80</div>
+          </div>
+          <div class="flex items-center gap-3 py-2.5">
+            <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <i data-lucide="wrench" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-zinc-900 truncate">Alinhamento + balanceamento</div>
+              <div class="text-xs text-zinc-500">Serviço · 16/05, 16:10 · Marcos</div>
+            </div>
+            <div class="text-sm font-bold text-emerald-600">+ R$ 180,00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- BOTTOM NAV MOBILE -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30">
+    <div class="grid grid-cols-5 h-16">
+      <a href="dashboard.html" class="flex flex-col items-center justify-center gap-0.5 text-emerald-600">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+        <span class="text-[10px] font-medium">Home</span>
+      </a>
+      <a href="transactions.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500">
+        <i data-lucide="list" class="w-5 h-5"></i>
+        <span class="text-[10px] font-medium">Lançamentos</span>
+      </a>
+      <a href="transactions.html?new=1" class="flex flex-col items-center justify-center">
+        <div class="w-12 h-12 -mt-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white">
+          <i data-lucide="plus" class="w-6 h-6"></i>
+        </div>
+      </a>
+      <a href="crm.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500">
+        <i data-lucide="contact-round" class="w-5 h-5"></i>
+        <span class="text-[10px] font-medium">CRM</span>
+      </a>
+      <a href="reports.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500">
+        <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+        <span class="text-[10px] font-medium">Relatórios</span>
+      </a>
+    </div>
+  </nav>
+
+  <script>
+    lucide.createIcons();
+
+    // Dropdowns
+    function toggleDropdown(event, id) {
+      event.stopPropagation();
+      ['notifMenu', 'avatarMenu'].forEach(m => {
+        if (m !== id) document.getElementById(m)?.classList.add('hidden');
+      });
+      document.getElementById(id).classList.toggle('hidden');
+    }
+    document.addEventListener('click', () => {
+      document.getElementById('notifMenu')?.classList.add('hidden');
+      document.getElementById('avatarMenu')?.classList.add('hidden');
+    });
+
+    // Helper to draw gauges
+    function gauge(canvasId, value, color) {
+      new Chart(document.getElementById(canvasId), {
+        type: 'doughnut',
+        data: {
+          datasets: [{
+            data: [value, 100 - value],
+            backgroundColor: [color, '#f1f5f9'],
+            borderWidth: 0,
+            circumference: 270,
+            rotation: 225,
+          }]
+        },
+        options: {
+          cutout: '78%',
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          responsive: false,
+        }
+      });
+    }
+    gauge('gaugeBalance', 78, '#10b981');
+    gauge('gaugeIncome', 92, '#10b981');
+    gauge('gaugeExpense', 46, '#ef4444');
+
+    // Balance trend
+    new Chart(document.getElementById('balanceChart'), {
+      type: 'line',
+      data: {
+        labels: ['01','05','10','15','20','25','30'],
+        datasets: [{
+          data: [22000, 24500, 23800, 27200, 28900, 31000, 32356],
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 0,
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false } },
+        responsive: true, maintainAspectRatio: false,
+      }
+    });
+
+    // Category donut
+    new Chart(document.getElementById('categoryChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Peças','Mão de obra','Aluguel','Energia','Outros'],
+        datasets: [{
+          data: [38,25,18,12,7],
+          backgroundColor: ['#8b5cf6','#f97316','#0ea5e9','#10b981','#a1a1aa'],
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        cutout: '68%',
+        plugins: { legend: { display: false } },
+        responsive: true, maintainAspectRatio: false,
+      }
+    });
+  </script>
+</body>
+</html>

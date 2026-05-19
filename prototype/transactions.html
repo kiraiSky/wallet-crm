@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marcola Balancete · Lançamentos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="min-h-screen bg-zinc-50">
+
+  <!-- TOP NAVBAR (igual ao dashboard) -->
+  <nav class="bg-white border-b border-zinc-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-8">
+          <a href="dashboard.html" class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+              <i data-lucide="wallet" class="w-5 h-5 text-white"></i>
+            </div>
+            <span class="font-bold text-zinc-900 hidden sm:inline">Marcola</span>
+          </a>
+          <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Dashboard</a>
+            <a href="transactions.html" class="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-medium text-sm">Lançamentos</a>
+            <a href="crm.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">CRM</a>
+            <a href="accounts.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Caixas</a>
+            <a href="categories.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Categorias</a>
+            <a href="reports.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Relatórios</a>
+            <a href="users.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Usuários</a>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="openModal()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg shadow-sm shadow-emerald-500/20 transition">
+            <i data-lucide="plus" class="w-4 h-4"></i> Novo lançamento
+          </button>
+          <button class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-zinc-100">
+            <div class="w-7 h-7 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">JC</div>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-zinc-500"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">
+
+    <!-- HEADER -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+      <div>
+        <h1 class="text-2xl font-bold text-zinc-900">Lançamentos</h1>
+        <p class="text-zinc-500 text-sm">Todas as entradas e saídas do caixa.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-sm font-medium rounded-lg">
+          <i data-lucide="download" class="w-4 h-4"></i> Excel
+        </button>
+        <button class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-sm font-medium rounded-lg">
+          <i data-lucide="file-text" class="w-4 h-4"></i> PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- SUMÁRIO -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      <div class="bg-white border border-zinc-200 rounded-xl p-4">
+        <div class="text-xs text-zinc-500 mb-1">Entradas (filtradas)</div>
+        <div class="text-lg font-bold text-emerald-600">+ R$ 18.400,00</div>
+      </div>
+      <div class="bg-white border border-zinc-200 rounded-xl p-4">
+        <div class="text-xs text-zinc-500 mb-1">Saídas (filtradas)</div>
+        <div class="text-lg font-bold text-red-500">- R$ 9.243,80</div>
+      </div>
+      <div class="bg-white border border-zinc-200 rounded-xl p-4">
+        <div class="text-xs text-zinc-500 mb-1">Resultado</div>
+        <div class="text-lg font-bold text-zinc-900">R$ 9.156,20</div>
+      </div>
+      <div class="bg-white border border-zinc-200 rounded-xl p-4">
+        <div class="text-xs text-zinc-500 mb-1">Nº lançamentos</div>
+        <div class="text-lg font-bold text-zinc-900">128</div>
+      </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="bg-white border border-zinc-200 rounded-2xl p-3 mb-4 flex flex-wrap gap-2 items-center">
+      <div class="relative flex-1 min-w-[200px]">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"></i>
+        <input type="search" placeholder="Buscar por descrição, placa, cliente..."
+               class="w-full pl-10 pr-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none" />
+      </div>
+      <select class="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm">
+        <option>Todos os tipos</option>
+        <option>Apenas entradas</option>
+        <option>Apenas saídas</option>
+      </select>
+      <select class="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm">
+        <option>Todas as categorias</option>
+        <option>Serviço</option>
+        <option>Peças</option>
+        <option>Mão de obra</option>
+        <option>Energia</option>
+      </select>
+      <select class="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm">
+        <option>Todos os caixas</option>
+        <option>Dinheiro</option>
+        <option>Itaú</option>
+        <option>Pix</option>
+        <option>Bradesco</option>
+      </select>
+      <button class="inline-flex items-center gap-1.5 px-3 py-2 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100 text-zinc-700 text-sm font-medium rounded-lg">
+        <i data-lucide="calendar" class="w-4 h-4"></i> Maio/2026
+      </button>
+    </div>
+
+    <!-- TABELA (desktop) / LISTA (mobile) -->
+    <div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
+      <!-- Desktop table -->
+      <table class="hidden md:table w-full text-sm">
+        <thead class="bg-zinc-50 border-b border-zinc-200">
+          <tr class="text-left text-xs uppercase tracking-wide text-zinc-500">
+            <th class="px-4 py-3 font-semibold">Data</th>
+            <th class="px-4 py-3 font-semibold">Descrição</th>
+            <th class="px-4 py-3 font-semibold">Categoria</th>
+            <th class="px-4 py-3 font-semibold">Caixa</th>
+            <th class="px-4 py-3 font-semibold">Usuário</th>
+            <th class="px-4 py-3 font-semibold text-right">Valor</th>
+            <th class="px-4 py-3 w-10"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-100">
+          <tr class="hover:bg-zinc-50">
+            <td class="px-4 py-3 text-zinc-600 whitespace-nowrap">18/05 14:32</td>
+            <td class="px-4 py-3 font-medium text-zinc-900">Troca de óleo · Civic 2018 ABC-1234</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Serviço</span></td>
+            <td class="px-4 py-3 text-zinc-600">Dinheiro</td>
+            <td class="px-4 py-3 text-zinc-600">Marcos</td>
+            <td class="px-4 py-3 text-right font-bold text-emerald-600">+ R$ 280,00</td>
+            <td class="px-4 py-3"><button onclick="showTxMenu(event, this)" class="text-zinc-400 hover:text-zinc-700"><i data-lucide="more-vertical" class="w-4 h-4"></i></button></td>
+          </tr>
+          <tr class="hover:bg-zinc-50">
+            <td class="px-4 py-3 text-zinc-600 whitespace-nowrap">18/05 11:15</td>
+            <td class="px-4 py-3 font-medium text-zinc-900">Pastilhas de freio Bosch</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-violet-500"></span>Peças</span></td>
+            <td class="px-4 py-3 text-zinc-600">Itaú</td>
+            <td class="px-4 py-3 text-zinc-600">João</td>
+            <td class="px-4 py-3 text-right font-bold text-red-500">- R$ 145,00</td>
+            <td class="px-4 py-3"><button onclick="showTxMenu(event, this)" class="text-zinc-400 hover:text-zinc-700"><i data-lucide="more-vertical" class="w-4 h-4"></i></button></td>
+          </tr>
+          <tr class="hover:bg-zinc-50">
+            <td class="px-4 py-3 text-zinc-600 whitespace-nowrap">17/05 17:48</td>
+            <td class="px-4 py-3 font-medium text-zinc-900">Revisão completa · Corolla XYZ-9876</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Serviço</span></td>
+            <td class="px-4 py-3 text-zinc-600">Pix</td>
+            <td class="px-4 py-3 text-zinc-600">Marcos</td>
+            <td class="px-4 py-3 text-right font-bold text-emerald-600">+ R$ 850,00</td>
+            <td class="px-4 py-3"><button onclick="showTxMenu(event, this)" class="text-zinc-400 hover:text-zinc-700"><i data-lucide="more-vertical" class="w-4 h-4"></i></button></td>
+          </tr>
+          <tr class="hover:bg-zinc-50">
+            <td class="px-4 py-3 text-zinc-600 whitespace-nowrap">17/05 09:30</td>
+            <td class="px-4 py-3 font-medium text-zinc-900">Conta de energia · CPFL</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>Energia</span></td>
+            <td class="px-4 py-3 text-zinc-600">Itaú</td>
+            <td class="px-4 py-3 text-zinc-600">João</td>
+            <td class="px-4 py-3 text-right font-bold text-red-500">- R$ 432,80</td>
+            <td class="px-4 py-3"><button onclick="showTxMenu(event, this)" class="text-zinc-400 hover:text-zinc-700"><i data-lucide="more-vertical" class="w-4 h-4"></i></button></td>
+          </tr>
+          <tr class="hover:bg-zinc-50">
+            <td class="px-4 py-3 text-zinc-600 whitespace-nowrap">16/05 16:10</td>
+            <td class="px-4 py-3 font-medium text-zinc-900">Alinhamento + balanceamento</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Serviço</span></td>
+            <td class="px-4 py-3 text-zinc-600">Dinheiro</td>
+            <td class="px-4 py-3 text-zinc-600">Marcos</td>
+            <td class="px-4 py-3 text-right font-bold text-emerald-600">+ R$ 180,00</td>
+            <td class="px-4 py-3"><button onclick="showTxMenu(event, this)" class="text-zinc-400 hover:text-zinc-700"><i data-lucide="more-vertical" class="w-4 h-4"></i></button></td>
+          </tr>
+          <tr class="hover:bg-zinc-50">
+            <td class="px-4 py-3 text-zinc-600 whitespace-nowrap">16/05 10:22</td>
+            <td class="px-4 py-3 font-medium text-zinc-900">Filtro de ar K&N</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-violet-500"></span>Peças</span></td>
+            <td class="px-4 py-3 text-zinc-600">Itaú</td>
+            <td class="px-4 py-3 text-zinc-600">João</td>
+            <td class="px-4 py-3 text-right font-bold text-red-500">- R$ 89,90</td>
+            <td class="px-4 py-3"><button onclick="showTxMenu(event, this)" class="text-zinc-400 hover:text-zinc-700"><i data-lucide="more-vertical" class="w-4 h-4"></i></button></td>
+          </tr>
+          <tr class="hover:bg-zinc-50">
+            <td class="px-4 py-3 text-zinc-600 whitespace-nowrap">15/05 08:45</td>
+            <td class="px-4 py-3 font-medium text-zinc-900">Aluguel da oficina · Maio</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>Aluguel</span></td>
+            <td class="px-4 py-3 text-zinc-600">Itaú</td>
+            <td class="px-4 py-3 text-zinc-600">João</td>
+            <td class="px-4 py-3 text-right font-bold text-red-500">- R$ 2.800,00</td>
+            <td class="px-4 py-3"><button onclick="showTxMenu(event, this)" class="text-zinc-400 hover:text-zinc-700"><i data-lucide="more-vertical" class="w-4 h-4"></i></button></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Mobile list -->
+      <div class="md:hidden divide-y divide-zinc-100">
+        <div class="flex items-center gap-3 p-4">
+          <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><i data-lucide="wrench" class="w-5 h-5"></i></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-zinc-900 truncate">Troca de óleo · Civic 2018</div>
+            <div class="text-xs text-zinc-500">Serviço · Dinheiro · Hoje 14:32</div>
+          </div>
+          <div class="text-sm font-bold text-emerald-600 whitespace-nowrap">+ R$ 280,00</div>
+        </div>
+        <div class="flex items-center gap-3 p-4">
+          <div class="w-10 h-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center"><i data-lucide="package" class="w-5 h-5"></i></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-zinc-900 truncate">Pastilhas de freio Bosch</div>
+            <div class="text-xs text-zinc-500">Peças · Itaú · Hoje 11:15</div>
+          </div>
+          <div class="text-sm font-bold text-red-500 whitespace-nowrap">- R$ 145,00</div>
+        </div>
+        <div class="flex items-center gap-3 p-4">
+          <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><i data-lucide="car" class="w-5 h-5"></i></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-zinc-900 truncate">Revisão completa · Corolla</div>
+            <div class="text-xs text-zinc-500">Serviço · Pix · Ontem 17:48</div>
+          </div>
+          <div class="text-sm font-bold text-emerald-600 whitespace-nowrap">+ R$ 850,00</div>
+        </div>
+        <div class="flex items-center gap-3 p-4">
+          <div class="w-10 h-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center"><i data-lucide="zap" class="w-5 h-5"></i></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-zinc-900 truncate">Conta de energia · CPFL</div>
+            <div class="text-xs text-zinc-500">Energia · Itaú · Ontem 09:30</div>
+          </div>
+          <div class="text-sm font-bold text-red-500 whitespace-nowrap">- R$ 432,80</div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="flex items-center justify-between px-4 py-3 border-t border-zinc-100 bg-zinc-50">
+        <span class="text-xs text-zinc-500">Mostrando 1–7 de 128 lançamentos</span>
+        <div class="flex items-center gap-1">
+          <button class="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-400 hover:text-zinc-700"><i data-lucide="chevron-left" class="w-4 h-4 mx-auto"></i></button>
+          <button class="w-8 h-8 rounded-lg bg-emerald-500 text-white font-semibold text-sm">1</button>
+          <button class="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-700 font-semibold text-sm">2</button>
+          <button class="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-700 font-semibold text-sm">3</button>
+          <span class="text-zinc-400 px-1">...</span>
+          <button class="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-700 hover:text-zinc-900"><i data-lucide="chevron-right" class="w-4 h-4 mx-auto"></i></button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- BOTTOM NAV MOBILE -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30">
+    <div class="grid grid-cols-5 h-16">
+      <a href="dashboard.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+        <span class="text-[10px] font-medium">Home</span>
+      </a>
+      <a href="transactions.html" class="flex flex-col items-center justify-center gap-0.5 text-emerald-600">
+        <i data-lucide="list" class="w-5 h-5"></i>
+        <span class="text-[10px] font-medium">Lançamentos</span>
+      </a>
+      <button onclick="openModal()" class="flex flex-col items-center justify-center">
+        <div class="w-12 h-12 -mt-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white">
+          <i data-lucide="plus" class="w-6 h-6"></i>
+        </div>
+      </button>
+      <a href="crm.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500">
+        <i data-lucide="contact-round" class="w-5 h-5"></i>
+        <span class="text-[10px] font-medium">CRM</span>
+      </a>
+      <a href="reports.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500">
+        <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+        <span class="text-[10px] font-medium">Relatórios</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- MODAL NOVO LANÇAMENTO -->
+  <div id="modal" class="hidden fixed inset-0 z-50 bg-zinc-900/50 backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between p-5 border-b border-zinc-100">
+        <h3 class="font-bold text-zinc-900">Novo lançamento</h3>
+        <button onclick="closeModal()" class="text-zinc-400 hover:text-zinc-700"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form class="p-5 space-y-4" onsubmit="event.preventDefault(); closeModal();">
+        <!-- Tipo toggle -->
+        <div class="grid grid-cols-2 gap-2 p-1 bg-zinc-100 rounded-xl">
+          <button type="button" id="btnEntrada" onclick="setType('in')" class="py-2.5 rounded-lg bg-white shadow-sm font-semibold text-emerald-600 text-sm">
+            ↗ Entrada
+          </button>
+          <button type="button" id="btnSaida" onclick="setType('out')" class="py-2.5 rounded-lg font-semibold text-zinc-500 text-sm">
+            ↙ Saída
+          </button>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Valor</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-semibold">R$</span>
+            <input type="text" placeholder="0,00" required
+                   class="w-full pl-12 pr-3 py-3 text-2xl font-bold bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:border-emerald-500 outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Descrição</label>
+          <input type="text" placeholder="Ex: Troca de óleo · Civic ABC-1234"
+                 class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Categoria</label>
+            <select class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none">
+              <option>Serviço</option>
+              <option>Peças</option>
+              <option>Mão de obra</option>
+              <option>Energia</option>
+              <option>Aluguel</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Caixa</label>
+            <select class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none">
+              <option>Dinheiro</option>
+              <option>Itaú</option>
+              <option>Pix</option>
+              <option>Bradesco</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Data e hora</label>
+          <input type="datetime-local" value="2026-05-18T14:30"
+                 class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Cliente / Veículo (opcional)</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"></i>
+            <input type="text" placeholder="Buscar cliente cadastrado ou placa..."
+                   class="w-full pl-10 pr-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none" />
+          </div>
+          <p class="text-[11px] text-zinc-400 mt-1">Vincula o lançamento ao histórico do cliente.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Comprovante (foto/PDF)</label>
+          <label class="flex flex-col items-center justify-center gap-1.5 px-3 py-4 bg-zinc-50 border-2 border-dashed border-zinc-200 hover:border-emerald-400 hover:bg-emerald-50/30 rounded-lg cursor-pointer transition">
+            <i data-lucide="upload-cloud" class="w-6 h-6 text-zinc-400"></i>
+            <span class="text-sm font-medium text-zinc-600">Clique pra enviar ou arraste aqui</span>
+            <span class="text-[11px] text-zinc-400">JPG, PNG ou PDF · até 5MB</span>
+            <input type="file" accept="image/*,.pdf" class="hidden" />
+          </label>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Observação (opcional)</label>
+          <textarea rows="2" placeholder="Notas internas..."
+                    class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none resize-none"></textarea>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeModal()" class="flex-1 py-2.5 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 font-semibold rounded-lg">Cancelar</button>
+          <button type="submit" class="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-sm shadow-emerald-500/20">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    function openModal(editing) {
+      document.querySelector('#modal h3').textContent = editing ? 'Editar lançamento' : 'Novo lançamento';
+      document.getElementById('modal').classList.remove('hidden');
+      document.getElementById('modal').classList.add('flex');
+    }
+    function closeModal() { document.getElementById('modal').classList.add('hidden'); document.getElementById('modal').classList.remove('flex'); }
+
+    // Menu de ações por linha
+    function showTxMenu(event, btn) {
+      event.stopPropagation();
+      const menu = document.getElementById('txActionMenu');
+      const rect = btn.getBoundingClientRect();
+      menu.style.top = (rect.bottom + 4) + 'px';
+      menu.style.left = (rect.right - 192) + 'px';
+      menu.classList.remove('hidden');
+    }
+    function hideTxMenu() { document.getElementById('txActionMenu').classList.add('hidden'); }
+    function openDeleteTxModal() {
+      hideTxMenu();
+      document.getElementById('deleteTxModal').classList.remove('hidden');
+      document.getElementById('deleteTxModal').classList.add('flex');
+    }
+    function closeDeleteTxModal() {
+      document.getElementById('deleteTxModal').classList.add('hidden');
+      document.getElementById('deleteTxModal').classList.remove('flex');
+    }
+    function openAttachmentPreview() {
+      hideTxMenu();
+      document.getElementById('attachmentModal').classList.remove('hidden');
+      document.getElementById('attachmentModal').classList.add('flex');
+    }
+    function closeAttachmentPreview() {
+      document.getElementById('attachmentModal').classList.add('hidden');
+      document.getElementById('attachmentModal').classList.remove('flex');
+    }
+    document.addEventListener('click', hideTxMenu);
+    function setType(t) {
+      const e = document.getElementById('btnEntrada'); const s = document.getElementById('btnSaida');
+      if (t === 'in') {
+        e.className = 'py-2.5 rounded-lg bg-white shadow-sm font-semibold text-emerald-600 text-sm';
+        s.className = 'py-2.5 rounded-lg font-semibold text-zinc-500 text-sm';
+      } else {
+        s.className = 'py-2.5 rounded-lg bg-white shadow-sm font-semibold text-red-500 text-sm';
+        e.className = 'py-2.5 rounded-lg font-semibold text-zinc-500 text-sm';
+      }
+    }
+    // Auto-open if ?new=1
+    if (new URLSearchParams(location.search).get('new') === '1') openModal();
+  </script>
+
+  <!-- MENU DE AÇÕES DAS LINHAS -->
+  <div id="txActionMenu" class="hidden fixed bg-white border border-zinc-200 rounded-xl shadow-lg w-48 py-1 z-40">
+    <button onclick="hideTxMenu(); openModal(true)" class="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-sm text-zinc-700"><i data-lucide="pencil" class="w-4 h-4"></i> Editar</button>
+    <button onclick="hideTxMenu(); openModal(false)" class="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-sm text-zinc-700"><i data-lucide="copy" class="w-4 h-4"></i> Duplicar</button>
+    <button onclick="openAttachmentPreview()" class="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-sm text-zinc-700"><i data-lucide="paperclip" class="w-4 h-4"></i> Ver anexo</button>
+    <button onclick="hideTxMenu()" class="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-sm text-zinc-700"><i data-lucide="user" class="w-4 h-4"></i> Ver cliente</button>
+    <div class="border-t border-zinc-100 my-1"></div>
+    <button onclick="openDeleteTxModal()" class="w-full text-left px-3 py-2 hover:bg-red-50 flex items-center gap-2 text-sm text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i> Excluir</button>
+  </div>
+
+  <!-- MODAL EXCLUIR LANÇAMENTO -->
+  <div id="deleteTxModal" class="hidden fixed inset-0 z-50 bg-zinc-900/50 backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        </div>
+        <div class="flex-1">
+          <h3 class="font-bold text-zinc-900">Excluir lançamento?</h3>
+          <p class="text-sm text-zinc-500 mt-0.5">"Troca de óleo · Civic 2018" será removido permanentemente. Esta ação fica registrada no log de auditoria.</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="closeDeleteTxModal()" class="flex-1 py-2.5 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 font-semibold rounded-lg">Cancelar</button>
+        <button onclick="closeDeleteTxModal()" class="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL VISUALIZAR ANEXO -->
+  <div id="attachmentModal" class="hidden fixed inset-0 z-50 bg-zinc-900/80 backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="flex items-center justify-between p-4 border-b border-zinc-100">
+        <div>
+          <h3 class="font-bold text-zinc-900">Comprovante</h3>
+          <p class="text-xs text-zinc-500">nota-fiscal-civic-18-05.jpg · 1.2 MB</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 rounded-lg inline-flex items-center gap-1.5"><i data-lucide="download" class="w-4 h-4"></i> Baixar</button>
+          <button onclick="closeAttachmentPreview()" class="w-8 h-8 rounded-lg hover:bg-zinc-100 text-zinc-500 flex items-center justify-center"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+      </div>
+      <div class="flex-1 bg-zinc-100 flex items-center justify-center p-6 min-h-[400px]">
+        <div class="bg-white rounded-lg shadow-xl p-12 max-w-md w-full text-center">
+          <i data-lucide="file-image" class="w-20 h-20 mx-auto text-zinc-300 mb-3"></i>
+          <p class="text-sm text-zinc-500">Pré-visualização do comprovante</p>
+          <p class="text-xs text-zinc-400 mt-1">(simulação no protótipo)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

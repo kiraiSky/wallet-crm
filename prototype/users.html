@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marcola Balancete · Usuários</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="min-h-screen bg-zinc-50">
+
+  <nav class="bg-white border-b border-zinc-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-8">
+          <a href="dashboard.html" class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center"><i data-lucide="wallet" class="w-5 h-5 text-white"></i></div>
+            <span class="font-bold text-zinc-900 hidden sm:inline">Marcola</span>
+          </a>
+          <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Dashboard</a>
+            <a href="transactions.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Lançamentos</a>
+            <a href="crm.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">CRM</a>
+            <a href="accounts.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Caixas</a>
+            <a href="categories.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Categorias</a>
+            <a href="reports.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Relatórios</a>
+            <a href="users.html" class="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-medium text-sm">Usuários</a>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="openInviteModal()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg shadow-sm shadow-emerald-500/20">
+            <i data-lucide="user-plus" class="w-4 h-4"></i> Convidar usuário
+          </button>
+          <button class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-zinc-100">
+            <div class="w-7 h-7 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">JC</div>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-zinc-500"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">
+
+    <div class="mb-5">
+      <h1 class="text-2xl font-bold text-zinc-900">Usuários e permissões</h1>
+      <p class="text-zinc-500 text-sm">Controle quem acessa o sistema e o que cada um pode fazer.</p>
+    </div>
+
+    <!-- Aviso -->
+    <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-5 flex items-start gap-3">
+      <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center flex-shrink-0"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+      <div class="flex-1">
+        <div class="font-semibold text-emerald-900 text-sm">Apenas o dono (OWNER) acessa esta tela.</div>
+        <div class="text-xs text-emerald-700 mt-0.5">Funcionários só conseguem registrar entradas e saídas, não veem relatórios nem editam cadastros.</div>
+      </div>
+    </div>
+
+    <!-- LISTA DE USUÁRIOS -->
+    <div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden mb-5">
+      <div class="px-5 py-3 border-b border-zinc-100 flex items-center justify-between">
+        <h3 class="font-semibold text-zinc-900">Usuários ativos <span class="text-zinc-400 font-normal">(3)</span></h3>
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"></i>
+          <input type="search" placeholder="Buscar usuário..." class="pl-9 pr-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none w-48" />
+        </div>
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs uppercase tracking-wide text-zinc-500 bg-zinc-50 border-b border-zinc-100">
+            <th class="px-5 py-3 font-semibold">Usuário</th>
+            <th class="px-5 py-3 font-semibold hidden md:table-cell">E-mail</th>
+            <th class="px-5 py-3 font-semibold">Papel</th>
+            <th class="px-5 py-3 font-semibold hidden lg:table-cell">Último acesso</th>
+            <th class="px-5 py-3 font-semibold">Status</th>
+            <th class="px-5 py-3 w-10"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-100">
+          <tr class="hover:bg-zinc-50">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center font-bold text-sm">JC</div>
+                <div>
+                  <div class="font-semibold text-zinc-900">João Cunha <span class="text-xs text-zinc-400 font-normal">(você)</span></div>
+                  <div class="text-xs text-zinc-500 md:hidden">joao@marcola.com</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-5 py-3 text-zinc-600 hidden md:table-cell">joao@marcola.com</td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 text-xs font-semibold"><i data-lucide="crown" class="w-3 h-3"></i>OWNER</span></td>
+            <td class="px-5 py-3 text-zinc-500 text-xs hidden lg:table-cell">Agora</td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Ativo</span></td>
+            <td class="px-5 py-3"><button class="text-zinc-400 hover:text-zinc-700"><i data-lucide="more-vertical" class="w-4 h-4"></i></button></td>
+          </tr>
+          <tr class="hover:bg-zinc-50">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white flex items-center justify-center font-bold text-sm">MS</div>
+                <div>
+                  <div class="font-semibold text-zinc-900">Marcos Santos</div>
+                  <div class="text-xs text-zinc-500 md:hidden">marcos@marcola.com</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-5 py-3 text-zinc-600 hidden md:table-cell">marcos@marcola.com</td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-xs font-semibold"><i data-lucide="user" class="w-3 h-3"></i>EMPLOYEE</span></td>
+            <td class="px-5 py-3 text-zinc-500 text-xs hidden lg:table-cell">Hoje, 14:32</td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Ativo</span></td>
+            <td class="px-5 py-3"><button class="text-zinc-400 hover:text-zinc-700"><i data-lucide="more-vertical" class="w-4 h-4"></i></button></td>
+          </tr>
+          <tr class="hover:bg-zinc-50">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400 to-sky-600 text-white flex items-center justify-center font-bold text-sm">RB</div>
+                <div>
+                  <div class="font-semibold text-zinc-900">Rafael Borges</div>
+                  <div class="text-xs text-zinc-500 md:hidden">rafael@marcola.com</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-5 py-3 text-zinc-600 hidden md:table-cell">rafael@marcola.com</td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-xs font-semibold"><i data-lucide="user" class="w-3 h-3"></i>EMPLOYEE</span></td>
+            <td class="px-5 py-3 text-zinc-500 text-xs hidden lg:table-cell">Ontem, 17:48</td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Convite pendente</span></td>
+            <td class="px-5 py-3"><button class="text-zinc-400 hover:text-zinc-700"><i data-lucide="more-vertical" class="w-4 h-4"></i></button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- MATRIZ DE PERMISSÕES -->
+    <div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
+      <div class="p-5 border-b border-zinc-100">
+        <h3 class="font-semibold text-zinc-900">Matriz de permissões</h3>
+        <p class="text-xs text-zinc-500 mt-0.5">Resumo do que cada papel pode fazer no sistema.</p>
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs uppercase tracking-wide text-zinc-500 bg-zinc-50 border-b border-zinc-100">
+            <th class="px-5 py-3 font-semibold text-left">Ação</th>
+            <th class="px-5 py-3 font-semibold text-center w-32">
+              <span class="inline-flex items-center gap-1.5"><i data-lucide="crown" class="w-3 h-3 text-violet-500"></i>OWNER</span>
+            </th>
+            <th class="px-5 py-3 font-semibold text-center w-32">
+              <span class="inline-flex items-center gap-1.5"><i data-lucide="user" class="w-3 h-3 text-sky-500"></i>EMPLOYEE</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-100 text-sm">
+          <tr>
+            <td class="px-5 py-2.5 text-zinc-700">Lançar entrada/saída</td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="check" class="w-4 h-4 text-emerald-500 mx-auto"></i></td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="check" class="w-4 h-4 text-emerald-500 mx-auto"></i></td>
+          </tr>
+          <tr>
+            <td class="px-5 py-2.5 text-zinc-700">Editar/excluir lançamento próprio (mesmo dia)</td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="check" class="w-4 h-4 text-emerald-500 mx-auto"></i></td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="check" class="w-4 h-4 text-emerald-500 mx-auto"></i></td>
+          </tr>
+          <tr>
+            <td class="px-5 py-2.5 text-zinc-700">Editar/excluir qualquer lançamento</td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="check" class="w-4 h-4 text-emerald-500 mx-auto"></i></td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="x" class="w-4 h-4 text-zinc-300 mx-auto"></i></td>
+          </tr>
+          <tr>
+            <td class="px-5 py-2.5 text-zinc-700">Ver dashboard e relatórios</td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="check" class="w-4 h-4 text-emerald-500 mx-auto"></i></td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="x" class="w-4 h-4 text-zinc-300 mx-auto"></i></td>
+          </tr>
+          <tr>
+            <td class="px-5 py-2.5 text-zinc-700">Cadastrar clientes/veículos</td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="check" class="w-4 h-4 text-emerald-500 mx-auto"></i></td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="check" class="w-4 h-4 text-emerald-500 mx-auto"></i></td>
+          </tr>
+          <tr>
+            <td class="px-5 py-2.5 text-zinc-700">Gerenciar caixas e categorias</td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="check" class="w-4 h-4 text-emerald-500 mx-auto"></i></td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="x" class="w-4 h-4 text-zinc-300 mx-auto"></i></td>
+          </tr>
+          <tr>
+            <td class="px-5 py-2.5 text-zinc-700">Gerenciar usuários</td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="check" class="w-4 h-4 text-emerald-500 mx-auto"></i></td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="x" class="w-4 h-4 text-zinc-300 mx-auto"></i></td>
+          </tr>
+          <tr>
+            <td class="px-5 py-2.5 text-zinc-700">Exportar Excel/PDF</td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="check" class="w-4 h-4 text-emerald-500 mx-auto"></i></td>
+            <td class="px-5 py-2.5 text-center"><i data-lucide="x" class="w-4 h-4 text-zinc-300 mx-auto"></i></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30">
+    <div class="grid grid-cols-5 h-16">
+      <a href="dashboard.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500"><i data-lucide="layout-dashboard" class="w-5 h-5"></i><span class="text-[10px] font-medium">Home</span></a>
+      <a href="transactions.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500"><i data-lucide="list" class="w-5 h-5"></i><span class="text-[10px] font-medium">Lançamentos</span></a>
+      <a href="transactions.html?new=1" class="flex flex-col items-center justify-center"><div class="w-12 h-12 -mt-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white"><i data-lucide="plus" class="w-6 h-6"></i></div></a>
+      <a href="crm.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500"><i data-lucide="contact-round" class="w-5 h-5"></i><span class="text-[10px] font-medium">CRM</span></a>
+      <a href="reports.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500"><i data-lucide="bar-chart-3" class="w-5 h-5"></i><span class="text-[10px] font-medium">Relatórios</span></a>
+    </div>
+  </nav>
+
+  <!-- MODAL CONVIDAR USUÁRIO -->
+  <div id="inviteModal" class="hidden fixed inset-0 z-50 bg-zinc-900/50 backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between p-5 border-b border-zinc-100">
+        <h3 class="font-bold text-zinc-900">Convidar usuário</h3>
+        <button onclick="closeInviteModal()" class="text-zinc-400 hover:text-zinc-700"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form class="p-5 space-y-4" onsubmit="event.preventDefault(); closeInviteModal();">
+
+        <div class="bg-sky-50 border border-sky-100 rounded-lg p-3 flex items-start gap-2.5">
+          <i data-lucide="info" class="w-4 h-4 text-sky-600 flex-shrink-0 mt-0.5"></i>
+          <p class="text-xs text-sky-800">O usuário receberá um e-mail com um link para criar a senha e acessar o sistema.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Nome completo *</label>
+          <input type="text" placeholder="Ex: Marcos Santos" required
+                 class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">E-mail *</label>
+          <div class="relative">
+            <i data-lucide="mail" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"></i>
+            <input type="email" placeholder="marcos@marcola.com" required
+                   class="w-full pl-10 pr-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Papel *</label>
+          <div class="space-y-2">
+            <button type="button" onclick="selectRole('OWNER')" id="roleOwner" data-role-btn class="w-full text-left border border-zinc-200 rounded-lg p-3 hover:border-violet-300 hover:bg-violet-50/30 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center"><i data-lucide="crown" class="w-4 h-4"></i></div>
+              <div class="flex-1">
+                <div class="font-semibold text-zinc-900 text-sm">OWNER (Dono)</div>
+                <div class="text-xs text-zinc-500">Acesso total: relatórios, configurações, usuários, exports.</div>
+              </div>
+              <i data-lucide="circle" class="w-5 h-5 text-zinc-300 role-circle"></i>
+            </button>
+            <button type="button" onclick="selectRole('EMPLOYEE')" id="roleEmployee" data-role-btn class="w-full text-left border-2 border-emerald-500 bg-emerald-50/30 rounded-lg p-3 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center"><i data-lucide="user" class="w-4 h-4"></i></div>
+              <div class="flex-1">
+                <div class="font-semibold text-zinc-900 text-sm">EMPLOYEE (Funcionário)</div>
+                <div class="text-xs text-zinc-500">Só registra lançamentos e cadastra clientes. Sem acesso a relatórios.</div>
+              </div>
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 role-circle"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeInviteModal()" class="flex-1 py-2.5 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 font-semibold rounded-lg">Cancelar</button>
+          <button type="submit" class="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-sm shadow-emerald-500/20 inline-flex items-center justify-center gap-1.5">
+            <i data-lucide="send" class="w-4 h-4"></i> Enviar convite
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MENU DE AÇÕES (mostrado quando clica no "...") -->
+  <div id="userActionMenu" class="hidden fixed bg-white border border-zinc-200 rounded-xl shadow-lg w-48 py-1 z-40">
+    <button onclick="hideUserMenu()" class="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-sm text-zinc-700"><i data-lucide="pencil" class="w-4 h-4"></i> Editar nome</button>
+    <button onclick="hideUserMenu()" class="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-sm text-zinc-700"><i data-lucide="shuffle" class="w-4 h-4"></i> Alterar papel</button>
+    <button onclick="hideUserMenu()" class="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-sm text-zinc-700"><i data-lucide="key-round" class="w-4 h-4"></i> Resetar senha</button>
+    <button onclick="hideUserMenu()" class="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-sm text-zinc-700"><i data-lucide="send" class="w-4 h-4"></i> Reenviar convite</button>
+    <div class="border-t border-zinc-100 my-1"></div>
+    <button onclick="openDeactivateModal()" class="w-full text-left px-3 py-2 hover:bg-red-50 flex items-center gap-2 text-sm text-red-600"><i data-lucide="user-x" class="w-4 h-4"></i> Desativar</button>
+  </div>
+
+  <!-- MODAL DESATIVAR -->
+  <div id="deactivateModal" class="hidden fixed inset-0 z-50 bg-zinc-900/50 backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="user-x" class="w-5 h-5"></i>
+        </div>
+        <div class="flex-1">
+          <h3 class="font-bold text-zinc-900">Desativar usuário?</h3>
+          <p class="text-sm text-zinc-500 mt-0.5">O usuário não conseguirá mais acessar o sistema, mas o histórico de lançamentos dele será mantido.</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="closeDeactivateModal()" class="flex-1 py-2.5 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 font-semibold rounded-lg">Cancelar</button>
+        <button onclick="closeDeactivateModal()" class="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg">Desativar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    function openInviteModal() {
+      document.getElementById('inviteModal').classList.remove('hidden');
+      document.getElementById('inviteModal').classList.add('flex');
+    }
+    function closeInviteModal() {
+      document.getElementById('inviteModal').classList.add('hidden');
+      document.getElementById('inviteModal').classList.remove('flex');
+    }
+    function selectRole(role) {
+      const owner = document.getElementById('roleOwner');
+      const emp = document.getElementById('roleEmployee');
+      if (role === 'OWNER') {
+        owner.className = 'w-full text-left border-2 border-emerald-500 bg-emerald-50/30 rounded-lg p-3 flex items-center gap-3';
+        emp.className = 'w-full text-left border border-zinc-200 rounded-lg p-3 hover:border-emerald-300 hover:bg-emerald-50/30 flex items-center gap-3';
+        owner.querySelector('.role-circle').outerHTML = '<i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 role-circle"></i>';
+        emp.querySelector('.role-circle').outerHTML = '<i data-lucide="circle" class="w-5 h-5 text-zinc-300 role-circle"></i>';
+      } else {
+        emp.className = 'w-full text-left border-2 border-emerald-500 bg-emerald-50/30 rounded-lg p-3 flex items-center gap-3';
+        owner.className = 'w-full text-left border border-zinc-200 rounded-lg p-3 hover:border-violet-300 hover:bg-violet-50/30 flex items-center gap-3';
+        emp.querySelector('.role-circle').outerHTML = '<i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 role-circle"></i>';
+        owner.querySelector('.role-circle').outerHTML = '<i data-lucide="circle" class="w-5 h-5 text-zinc-300 role-circle"></i>';
+      }
+      lucide.createIcons();
+    }
+
+    // Menu de ações por usuário
+    function showUserMenu(event, btn) {
+      event.stopPropagation();
+      const menu = document.getElementById('userActionMenu');
+      const rect = btn.getBoundingClientRect();
+      menu.style.top = (rect.bottom + 4) + 'px';
+      menu.style.left = (rect.right - 192) + 'px';
+      menu.classList.remove('hidden');
+    }
+    function hideUserMenu() {
+      document.getElementById('userActionMenu').classList.add('hidden');
+    }
+    function openDeactivateModal() {
+      hideUserMenu();
+      document.getElementById('deactivateModal').classList.remove('hidden');
+      document.getElementById('deactivateModal').classList.add('flex');
+    }
+    function closeDeactivateModal() {
+      document.getElementById('deactivateModal').classList.add('hidden');
+      document.getElementById('deactivateModal').classList.remove('flex');
+    }
+
+    // Hook every "more-vertical" button on user rows
+    document.querySelectorAll('[data-lucide="more-vertical"]').forEach(icon => {
+      const btn = icon.closest('button');
+      if (btn) btn.addEventListener('click', e => showUserMenu(e, btn));
+    });
+    document.addEventListener('click', hideUserMenu);
+  </script>
+</body>
+</html>

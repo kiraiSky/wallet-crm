@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marcola Balancete · Relatórios</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="min-h-screen bg-zinc-50">
+
+  <nav class="bg-white border-b border-zinc-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-8">
+          <a href="dashboard.html" class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center"><i data-lucide="wallet" class="w-5 h-5 text-white"></i></div>
+            <span class="font-bold text-zinc-900 hidden sm:inline">Marcola</span>
+          </a>
+          <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Dashboard</a>
+            <a href="transactions.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Lançamentos</a>
+            <a href="crm.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">CRM</a>
+            <a href="accounts.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Caixas</a>
+            <a href="categories.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Categorias</a>
+            <a href="reports.html" class="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-medium text-sm">Relatórios</a>
+            <a href="users.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Usuários</a>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-zinc-100">
+            <div class="w-7 h-7 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">JC</div>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-zinc-500"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+      <div>
+        <h1 class="text-2xl font-bold text-zinc-900">Relatórios</h1>
+        <p class="text-zinc-500 text-sm">Análise financeira detalhada do período.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-sm font-medium rounded-lg">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Exportar Excel
+        </button>
+        <button class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-sm font-medium rounded-lg">
+          <i data-lucide="file-text" class="w-4 h-4 text-red-500"></i> Exportar PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white border border-zinc-200 rounded-2xl p-3 mb-5 flex flex-wrap gap-2 items-center">
+      <span class="text-xs font-semibold text-zinc-500 uppercase tracking-wide px-2">Período:</span>
+      <button class="px-3 py-1.5 bg-zinc-900 text-white rounded-lg text-xs font-semibold">Este mês</button>
+      <button class="px-3 py-1.5 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 rounded-lg text-xs font-medium">Mês passado</button>
+      <button class="px-3 py-1.5 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 rounded-lg text-xs font-medium">Últimos 3 meses</button>
+      <button class="px-3 py-1.5 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 rounded-lg text-xs font-medium">Este ano</button>
+      <button class="px-3 py-1.5 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 rounded-lg text-xs font-medium inline-flex items-center gap-1">
+        <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Personalizado
+      </button>
+      <div class="ml-auto flex items-center gap-2">
+        <select class="px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-medium">
+          <option>Todos os caixas</option><option>Dinheiro</option><option>Itaú</option><option>Pix</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      <div class="bg-white border border-zinc-200 rounded-xl p-4">
+        <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1.5"><i data-lucide="trending-up" class="w-3.5 h-3.5 text-emerald-500"></i>Entradas</div>
+        <div class="text-lg font-bold text-emerald-600">R$ 18.400,00</div>
+        <div class="text-xs text-emerald-600 mt-0.5">↑ 12% vs período anterior</div>
+      </div>
+      <div class="bg-white border border-zinc-200 rounded-xl p-4">
+        <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1.5"><i data-lucide="trending-down" class="w-3.5 h-3.5 text-red-500"></i>Saídas</div>
+        <div class="text-lg font-bold text-red-500">R$ 9.243,80</div>
+        <div class="text-xs text-red-500 mt-0.5">↑ 4% vs período anterior</div>
+      </div>
+      <div class="bg-white border border-zinc-200 rounded-xl p-4">
+        <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1.5"><i data-lucide="dollar-sign" class="w-3.5 h-3.5 text-zinc-500"></i>Lucro líquido</div>
+        <div class="text-lg font-bold text-zinc-900">R$ 9.156,20</div>
+        <div class="text-xs text-emerald-600 mt-0.5">↑ 21% vs período anterior</div>
+      </div>
+      <div class="bg-white border border-zinc-200 rounded-xl p-4">
+        <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1.5"><i data-lucide="percent" class="w-3.5 h-3.5 text-zinc-500"></i>Margem</div>
+        <div class="text-lg font-bold text-zinc-900">49.8%</div>
+        <div class="text-xs text-emerald-600 mt-0.5">↑ 3pp vs período anterior</div>
+      </div>
+    </div>
+
+    <!-- ENTRADAS vs SAÍDAS POR DIA -->
+    <div class="bg-white border border-zinc-200 rounded-2xl p-5 mb-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-semibold text-zinc-900">Entradas vs Saídas (por dia)</h3>
+          <p class="text-xs text-zinc-500">Maio/2026</p>
+        </div>
+        <div class="flex items-center gap-3 text-xs">
+          <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></span>Entradas</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-red-500"></span>Saídas</span>
+        </div>
+      </div>
+      <div class="h-64"><canvas id="barChart"></canvas></div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+      <!-- Top categorias receita -->
+      <div class="bg-white border border-zinc-200 rounded-2xl p-5">
+        <h3 class="font-semibold text-zinc-900 mb-4">Top categorias de receita</h3>
+        <div class="space-y-3">
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-zinc-700 font-medium">Serviço</span>
+              <span class="font-semibold text-zinc-900">R$ 14.230,00</span>
+            </div>
+            <div class="h-2 bg-zinc-100 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 rounded-full" style="width:100%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-zinc-700 font-medium">Revisão</span>
+              <span class="font-semibold text-zinc-900">R$ 8.450,00</span>
+            </div>
+            <div class="h-2 bg-zinc-100 rounded-full overflow-hidden"><div class="h-full bg-sky-500 rounded-full" style="width:59%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-zinc-700 font-medium">Venda de peças</span>
+              <span class="font-semibold text-zinc-900">R$ 3.620,00</span>
+            </div>
+            <div class="h-2 bg-zinc-100 rounded-full overflow-hidden"><div class="h-full bg-violet-500 rounded-full" style="width:25%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-zinc-700 font-medium">Alinhamento</span>
+              <span class="font-semibold text-zinc-900">R$ 2.180,00</span>
+            </div>
+            <div class="h-2 bg-zinc-100 rounded-full overflow-hidden"><div class="h-full bg-amber-500 rounded-full" style="width:15%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top categorias despesa -->
+      <div class="bg-white border border-zinc-200 rounded-2xl p-5">
+        <h3 class="font-semibold text-zinc-900 mb-4">Top categorias de despesa</h3>
+        <div class="space-y-3">
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-zinc-700 font-medium">Peças</span>
+              <span class="font-semibold text-zinc-900">R$ 3.480,00</span>
+            </div>
+            <div class="h-2 bg-zinc-100 rounded-full overflow-hidden"><div class="h-full bg-violet-500 rounded-full" style="width:100%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-zinc-700 font-medium">Aluguel</span>
+              <span class="font-semibold text-zinc-900">R$ 2.800,00</span>
+            </div>
+            <div class="h-2 bg-zinc-100 rounded-full overflow-hidden"><div class="h-full bg-sky-500 rounded-full" style="width:80%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-zinc-700 font-medium">Mão de obra</span>
+              <span class="font-semibold text-zinc-900">R$ 2.310,00</span>
+            </div>
+            <div class="h-2 bg-zinc-100 rounded-full overflow-hidden"><div class="h-full bg-orange-500 rounded-full" style="width:66%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-zinc-700 font-medium">Energia</span>
+              <span class="font-semibold text-zinc-900">R$ 432,80</span>
+            </div>
+            <div class="h-2 bg-zinc-100 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 rounded-full" style="width:12%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparativo mensal -->
+    <div class="bg-white border border-zinc-200 rounded-2xl p-5 mb-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-zinc-900">Evolução nos últimos 6 meses</h3>
+      </div>
+      <div class="h-64"><canvas id="trendChart"></canvas></div>
+    </div>
+
+    <!-- Top clientes -->
+    <div class="bg-white border border-zinc-200 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-zinc-900">Top clientes do período</h3>
+        <a href="customers.html" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium">Ver todos →</a>
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs uppercase tracking-wide text-zinc-500 border-b border-zinc-100">
+            <th class="py-2 font-semibold">Cliente</th>
+            <th class="py-2 font-semibold hidden sm:table-cell">Serviços</th>
+            <th class="py-2 font-semibold hidden sm:table-cell">Ticket médio</th>
+            <th class="py-2 font-semibold text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-100">
+          <tr>
+            <td class="py-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs">CS</div>
+                <span class="font-medium text-zinc-900">Carlos Silva</span>
+              </div>
+            </td>
+            <td class="py-3 text-zinc-600 hidden sm:table-cell">3</td>
+            <td class="py-3 text-zinc-600 hidden sm:table-cell">R$ 393,33</td>
+            <td class="py-3 text-right font-bold text-emerald-600">R$ 1.180,00</td>
+          </tr>
+          <tr>
+            <td class="py-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full bg-violet-500 text-white flex items-center justify-center font-bold text-xs">MO</div>
+                <span class="font-medium text-zinc-900">Mariana Oliveira</span>
+              </div>
+            </td>
+            <td class="py-3 text-zinc-600 hidden sm:table-cell">2</td>
+            <td class="py-3 text-zinc-600 hidden sm:table-cell">R$ 460,00</td>
+            <td class="py-3 text-right font-bold text-emerald-600">R$ 920,00</td>
+          </tr>
+          <tr>
+            <td class="py-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-xs">JP</div>
+                <span class="font-medium text-zinc-900">João Pereira</span>
+              </div>
+            </td>
+            <td class="py-3 text-zinc-600 hidden sm:table-cell">4</td>
+            <td class="py-3 text-zinc-600 hidden sm:table-cell">R$ 212,50</td>
+            <td class="py-3 text-right font-bold text-emerald-600">R$ 850,00</td>
+          </tr>
+          <tr>
+            <td class="py-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center font-bold text-xs">RA</div>
+                <span class="font-medium text-zinc-900">Renata Alves</span>
+              </div>
+            </td>
+            <td class="py-3 text-zinc-600 hidden sm:table-cell">1</td>
+            <td class="py-3 text-zinc-600 hidden sm:table-cell">R$ 680,00</td>
+            <td class="py-3 text-right font-bold text-emerald-600">R$ 680,00</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30">
+    <div class="grid grid-cols-5 h-16">
+      <a href="dashboard.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500"><i data-lucide="layout-dashboard" class="w-5 h-5"></i><span class="text-[10px] font-medium">Home</span></a>
+      <a href="transactions.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500"><i data-lucide="list" class="w-5 h-5"></i><span class="text-[10px] font-medium">Lançamentos</span></a>
+      <a href="transactions.html?new=1" class="flex flex-col items-center justify-center"><div class="w-12 h-12 -mt-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white"><i data-lucide="plus" class="w-6 h-6"></i></div></a>
+      <a href="crm.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500"><i data-lucide="contact-round" class="w-5 h-5"></i><span class="text-[10px] font-medium">CRM</span></a>
+      <a href="reports.html" class="flex flex-col items-center justify-center gap-0.5 text-emerald-600"><i data-lucide="bar-chart-3" class="w-5 h-5"></i><span class="text-[10px] font-medium">Relatórios</span></a>
+    </div>
+  </nav>
+
+  <script>
+    lucide.createIcons();
+
+    new Chart(document.getElementById('barChart'), {
+      type: 'bar',
+      data: {
+        labels: ['01','03','05','07','09','11','13','15','17'],
+        datasets: [
+          { label: 'Entradas', data: [820, 1240, 0, 680, 1850, 920, 450, 2100, 1130], backgroundColor: '#10b981', borderRadius: 6 },
+          { label: 'Saídas', data: [120, 0, 2800, 340, 89, 0, 432, 145, 280], backgroundColor: '#ef4444', borderRadius: 6 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { grid: { color: '#f4f4f5' }, ticks: { color: '#71717a', font: { size: 11 } } }, x: { grid: { display: false }, ticks: { color: '#71717a', font: { size: 11 } } } }
+      }
+    });
+
+    new Chart(document.getElementById('trendChart'), {
+      type: 'line',
+      data: {
+        labels: ['Dez', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai'],
+        datasets: [
+          { label: 'Entradas', data: [14200, 15800, 13900, 16400, 17100, 18400], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.35, borderWidth: 2 },
+          { label: 'Saídas', data: [8100, 8900, 7800, 8650, 9400, 9243], borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)', fill: true, tension: 0.35, borderWidth: 2 },
+          { label: 'Lucro', data: [6100, 6900, 6100, 7750, 7700, 9156], borderColor: '#0ea5e9', backgroundColor: 'transparent', tension: 0.35, borderWidth: 2, borderDash: [4,4] },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+        scales: { y: { grid: { color: '#f4f4f5' } }, x: { grid: { display: false } } }
+      }
+    });
+  </script>
+</body>
+</html>

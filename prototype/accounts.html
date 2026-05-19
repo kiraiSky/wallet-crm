@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marcola Balancete · Caixas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="min-h-screen bg-zinc-50">
+
+  <nav class="bg-white border-b border-zinc-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-8">
+          <a href="dashboard.html" class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+              <i data-lucide="wallet" class="w-5 h-5 text-white"></i>
+            </div>
+            <span class="font-bold text-zinc-900 hidden sm:inline">Marcola</span>
+          </a>
+          <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Dashboard</a>
+            <a href="transactions.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Lançamentos</a>
+            <a href="crm.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">CRM</a>
+            <a href="accounts.html" class="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-medium text-sm">Caixas</a>
+            <a href="categories.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Categorias</a>
+            <a href="reports.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Relatórios</a>
+            <a href="users.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Usuários</a>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="openAccountModal()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg shadow-sm shadow-emerald-500/20">
+            <i data-lucide="plus" class="w-4 h-4"></i> Novo caixa
+          </button>
+          <button class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-zinc-100">
+            <div class="w-7 h-7 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">JC</div>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-zinc-500"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">
+
+    <div class="mb-5">
+      <h1 class="text-2xl font-bold text-zinc-900">Caixas e contas</h1>
+      <p class="text-zinc-500 text-sm">Gerencie onde o dinheiro entra e sai.</p>
+    </div>
+
+    <!-- Saldo total -->
+    <div class="bg-gradient-to-br from-zinc-900 to-zinc-800 text-white rounded-2xl p-6 mb-5 flex items-center justify-between">
+      <div>
+        <div class="text-xs uppercase tracking-wide text-zinc-400 mb-1">Saldo total consolidado</div>
+        <div class="text-3xl font-bold">R$ 32.356,15</div>
+        <div class="text-xs text-zinc-400 mt-1">4 caixas ativos</div>
+      </div>
+      <div class="hidden sm:block">
+        <i data-lucide="trending-up" class="w-12 h-12 text-emerald-400"></i>
+      </div>
+    </div>
+
+    <!-- Grid de caixas -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+      <!-- Card 1 -->
+      <div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:shadow-md transition group">
+        <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 p-4 text-white">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <i data-lucide="banknote" class="w-5 h-5"></i>
+            </div>
+            <button class="opacity-0 group-hover:opacity-100 transition text-white/80 hover:text-white">
+              <i data-lucide="more-vertical" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="text-xs text-white/80 mb-0.5">Caixa físico · Dinheiro</div>
+          <div class="text-2xl font-bold">R$ 4.320,00</div>
+        </div>
+        <div class="p-4 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-500">Entradas (mês)</span>
+            <span class="font-semibold text-emerald-600">+ R$ 6.250,00</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-500">Saídas (mês)</span>
+            <span class="font-semibold text-red-500">- R$ 1.930,00</span>
+          </div>
+          <div class="flex items-center justify-between text-xs pt-2 border-t border-zinc-100">
+            <span class="text-zinc-500">Lançamentos</span>
+            <span class="font-semibold text-zinc-900">42</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:shadow-md transition group">
+        <div class="bg-gradient-to-br from-violet-500 to-violet-600 p-4 text-white">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <i data-lucide="landmark" class="w-5 h-5"></i>
+            </div>
+            <button class="opacity-0 group-hover:opacity-100 transition text-white/80 hover:text-white">
+              <i data-lucide="more-vertical" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="text-xs text-white/80 mb-0.5">Conta corrente · Itaú</div>
+          <div class="text-2xl font-bold">R$ 18.750,40</div>
+        </div>
+        <div class="p-4 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-500">Entradas (mês)</span>
+            <span class="font-semibold text-emerald-600">+ R$ 8.420,00</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-500">Saídas (mês)</span>
+            <span class="font-semibold text-red-500">- R$ 5.180,00</span>
+          </div>
+          <div class="flex items-center justify-between text-xs pt-2 border-t border-zinc-100">
+            <span class="text-zinc-500">Lançamentos</span>
+            <span class="font-semibold text-zinc-900">38</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:shadow-md transition group">
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-4 text-white">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <i data-lucide="smartphone" class="w-5 h-5"></i>
+            </div>
+            <button class="opacity-0 group-hover:opacity-100 transition text-white/80 hover:text-white">
+              <i data-lucide="more-vertical" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="text-xs text-white/80 mb-0.5">Carteira Pix</div>
+          <div class="text-2xl font-bold">R$ 2.180,55</div>
+        </div>
+        <div class="p-4 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-500">Entradas (mês)</span>
+            <span class="font-semibold text-emerald-600">+ R$ 3.730,00</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-500">Saídas (mês)</span>
+            <span class="font-semibold text-red-500">- R$ 1.640,00</span>
+          </div>
+          <div class="flex items-center justify-between text-xs pt-2 border-t border-zinc-100">
+            <span class="text-zinc-500">Lançamentos</span>
+            <span class="font-semibold text-zinc-900">29</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:shadow-md transition group">
+        <div class="bg-gradient-to-br from-sky-500 to-sky-600 p-4 text-white">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <i data-lucide="credit-card" class="w-5 h-5"></i>
+            </div>
+            <button class="opacity-0 group-hover:opacity-100 transition text-white/80 hover:text-white">
+              <i data-lucide="more-vertical" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="text-xs text-white/80 mb-0.5">Conta corrente · Bradesco</div>
+          <div class="text-2xl font-bold">R$ 7.105,20</div>
+        </div>
+        <div class="p-4 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-500">Entradas (mês)</span>
+            <span class="font-semibold text-emerald-600">+ R$ 0,00</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-500">Saídas (mês)</span>
+            <span class="font-semibold text-red-500">- R$ 493,80</span>
+          </div>
+          <div class="flex items-center justify-between text-xs pt-2 border-t border-zinc-100">
+            <span class="text-zinc-500">Lançamentos</span>
+            <span class="font-semibold text-zinc-900">19</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Adicionar -->
+      <button onclick="openAccountModal()" class="border-2 border-dashed border-zinc-300 rounded-2xl p-8 text-zinc-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50/50 transition flex flex-col items-center justify-center gap-2 min-h-[200px]">
+        <i data-lucide="plus-circle" class="w-8 h-8"></i>
+        <span class="font-semibold">Adicionar novo caixa</span>
+        <span class="text-xs">Dinheiro · Banco · Pix · Cartão</span>
+      </button>
+    </div>
+  </main>
+
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30">
+    <div class="grid grid-cols-5 h-16">
+      <a href="dashboard.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i><span class="text-[10px] font-medium">Home</span>
+      </a>
+      <a href="transactions.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500">
+        <i data-lucide="list" class="w-5 h-5"></i><span class="text-[10px] font-medium">Lançamentos</span>
+      </a>
+      <a href="transactions.html?new=1" class="flex flex-col items-center justify-center">
+        <div class="w-12 h-12 -mt-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white">
+          <i data-lucide="plus" class="w-6 h-6"></i>
+        </div>
+      </a>
+      <a href="crm.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500">
+        <i data-lucide="contact-round" class="w-5 h-5"></i><span class="text-[10px] font-medium">CRM</span>
+      </a>
+      <a href="reports.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500">
+        <i data-lucide="bar-chart-3" class="w-5 h-5"></i><span class="text-[10px] font-medium">Relatórios</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- MODAL NOVO/EDITAR CAIXA -->
+  <div id="accountModal" class="hidden fixed inset-0 z-50 bg-zinc-900/50 backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between p-5 border-b border-zinc-100">
+        <h3 id="accountModalTitle" class="font-bold text-zinc-900">Novo caixa</h3>
+        <button onclick="closeAccountModal()" class="text-zinc-400 hover:text-zinc-700"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form class="p-5 space-y-4" onsubmit="event.preventDefault(); closeAccountModal();">
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Nome do caixa</label>
+          <input type="text" placeholder="Ex: Conta Itaú, Dinheiro, Pix..." required
+                 class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Tipo</label>
+          <div class="grid grid-cols-4 gap-2">
+            <button type="button" onclick="selectAccountType(this, 'banknote')" data-type-btn class="flex flex-col items-center gap-1 p-3 border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-emerald-300 text-zinc-600 text-xs font-medium">
+              <i data-lucide="banknote" class="w-5 h-5"></i> Dinheiro
+            </button>
+            <button type="button" onclick="selectAccountType(this, 'landmark')" data-type-btn class="flex flex-col items-center gap-1 p-3 border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-emerald-300 text-zinc-600 text-xs font-medium">
+              <i data-lucide="landmark" class="w-5 h-5"></i> Banco
+            </button>
+            <button type="button" onclick="selectAccountType(this, 'smartphone')" data-type-btn class="flex flex-col items-center gap-1 p-3 border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-emerald-300 text-zinc-600 text-xs font-medium">
+              <i data-lucide="smartphone" class="w-5 h-5"></i> Pix
+            </button>
+            <button type="button" onclick="selectAccountType(this, 'credit-card')" data-type-btn class="flex flex-col items-center gap-1 p-3 border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-emerald-300 text-zinc-600 text-xs font-medium">
+              <i data-lucide="credit-card" class="w-5 h-5"></i> Cartão
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Saldo inicial</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-semibold">R$</span>
+            <input type="text" placeholder="0,00" value="0,00"
+                   class="w-full pl-12 pr-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none" />
+          </div>
+          <p class="text-[11px] text-zinc-400 mt-1">Quanto já tem nesse caixa agora.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Cor</label>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="selectAccountColor(this)" data-color-btn class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 ring-2 ring-emerald-500 ring-offset-2"></button>
+            <button type="button" onclick="selectAccountColor(this)" data-color-btn class="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-400 to-violet-600 ring-2 ring-transparent hover:ring-violet-500 hover:ring-offset-2"></button>
+            <button type="button" onclick="selectAccountColor(this)" data-color-btn class="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 ring-2 ring-transparent hover:ring-orange-500 hover:ring-offset-2"></button>
+            <button type="button" onclick="selectAccountColor(this)" data-color-btn class="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-400 to-sky-600 ring-2 ring-transparent hover:ring-sky-500 hover:ring-offset-2"></button>
+            <button type="button" onclick="selectAccountColor(this)" data-color-btn class="w-9 h-9 rounded-lg bg-gradient-to-br from-rose-400 to-rose-600 ring-2 ring-transparent hover:ring-rose-500 hover:ring-offset-2"></button>
+            <button type="button" onclick="selectAccountColor(this)" data-color-btn class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 ring-2 ring-transparent hover:ring-amber-500 hover:ring-offset-2"></button>
+            <button type="button" onclick="selectAccountColor(this)" data-color-btn class="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 ring-2 ring-transparent hover:ring-teal-500 hover:ring-offset-2"></button>
+            <button type="button" onclick="selectAccountColor(this)" data-color-btn class="w-9 h-9 rounded-lg bg-gradient-to-br from-zinc-400 to-zinc-600 ring-2 ring-transparent hover:ring-zinc-500 hover:ring-offset-2"></button>
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAccountModal()" class="flex-1 py-2.5 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 font-semibold rounded-lg">Cancelar</button>
+          <button type="submit" class="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-sm shadow-emerald-500/20">Salvar caixa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    function openAccountModal() {
+      document.getElementById('accountModal').classList.remove('hidden');
+      document.getElementById('accountModal').classList.add('flex');
+    }
+    function closeAccountModal() {
+      document.getElementById('accountModal').classList.add('hidden');
+      document.getElementById('accountModal').classList.remove('flex');
+    }
+    function selectAccountType(btn) {
+      document.querySelectorAll('[data-type-btn]').forEach(b => {
+        b.className = 'flex flex-col items-center gap-1 p-3 border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-emerald-300 text-zinc-600 text-xs font-medium';
+      });
+      btn.className = 'flex flex-col items-center gap-1 p-3 border-2 border-emerald-500 bg-emerald-50 rounded-lg text-emerald-700 text-xs font-semibold';
+    }
+    function selectAccountColor(btn) {
+      document.querySelectorAll('[data-color-btn]').forEach(b => {
+        b.className = b.className.replace(/ring-emerald-\d+|ring-violet-\d+|ring-orange-\d+|ring-sky-\d+|ring-rose-\d+|ring-amber-\d+|ring-teal-\d+|ring-zinc-\d+/g, 'ring-transparent').replace('ring-offset-2', '');
+      });
+      btn.classList.add('ring-emerald-500', 'ring-offset-2');
+    }
+    // Open from query string ?new=1
+    if (new URLSearchParams(location.search).get('new') === '1') openAccountModal();
+  </script>
+</body>
+</html>

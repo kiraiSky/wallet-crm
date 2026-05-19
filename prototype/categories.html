@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marcola Balancete · Categorias</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="min-h-screen bg-zinc-50">
+
+  <nav class="bg-white border-b border-zinc-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-8">
+          <a href="dashboard.html" class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center"><i data-lucide="wallet" class="w-5 h-5 text-white"></i></div>
+            <span class="font-bold text-zinc-900 hidden sm:inline">Marcola</span>
+          </a>
+          <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Dashboard</a>
+            <a href="transactions.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Lançamentos</a>
+            <a href="crm.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">CRM</a>
+            <a href="accounts.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Caixas</a>
+            <a href="categories.html" class="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-medium text-sm">Categorias</a>
+            <a href="reports.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Relatórios</a>
+            <a href="users.html" class="px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100 font-medium text-sm">Usuários</a>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="openCategoryModal()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg shadow-sm shadow-emerald-500/20"><i data-lucide="plus" class="w-4 h-4"></i> Nova categoria</button>
+          <button class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-zinc-100">
+            <div class="w-7 h-7 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">JC</div>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-zinc-500"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">
+    <div class="mb-5">
+      <h1 class="text-2xl font-bold text-zinc-900">Categorias</h1>
+      <p class="text-zinc-500 text-sm">Organize seus lançamentos com categorias customizadas.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- RECEITAS -->
+      <div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
+        <div class="p-5 border-b border-zinc-100 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center"><i data-lucide="trending-up" class="w-4 h-4"></i></div>
+            <h3 class="font-semibold text-zinc-900">Receitas <span class="text-zinc-400 font-normal">(5)</span></h3>
+          </div>
+          <button onclick="openCategoryModal('RECEITA')" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar</button>
+        </div>
+        <div class="divide-y divide-zinc-100">
+          <!-- Item -->
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#10b98120;color:#10b981"><i data-lucide="wrench" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Serviço</div>
+              <div class="text-xs text-zinc-500">68 lançamentos · R$ 14.230,00</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#0ea5e920;color:#0ea5e9"><i data-lucide="car" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Revisão</div>
+              <div class="text-xs text-zinc-500">22 lançamentos · R$ 8.450,00</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#f59e0b20;color:#f59e0b"><i data-lucide="circle-dot" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Alinhamento</div>
+              <div class="text-xs text-zinc-500">15 lançamentos · R$ 2.180,00</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#8b5cf620;color:#8b5cf6"><i data-lucide="package-2" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Venda de peças</div>
+              <div class="text-xs text-zinc-500">12 lançamentos · R$ 3.620,00</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#a1a1aa20;color:#71717a"><i data-lucide="more-horizontal" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Outras receitas</div>
+              <div class="text-xs text-zinc-500">3 lançamentos · R$ 480,00</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DESPESAS -->
+      <div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
+        <div class="p-5 border-b border-zinc-100 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center"><i data-lucide="trending-down" class="w-4 h-4"></i></div>
+            <h3 class="font-semibold text-zinc-900">Despesas <span class="text-zinc-400 font-normal">(7)</span></h3>
+          </div>
+          <button onclick="openCategoryModal('DESPESA')" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar</button>
+        </div>
+        <div class="divide-y divide-zinc-100">
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#8b5cf620;color:#8b5cf6"><i data-lucide="package" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Peças</div>
+              <div class="text-xs text-zinc-500">42 lançamentos · R$ 3.480,00</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#f9731620;color:#f97316"><i data-lucide="users" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Mão de obra</div>
+              <div class="text-xs text-zinc-500">8 lançamentos · R$ 2.310,00</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#0ea5e920;color:#0ea5e9"><i data-lucide="home" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Aluguel</div>
+              <div class="text-xs text-zinc-500">1 lançamento · R$ 2.800,00</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#10b98120;color:#10b981"><i data-lucide="zap" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Energia</div>
+              <div class="text-xs text-zinc-500">1 lançamento · R$ 432,80</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#06b6d420;color:#06b6d4"><i data-lucide="droplet" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Água</div>
+              <div class="text-xs text-zinc-500">1 lançamento · R$ 128,00</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#ec489920;color:#ec4899"><i data-lucide="phone" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Internet/Telefone</div>
+              <div class="text-xs text-zinc-500">1 lançamento · R$ 189,90</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-4 hover:bg-zinc-50 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#a1a1aa20;color:#71717a"><i data-lucide="more-horizontal" class="w-4 h-4"></i></div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-zinc-900">Outras despesas</div>
+              <div class="text-xs text-zinc-500">2 lançamentos · R$ 78,30</div>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="pencil" class="w-3.5 h-3.5 mx-auto"></i></button>
+              <button class="w-7 h-7 rounded-lg hover:bg-white text-zinc-500"><i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30">
+    <div class="grid grid-cols-5 h-16">
+      <a href="dashboard.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500"><i data-lucide="layout-dashboard" class="w-5 h-5"></i><span class="text-[10px] font-medium">Home</span></a>
+      <a href="transactions.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500"><i data-lucide="list" class="w-5 h-5"></i><span class="text-[10px] font-medium">Lançamentos</span></a>
+      <a href="transactions.html?new=1" class="flex flex-col items-center justify-center"><div class="w-12 h-12 -mt-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white"><i data-lucide="plus" class="w-6 h-6"></i></div></a>
+      <a href="crm.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500"><i data-lucide="contact-round" class="w-5 h-5"></i><span class="text-[10px] font-medium">CRM</span></a>
+      <a href="reports.html" class="flex flex-col items-center justify-center gap-0.5 text-zinc-500"><i data-lucide="bar-chart-3" class="w-5 h-5"></i><span class="text-[10px] font-medium">Relatórios</span></a>
+    </div>
+  </nav>
+
+  <!-- MODAL CATEGORIA -->
+  <div id="categoryModal" class="hidden fixed inset-0 z-50 bg-zinc-900/50 backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between p-5 border-b border-zinc-100">
+        <h3 id="categoryModalTitle" class="font-bold text-zinc-900">Nova categoria</h3>
+        <button onclick="closeCategoryModal()" class="text-zinc-400 hover:text-zinc-700"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form class="p-5 space-y-4" onsubmit="event.preventDefault(); closeCategoryModal();">
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Tipo</label>
+          <div class="grid grid-cols-2 gap-2 p-1 bg-zinc-100 rounded-xl">
+            <button type="button" id="catTypeReceita" onclick="selectCategoryType('RECEITA')" class="py-2.5 rounded-lg font-semibold text-zinc-500 text-sm inline-flex items-center justify-center gap-1.5">
+              <i data-lucide="trending-up" class="w-4 h-4"></i> Receita
+            </button>
+            <button type="button" id="catTypeDespesa" onclick="selectCategoryType('DESPESA')" class="py-2.5 rounded-lg font-semibold text-zinc-500 text-sm inline-flex items-center justify-center gap-1.5">
+              <i data-lucide="trending-down" class="w-4 h-4"></i> Despesa
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Nome da categoria</label>
+          <input type="text" placeholder="Ex: Serviço, Peças, Aluguel..." required
+                 class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:border-emerald-500 outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Ícone</label>
+          <div class="grid grid-cols-8 gap-1.5">
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border-2 border-emerald-500 bg-emerald-50 text-emerald-600 flex items-center justify-center"><i data-lucide="wrench" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="package" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="car" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="circle-dot" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="zap" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="droplet" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="home" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="phone" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="users" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="package-2" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="fuel" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="shopping-bag" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="hammer" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="settings" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="briefcase" class="w-4 h-4"></i></button>
+            <button type="button" onclick="selectCategoryIcon(this)" data-icon-btn class="w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-600 uppercase tracking-wide mb-1.5">Cor</label>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="selectCategoryColor(this)" data-cat-color class="w-8 h-8 rounded-full bg-emerald-500 ring-2 ring-emerald-500 ring-offset-2"></button>
+            <button type="button" onclick="selectCategoryColor(this)" data-cat-color class="w-8 h-8 rounded-full bg-violet-500 ring-2 ring-transparent"></button>
+            <button type="button" onclick="selectCategoryColor(this)" data-cat-color class="w-8 h-8 rounded-full bg-orange-500 ring-2 ring-transparent"></button>
+            <button type="button" onclick="selectCategoryColor(this)" data-cat-color class="w-8 h-8 rounded-full bg-sky-500 ring-2 ring-transparent"></button>
+            <button type="button" onclick="selectCategoryColor(this)" data-cat-color class="w-8 h-8 rounded-full bg-rose-500 ring-2 ring-transparent"></button>
+            <button type="button" onclick="selectCategoryColor(this)" data-cat-color class="w-8 h-8 rounded-full bg-amber-500 ring-2 ring-transparent"></button>
+            <button type="button" onclick="selectCategoryColor(this)" data-cat-color class="w-8 h-8 rounded-full bg-teal-500 ring-2 ring-transparent"></button>
+            <button type="button" onclick="selectCategoryColor(this)" data-cat-color class="w-8 h-8 rounded-full bg-pink-500 ring-2 ring-transparent"></button>
+            <button type="button" onclick="selectCategoryColor(this)" data-cat-color class="w-8 h-8 rounded-full bg-cyan-500 ring-2 ring-transparent"></button>
+            <button type="button" onclick="selectCategoryColor(this)" data-cat-color class="w-8 h-8 rounded-full bg-zinc-500 ring-2 ring-transparent"></button>
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeCategoryModal()" class="flex-1 py-2.5 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 font-semibold rounded-lg">Cancelar</button>
+          <button type="submit" class="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-sm shadow-emerald-500/20">Salvar categoria</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL CONFIRMAR EXCLUSÃO -->
+  <div id="deleteModal" class="hidden fixed inset-0 z-50 bg-zinc-900/50 backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        </div>
+        <div class="flex-1">
+          <h3 class="font-bold text-zinc-900">Excluir categoria?</h3>
+          <p class="text-sm text-zinc-500 mt-0.5">Os lançamentos antigos vinculados a essa categoria serão movidos para "Outros".</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="closeDeleteModal()" class="flex-1 py-2.5 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 font-semibold rounded-lg">Cancelar</button>
+        <button onclick="closeDeleteModal()" class="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    function openCategoryModal(tipo) {
+      document.getElementById('categoryModal').classList.remove('hidden');
+      document.getElementById('categoryModal').classList.add('flex');
+      selectCategoryType(tipo || 'RECEITA');
+    }
+    function closeCategoryModal() {
+      document.getElementById('categoryModal').classList.add('hidden');
+      document.getElementById('categoryModal').classList.remove('flex');
+    }
+    function selectCategoryType(tipo) {
+      const r = document.getElementById('catTypeReceita');
+      const d = document.getElementById('catTypeDespesa');
+      if (tipo === 'RECEITA') {
+        r.className = 'py-2.5 rounded-lg bg-white shadow-sm font-semibold text-emerald-600 text-sm inline-flex items-center justify-center gap-1.5';
+        d.className = 'py-2.5 rounded-lg font-semibold text-zinc-500 text-sm inline-flex items-center justify-center gap-1.5';
+      } else {
+        d.className = 'py-2.5 rounded-lg bg-white shadow-sm font-semibold text-red-500 text-sm inline-flex items-center justify-center gap-1.5';
+        r.className = 'py-2.5 rounded-lg font-semibold text-zinc-500 text-sm inline-flex items-center justify-center gap-1.5';
+      }
+    }
+    function selectCategoryIcon(btn) {
+      document.querySelectorAll('[data-icon-btn]').forEach(b => {
+        b.className = 'w-9 h-9 rounded-lg border border-zinc-200 hover:border-emerald-300 text-zinc-600 flex items-center justify-center';
+      });
+      btn.className = 'w-9 h-9 rounded-lg border-2 border-emerald-500 bg-emerald-50 text-emerald-600 flex items-center justify-center';
+    }
+    function selectCategoryColor(btn) {
+      document.querySelectorAll('[data-cat-color]').forEach(b => b.classList.remove('ring-emerald-500', 'ring-violet-500', 'ring-orange-500', 'ring-sky-500', 'ring-rose-500', 'ring-amber-500', 'ring-teal-500', 'ring-pink-500', 'ring-cyan-500', 'ring-zinc-500', 'ring-offset-2'));
+      btn.classList.add('ring-emerald-500', 'ring-offset-2');
+    }
+    function openDeleteModal() {
+      document.getElementById('deleteModal').classList.remove('hidden');
+      document.getElementById('deleteModal').classList.add('flex');
+    }
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').classList.add('hidden');
+      document.getElementById('deleteModal').classList.remove('flex');
+    }
+
+    // Hook all delete pencils
+    document.querySelectorAll('[data-lucide="trash-2"]').forEach(icon => {
+      const btn = icon.closest('button');
+      if (btn) btn.addEventListener('click', openDeleteModal);
+    });
+    // Hook all edit pencils → open the edit modal (uses same form)
+    document.querySelectorAll('[data-lucide="pencil"]').forEach(icon => {
+      const btn = icon.closest('button');
+      if (btn) btn.addEventListener('click', () => {
+        document.getElementById('categoryModalTitle').textContent = 'Editar categoria';
+        openCategoryModal('RECEITA');
+      });
+    });
+  </script>
+</body>
+</html>
