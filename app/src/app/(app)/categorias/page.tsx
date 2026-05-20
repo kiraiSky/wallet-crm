@@ -9,6 +9,7 @@ export type CategoryWithStats = {
   tipo: 'ENTRADA' | 'SAIDA'
   cor: string
   icone: string
+  parentId: string | null
   count: number
   total: number
 }
@@ -29,6 +30,7 @@ export default async function CategoriasPage() {
     tipo: c.tipo,
     cor: c.cor,
     icone: c.icone,
+    parentId: c.parentId,
     count: c._count.transactions,
     total: c.transactions.reduce((s, t) => s + Number(t.valor), 0),
   }))

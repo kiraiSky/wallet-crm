@@ -16,6 +16,7 @@ import { STATUS_LIST, STATUS_META, nextStatus, type WorkOrderStatus } from '../s
 import { WorkOrderModal, type WorkOrderForModal } from '../WorkOrderModal'
 import { ItemModal } from './ItemModal'
 import { TransactionModal } from '../../lancamentos/TransactionModal'
+import { AttachmentViewer, AttachmentThumb, type ViewerTransaction } from '@/components/AttachmentViewer'
 import {
   deleteWorkOrder,
   changeStatus,
@@ -25,7 +26,14 @@ import type { WorkOrderDetail, WorkOrderItemRow, WorkOrderTransactionRow } from 
 import { openCustomerQuickView } from '@/lib/customerBus'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string }
-type CategoryOption = { id: string; nome: string; tipo: 'ENTRADA' | 'SAIDA'; cor: string; icone: string }
+type CategoryOption = {
+  id: string
+  nome: string
+  tipo: 'ENTRADA' | 'SAIDA'
+  cor: string
+  icone: string
+  parentId?: string | null
+}
 
 interface Props {
   workOrder: WorkOrderDetail
@@ -45,6 +53,8 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
   const [txModalOpen, setTxModalOpen] = useState(false)
   const [txModalTipo, setTxModalTipo] = useState<'ENTRADA' | 'SAIDA'>('SAIDA')
   const [editingTx, setEditingTx] = useState<WorkOrderTransactionRow | null>(null)
+  const [viewerTx, setViewerTx] = useState<WorkOrderTransactionRow | null>(null)
+  const [viewerAttachmentId, setViewerAttachmentId] = useState<string | undefined>()
 
   const workOrderOption = [{
     id: workOrder.id,
@@ -363,22 +373,48 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
                 {transactions.map((tx) => (
                   <div
                     key={tx.id}
-                    className="flex items-center gap-3 px-5 py-3 hover:bg-zinc-50 cursor-pointer"
+                    className={cn(
+                      'flex items-center gap-3 px-5 py-3 cursor-pointer',
+                      tx.agendado ? 'bg-amber-50/60 hover:bg-amber-100/60' : 'hover:bg-zinc-50'
+                    )}
                     onClick={() => { setEditingTx(tx); setTxModalTipo(tx.tipo); setTxModalOpen(true) }}
                   >
-                    <div className={cn(
-                      'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
-                      colorIconBg[tx.category.cor] || colorIconBg.violet
-                    )}>
-                      <DynamicIcon name={tx.category.icone} className="w-4 h-4" />
-                    </div>
+                    {tx.attachments.length > 0 ? (
+                      <AttachmentThumb
+                        attachment={tx.attachments[0]}
+                        size="md"
+                        onClick={() => {
+                          setViewerTx(tx)
+                          setViewerAttachmentId(tx.attachments[0].id)
+                        }}
+                      />
+                    ) : (
+                      <div className={cn(
+                        'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+                        colorIconBg[tx.category.cor] || colorIconBg.violet
+                      )}>
+                        <DynamicIcon name={tx.category.icone} className="w-4 h-4" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-zinc-900 flex items-center gap-1.5">
+                      <div className="text-sm font-medium text-zinc-900 flex items-center gap-1.5 flex-wrap">
                         {tx.descricao}
-                        {tx.hasAttachment && <Paperclip className="w-3 h-3 text-zinc-400" />}
+                        {tx.agendado && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                            AGENDADO
+                          </span>
+                        )}
+                        {tx.attachments.length > 1 && (
+                          <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[10px] bg-zinc-100 text-zinc-600">
+                            <Paperclip className="w-2.5 h-2.5" /> {tx.attachments.length}
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-zinc-500">
-                        {tx.category.nome} · {tx.account.nome} · {formatDateTime(tx.data)}
+                        {tx.category.nome} · {tx.account.nome} ·{' '}
+                        {tx.agendado && tx.dataAgendada
+                          ? `prev. ${formatDateTime(tx.dataAgendada)}`
+                          : formatDateTime(tx.data)}
                       </div>
                     </div>
                     <div className={cn(
@@ -431,6 +467,40 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
         categories={categories}
         workOrderOptions={workOrderOption}
         defaultWorkOrderId={workOrder.id}
+      />
+
+      <AttachmentViewer
+        open={!!viewerTx}
+        onClose={() => {
+          setViewerTx(null)
+          setViewerAttachmentId(undefined)
+        }}
+        initialAttachmentId={viewerAttachmentId}
+        transaction={
+          viewerTx
+            ? ({
+                id: viewerTx.id,
+                tipo: viewerTx.tipo,
+                valor: viewerTx.valor,
+                descricao: viewerTx.descricao,
+                data: viewerTx.data,
+                observacao: viewerTx.observacao,
+                agendado: viewerTx.agendado,
+                dataAgendada: viewerTx.dataAgendada,
+                account: { nome: viewerTx.account.nome },
+                category: viewerTx.category,
+                workOrder: { id: workOrder.id, numero: workOrder.numero, customer: { nome: workOrder.customer.nome } },
+                attachments: viewerTx.attachments,
+              } satisfies ViewerTransaction)
+            : null
+        }
+        onEdit={(_tx) => {
+          if (!viewerTx) return
+          setViewerTx(null)
+          setEditingTx(viewerTx)
+          setTxModalTipo(viewerTx.tipo)
+          setTxModalOpen(true)
+        }}
       />
     </>
   )

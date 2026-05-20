@@ -7,6 +7,7 @@ import { Gauge, Sparkline, Donut } from '@/components/Charts'
 import { colorGradient, colorHex, colorIconBg } from '@/lib/colors'
 import { ArrowRight, Plus, Paperclip } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ScheduledBlock, type ScheduledItem } from './ScheduledBlock'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,20 +24,24 @@ export default async function DashboardPage() {
   const user = await getCurrentUser()
   const primeiroNome = user.nome.split(' ')[0]
 
-  const [accounts, monthAgg, lastMonthAgg, recentTxs, expensesByCategory, totalAgg, allTxs] =
+  const in7Days = new Date(today)
+  in7Days.setDate(in7Days.getDate() + 7)
+
+  const [accounts, monthAgg, lastMonthAgg, recentTxs, expensesByCategory, totalAgg, allTxs, scheduledTxs] =
     await Promise.all([
       prisma.account.findMany({ where: { archived: false }, orderBy: { createdAt: 'asc' } }),
       prisma.transaction.groupBy({
         by: ['tipo'],
-        where: { data: { gte: startOfMonth } },
+        where: { agendado: false, data: { gte: startOfMonth } },
         _sum: { valor: true },
       }),
       prisma.transaction.groupBy({
         by: ['tipo'],
-        where: { data: { gte: startOfLastMonth, lt: startOfMonth } },
+        where: { agendado: false, data: { gte: startOfLastMonth, lt: startOfMonth } },
         _sum: { valor: true },
       }),
       prisma.transaction.findMany({
+        where: { agendado: false },
         orderBy: { data: 'desc' },
         take: 8,
         include: {
@@ -48,15 +53,29 @@ export default async function DashboardPage() {
       }),
       prisma.transaction.groupBy({
         by: ['categoryId'],
-        where: { tipo: 'SAIDA', data: { gte: startOfMonth } },
+        where: { agendado: false, tipo: 'SAIDA', data: { gte: startOfMonth } },
         _sum: { valor: true },
         orderBy: { _sum: { valor: 'desc' } },
         take: 5,
       }),
-      prisma.transaction.groupBy({ by: ['tipo', 'accountId'], _sum: { valor: true } }),
+      prisma.transaction.groupBy({
+        by: ['tipo', 'accountId'],
+        where: { agendado: false },
+        _sum: { valor: true },
+      }),
       prisma.transaction.findMany({
+        where: { agendado: false },
         orderBy: { data: 'asc' },
         select: { tipo: true, valor: true, data: true },
+      }),
+      prisma.transaction.findMany({
+        where: { agendado: true },
+        orderBy: { dataAgendada: 'asc' },
+        include: {
+          account: { select: { nome: true } },
+          category: { select: { nome: true, cor: true, icone: true } },
+          workOrder: { select: { id: true, numero: true } },
+        },
       }),
     ])
 
@@ -133,7 +152,7 @@ export default async function DashboardPage() {
   const totalDespesasMes = expensesByCategory.reduce((s, e) => s + Number(e._sum.valor ?? 0), 0)
   const allExpensesAgg = await prisma.transaction.groupBy({
     by: ['categoryId'],
-    where: { tipo: 'SAIDA', data: { gte: startOfMonth } },
+    where: { agendado: false, tipo: 'SAIDA', data: { gte: startOfMonth } },
     _sum: { valor: true },
   })
   const totalMesGeral = allExpensesAgg.reduce((s, e) => s + Number(e._sum.valor ?? 0), 0)
@@ -149,14 +168,31 @@ export default async function DashboardPage() {
     }
   })
   const outrosValor = Math.max(0, totalMesGeral - top4.reduce((s, c) => s + c.valor, 0))
+
+  // Cores visualmente distintas para os segmentos do donut.
+  // Ignoramos a `cor` da categoria aqui porque categorias diferentes podem partilhar
+  // cores ou usar tons demasiado próximos (ex: sky vs cyan), tornando o gráfico
+  // ilegível. A cor da categoria continua presente noutros sítios (cards, badges).
+  const DONUT_PALETTE = [
+    colorHex.violet,
+    colorHex.orange,
+    colorHex.emerald,
+    colorHex.sky,
+    colorHex.rose,
+    colorHex.amber,
+    colorHex.teal,
+    colorHex.pink,
+  ]
+  const donutColors = top4.map((_c, i) => DONUT_PALETTE[i % DONUT_PALETTE.length])
+
   const donutSegments = [
-    ...top4.map((c) => ({ value: c.valor, color: colorHex[c.cor] || colorHex.zinc })),
+    ...top4.map((c, i) => ({ value: c.valor, color: donutColors[i] })),
     ...(outrosValor > 0 ? [{ value: outrosValor, color: colorHex.zinc }] : []),
   ]
   const legenda = [
-    ...top4.map((c) => ({
+    ...top4.map((c, i) => ({
       nome: c.nome,
-      cor: colorHex[c.cor] || colorHex.zinc,
+      cor: donutColors[i],
       pct: totalMesGeral > 0 ? (c.valor / totalMesGeral) * 100 : 0,
     })),
     ...(outrosValor > 0
@@ -222,6 +258,22 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Pagamentos agendados */}
+      <ScheduledBlock
+        items={scheduledTxs.map<ScheduledItem>((t) => ({
+          id: t.id,
+          tipo: t.tipo as 'ENTRADA' | 'SAIDA',
+          valor: Number(t.valor),
+          descricao: t.descricao,
+          dataAgendada: (t.dataAgendada ?? t.data).toISOString(),
+          account: t.account,
+          category: t.category,
+          workOrder: t.workOrder
+            ? { id: t.workOrder.id, numero: t.workOrder.numero }
+            : null,
+        }))}
+      />
 
       {/* Linha de widgets: gauges + sparkline + fluxo */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
@@ -341,15 +393,15 @@ export default async function DashboardPage() {
               </div>
               <div className="flex-1 space-y-2 text-sm">
                 {legenda.map((l) => (
-                  <div key={l.nome} className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: l.cor }}
-                      />
-                      <span className="truncate">{l.nome}</span>
+                  <div key={l.nome} className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: l.cor }}
+                    />
+                    <span className="truncate flex-1 min-w-0" title={l.nome}>{l.nome}</span>
+                    <span className="font-semibold text-zinc-700 flex-shrink-0 ml-2">
+                      {l.pct.toFixed(0)}%
                     </span>
-                    <span className="font-semibold text-zinc-700">{l.pct.toFixed(0)}%</span>
                   </div>
                 ))}
               </div>

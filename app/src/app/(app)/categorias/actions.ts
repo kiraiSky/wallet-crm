@@ -10,6 +10,7 @@ const CategorySchema = z.object({
   tipo: z.enum(['ENTRADA', 'SAIDA']),
   cor: z.string().default('violet'),
   icone: z.string().default('package'),
+  parentId: z.string().optional(),
 })
 
 export type CategoryFormState = {
@@ -31,16 +32,39 @@ export async function saveCategory(
     return { ok: false, errors }
   }
   const data = parsed.data
+  const parentId = data.parentId && data.parentId !== '' ? data.parentId : null
+
+  // Validações: pai tem que existir, mesmo tipo, e não pode ele próprio ter pai (2 níveis)
+  if (parentId) {
+    const parent = await prisma.category.findUnique({ where: { id: parentId } })
+    if (!parent) return { ok: false, errors: { parentId: 'Categoria pai inválida' } }
+    if (parent.tipo !== data.tipo)
+      return { ok: false, errors: { parentId: 'Categoria pai tem de ser do mesmo tipo' } }
+    if (parent.parentId)
+      return { ok: false, errors: { parentId: 'Só são permitidos 2 níveis de subcategoria' } }
+    if (data.id && parent.id === data.id)
+      return { ok: false, errors: { parentId: 'Uma categoria não pode ser pai de si mesma' } }
+  }
+
+  // Não permitir que uma categoria que JÁ TEM FILHOS ganhe um pai (forçaria 3 níveis)
+  if (parentId && data.id) {
+    const childCount = await prisma.category.count({ where: { parentId: data.id } })
+    if (childCount > 0)
+      return {
+        ok: false,
+        errors: { parentId: 'Esta categoria já tem subcategorias, não pode virar subcategoria.' },
+      }
+  }
 
   try {
     if (data.id) {
       await prisma.category.update({
         where: { id: data.id },
-        data: { nome: data.nome, tipo: data.tipo, cor: data.cor, icone: data.icone },
+        data: { nome: data.nome, tipo: data.tipo, cor: data.cor, icone: data.icone, parentId },
       })
     } else {
       await prisma.category.create({
-        data: { nome: data.nome, tipo: data.tipo, cor: data.cor, icone: data.icone },
+        data: { nome: data.nome, tipo: data.tipo, cor: data.cor, icone: data.icone, parentId },
       })
     }
     revalidatePath('/categorias')

@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Search, FileText, Pencil, Copy, Paperclip, Trash2,
-  MoreVertical,
+  MoreVertical, CalendarClock,
 } from 'lucide-react'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { colorIconBg } from '@/lib/colors'
@@ -15,6 +15,7 @@ import { TransactionModal } from './TransactionModal'
 import { deleteTransaction, duplicateTransaction } from './actions'
 import type { TransactionRow, WorkOrderOption } from './page'
 import { dispatchNewTx } from '@/lib/newTxBus'
+import { AttachmentViewer, AttachmentThumb, type ViewerTransaction } from '@/components/AttachmentViewer'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string; tipo: string }
 type CategoryOption = { id: string; nome: string; cor: string; icone: string; tipo: 'ENTRADA' | 'SAIDA' }
@@ -49,6 +50,8 @@ export function TransactionsClient({
   const [modalTipo, setModalTipo] = useState<'ENTRADA' | 'SAIDA'>('SAIDA')
   const [editing, setEditing] = useState<TransactionRow | null>(null)
   const [menuOpen, setMenuOpen] = useState<{ id: string; x: number; y: number } | null>(null)
+  const [viewerTx, setViewerTx] = useState<TransactionRow | null>(null)
+  const [viewerAttachmentId, setViewerAttachmentId] = useState<string | undefined>()
 
   useEffect(() => {
     if (openNew !== null) {
@@ -210,15 +213,46 @@ export function TransactionsClient({
               </thead>
               <tbody className="divide-y divide-zinc-100">
                 {transactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-zinc-50 group">
+                  <tr
+                    key={tx.id}
+                    className={cn(
+                      'group',
+                      tx.agendado
+                        ? 'bg-amber-50/60 hover:bg-amber-100/60'
+                        : 'hover:bg-zinc-50'
+                    )}
+                  >
                     <td className="px-4 py-3 text-zinc-600 whitespace-nowrap text-xs">
-                      {formatDateTime(tx.data)}
+                      {tx.agendado && tx.dataAgendada ? (
+                        <span className="inline-flex items-center gap-1 text-amber-700 font-semibold">
+                          <CalendarClock className="w-3 h-3" />
+                          {formatDateTime(tx.dataAgendada)}
+                        </span>
+                      ) : (
+                        formatDateTime(tx.data)
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-medium text-zinc-900 flex items-center gap-2">
-                        {tx.descricao}
-                        {tx.hasAttachment && (
-                          <Paperclip className="w-3 h-3 text-zinc-400" />
+                        {tx.attachments.length > 0 && (
+                          <AttachmentThumb
+                            attachment={tx.attachments[0]}
+                            onClick={() => {
+                              setViewerTx(tx)
+                              setViewerAttachmentId(tx.attachments[0].id)
+                            }}
+                          />
+                        )}
+                        <span>{tx.descricao}</span>
+                        {tx.agendado && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                            AGENDADO
+                          </span>
+                        )}
+                        {tx.attachments.length > 1 && (
+                          <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[10px] bg-zinc-100 text-zinc-600">
+                            <Paperclip className="w-2.5 h-2.5" /> {tx.attachments.length}
+                          </span>
                         )}
                       </div>
                       {tx.observacao && (
@@ -268,20 +302,46 @@ export function TransactionsClient({
             {/* Mobile list */}
             <div className="md:hidden divide-y divide-zinc-100">
               {transactions.map((tx) => (
-                <div key={tx.id} className="flex items-center gap-3 p-4 relative">
-                  <div className={cn(
-                    'w-10 h-10 rounded-lg flex items-center justify-center',
-                    colorIconBg[tx.category.cor] || colorIconBg.violet
-                  )}>
-                    <DynamicIcon name={tx.category.icone} className="w-5 h-5" />
-                  </div>
+                <div
+                  key={tx.id}
+                  className={cn(
+                    'flex items-center gap-3 p-4 relative',
+                    tx.agendado && 'bg-amber-50/60'
+                  )}
+                >
+                  {tx.attachments.length > 0 ? (
+                    <AttachmentThumb
+                      attachment={tx.attachments[0]}
+                      size="md"
+                      onClick={() => {
+                        setViewerTx(tx)
+                        setViewerAttachmentId(tx.attachments[0].id)
+                      }}
+                    />
+                  ) : (
+                    <div className={cn(
+                      'w-10 h-10 rounded-lg flex items-center justify-center',
+                      colorIconBg[tx.category.cor] || colorIconBg.violet
+                    )}>
+                      <DynamicIcon name={tx.category.icone} className="w-5 h-5" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-zinc-900 truncate flex items-center gap-1">
                       {tx.descricao}
-                      {tx.hasAttachment && <Paperclip className="w-3 h-3 text-zinc-400" />}
+                      {tx.agendado && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                          AGENDADO
+                        </span>
+                      )}
+                      {tx.attachments.length > 1 && (
+                        <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[10px] bg-zinc-100 text-zinc-600">
+                          <Paperclip className="w-2.5 h-2.5" /> {tx.attachments.length}
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-zinc-500">
-                      {tx.category.nome} · {tx.account.nome} · {formatDateTime(tx.data)}
+                      {tx.category.nome} · {tx.account.nome} · {tx.agendado && tx.dataAgendada ? formatDateTime(tx.dataAgendada) : formatDateTime(tx.data)}
                     </div>
                   </div>
                   <div className={cn(
@@ -322,6 +382,42 @@ export function TransactionsClient({
         accounts={accounts}
         categories={categories}
         workOrderOptions={workOrderOptions}
+      />
+
+      <AttachmentViewer
+        open={!!viewerTx}
+        onClose={() => {
+          setViewerTx(null)
+          setViewerAttachmentId(undefined)
+        }}
+        initialAttachmentId={viewerAttachmentId}
+        transaction={
+          viewerTx
+            ? ({
+                id: viewerTx.id,
+                tipo: viewerTx.tipo,
+                valor: viewerTx.valor,
+                descricao: viewerTx.descricao,
+                data: viewerTx.data,
+                observacao: viewerTx.observacao,
+                agendado: viewerTx.agendado,
+                dataAgendada: viewerTx.dataAgendada,
+                account: { nome: viewerTx.account.nome },
+                category: viewerTx.category,
+                workOrder: viewerTx.workOrder
+                  ? { numero: viewerTx.workOrder.numero, customer: viewerTx.workOrder.customer }
+                  : null,
+                attachments: viewerTx.attachments,
+              } satisfies ViewerTransaction)
+            : null
+        }
+        onEdit={(tx) => {
+          const original = transactions.find((t) => t.id === tx.id)
+          if (original) {
+            setViewerTx(null)
+            openEdit(original)
+          }
+        }}
       />
     </>
   )

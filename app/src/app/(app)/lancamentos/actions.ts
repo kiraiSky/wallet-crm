@@ -19,6 +19,8 @@ const TransactionSchema = z.object({
   observacao: z.string().optional(),
   workOrderId: z.string().optional(),
   customerId: z.string().optional(),
+  agendado: z.string().optional(),
+  dataAgendada: z.string().optional(),
 })
 
 export type TransactionFormState = {
@@ -45,6 +47,8 @@ export async function saveTransaction(
     observacao: formData.get('observacao') || undefined,
     workOrderId: formData.get('workOrderId') || undefined,
     customerId: formData.get('customerId') || undefined,
+    agendado: formData.get('agendado') || undefined,
+    dataAgendada: formData.get('dataAgendada') || undefined,
   })
 
   if (!parsed.success) {
@@ -82,6 +86,12 @@ export async function saveTransaction(
     savedFile = await saveUpload(file)
   }
 
+  const isAgendado = data.agendado === 'true' || data.agendado === 'on' || data.agendado === '1'
+  if (isAgendado && !data.dataAgendada) {
+    return { ok: false, errors: { dataAgendada: 'Indica a data prevista do pagamento' } }
+  }
+  const dataAgendada = isAgendado && data.dataAgendada ? new Date(data.dataAgendada) : null
+
   try {
     const baseData = {
       tipo: data.tipo,
@@ -93,6 +103,8 @@ export async function saveTransaction(
       observacao: data.observacao || null,
       workOrderId: data.workOrderId || null,
       customerId: data.customerId || null,
+      agendado: isAgendado,
+      dataAgendada,
       ...(savedFile && {
         attachments: {
           create: {
@@ -198,5 +210,62 @@ export async function duplicateTransaction(id: string): Promise<TransactionFormS
   })
   revalidatePath('/lancamentos')
   revalidatePath('/dashboard')
+  return { ok: true }
+}
+
+export async function confirmScheduledTransaction(id: string): Promise<TransactionFormState> {
+  const tx = await prisma.transaction.findUnique({ where: { id } })
+  if (!tx) return { ok: false, message: 'Movimento não encontrado' }
+  if (!tx.agendado) return { ok: false, message: 'Este movimento já está confirmado' }
+
+  const updated = await prisma.transaction.update({
+    where: { id },
+    data: {
+      agendado: false,
+      confirmadoEm: new Date(),
+      data: new Date(),
+    },
+  })
+  await logAudit({
+    entityType: 'TRANSACTION',
+    entityId: id,
+    action: 'UPDATE',
+    summary: `Agendado confirmado • ${tx.descricao}`,
+    before: tx,
+    after: updated,
+  })
+
+  revalidatePath('/lancamentos')
+  revalidatePath('/dashboard')
+  revalidatePath('/caixas')
+  if (tx.workOrderId) revalidatePath(`/folhas/${tx.workOrderId}`)
+  return { ok: true }
+}
+
+export async function rescheduleTransaction(
+  id: string,
+  novaData: string
+): Promise<TransactionFormState> {
+  if (!novaData) return { ok: false, message: 'Indica a nova data' }
+  const tx = await prisma.transaction.findUnique({ where: { id } })
+  if (!tx) return { ok: false, message: 'Movimento não encontrado' }
+  if (!tx.agendado) return { ok: false, message: 'Apenas movimentos agendados podem ser reagendados' }
+
+  const updated = await prisma.transaction.update({
+    where: { id },
+    data: { dataAgendada: new Date(novaData) },
+  })
+  await logAudit({
+    entityType: 'TRANSACTION',
+    entityId: id,
+    action: 'UPDATE',
+    summary: `Agendado reagendado • ${tx.descricao}`,
+    before: tx,
+    after: updated,
+  })
+
+  revalidatePath('/lancamentos')
+  revalidatePath('/dashboard')
+  if (tx.workOrderId) revalidatePath(`/folhas/${tx.workOrderId}`)
   return { ok: true }
 }

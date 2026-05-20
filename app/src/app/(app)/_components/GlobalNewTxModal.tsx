@@ -6,7 +6,14 @@ import { NEW_TX_EVENT, type NewTxDetail } from '@/lib/newTxBus'
 import type { WorkOrderOption } from '@/app/(app)/lancamentos/page'
 
 type Account = { id: string; nome: string; cor: string; icone: string }
-type Category = { id: string; nome: string; tipo: 'ENTRADA' | 'SAIDA'; cor: string; icone: string }
+type Category = {
+  id: string
+  nome: string
+  tipo: 'ENTRADA' | 'SAIDA'
+  cor: string
+  icone: string
+  parentId?: string | null
+}
 
 interface Props {
   accounts: Account[]

@@ -34,12 +34,12 @@ export default async function CaixasPage() {
       const [agg, monthAgg] = await Promise.all([
         prisma.transaction.groupBy({
           by: ['tipo'],
-          where: { accountId: acc.id },
+          where: { accountId: acc.id, agendado: false },
           _sum: { valor: true },
         }),
         prisma.transaction.groupBy({
           by: ['tipo'],
-          where: { accountId: acc.id, data: { gte: startOfMonth } },
+          where: { accountId: acc.id, agendado: false, data: { gte: startOfMonth } },
           _sum: { valor: true },
         }),
       ])

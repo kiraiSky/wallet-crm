@@ -28,6 +28,9 @@ export type WorkOrderTransactionRow = {
   account: { nome: string }
   category: { nome: string; cor: string; icone: string }
   hasAttachment: boolean
+  attachments: { id: string; filename: string; mimeType: string }[]
+  agendado: boolean
+  dataAgendada: string | null
 }
 
 export type WorkOrderDetail = {
@@ -79,6 +82,7 @@ export default async function WorkOrderDetailPage({
       include: {
         account: { select: { nome: true } },
         category: { select: { nome: true, cor: true, icone: true } },
+        attachments: { select: { id: true, filename: true, mimeType: true } },
         _count: { select: { attachments: true } },
       },
     }),
@@ -90,7 +94,7 @@ export default async function WorkOrderDetailPage({
     prisma.category.findMany({
       where: { archived: false },
       orderBy: { nome: 'asc' },
-      select: { id: true, nome: true, tipo: true, cor: true, icone: true },
+      select: { id: true, nome: true, tipo: true, cor: true, icone: true, parentId: true },
     }),
   ])
   if (!wo) notFound()
@@ -146,6 +150,9 @@ export default async function WorkOrderDetailPage({
     account: t.account,
     category: t.category,
     hasAttachment: t._count.attachments > 0,
+    attachments: t.attachments,
+    agendado: t.agendado,
+    dataAgendada: t.dataAgendada ? t.dataAgendada.toISOString() : null,
   }))
 
   return (

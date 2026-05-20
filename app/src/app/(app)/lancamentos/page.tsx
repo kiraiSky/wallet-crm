@@ -22,6 +22,9 @@ export type TransactionRow = {
   user: { nome: string }
   workOrder: { numero: number; customer: { nome: string } } | null
   hasAttachment: boolean
+  attachments: { id: string; filename: string; mimeType: string }[]
+  agendado: boolean
+  dataAgendada: string | null
 }
 
 export type WorkOrderOption = {
@@ -67,6 +70,7 @@ export default async function LancamentosPage({
         category: { select: { nome: true, cor: true, icone: true } },
         user: { select: { nome: true } },
         workOrder: { select: { numero: true, customer: { select: { nome: true } } } },
+        attachments: { select: { id: true, filename: true, mimeType: true } },
         _count: { select: { attachments: true } },
       },
     }),
@@ -78,11 +82,11 @@ export default async function LancamentosPage({
     prisma.category.findMany({
       where: { archived: false },
       orderBy: { nome: 'asc' },
-      select: { id: true, nome: true, cor: true, icone: true, tipo: true },
+      select: { id: true, nome: true, cor: true, icone: true, tipo: true, parentId: true },
     }),
     prisma.transaction.groupBy({
       by: ['tipo'],
-      where,
+      where: { ...where, agendado: false },
       _sum: { valor: true },
       _count: true,
     }),
@@ -116,6 +120,9 @@ export default async function LancamentosPage({
     user: t.user,
     workOrder: t.workOrder,
     hasAttachment: t._count.attachments > 0,
+    attachments: t.attachments,
+    agendado: t.agendado,
+    dataAgendada: t.dataAgendada ? t.dataAgendada.toISOString() : null,
   }))
 
   const workOrderOptions: WorkOrderOption[] = workOrders.map((wo) => ({

@@ -23,7 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     prisma.category.findMany({
       where: { archived: false },
       orderBy: { nome: 'asc' },
-      select: { id: true, nome: true, cor: true, icone: true, tipo: true },
+      select: { id: true, nome: true, cor: true, icone: true, tipo: true, parentId: true },
     }),
     prisma.workOrder.findMany({
       where: { estado: { notIn: ['CANCELADA'] } },

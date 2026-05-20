@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { UploadCloud, X as XIcon, ClipboardList, ChevronDown } from 'lucide-react'
+import { UploadCloud, X as XIcon, ClipboardList, ChevronDown, CalendarClock } from 'lucide-react'
 import { Modal } from '@/components/Modal'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { colorIconBg } from '@/lib/colors'
@@ -11,7 +11,14 @@ import { saveTransaction } from './actions'
 import type { WorkOrderOption } from './page'
 
 type Account = { id: string; nome: string; cor: string; icone: string }
-type Category = { id: string; nome: string; tipo: 'ENTRADA' | 'SAIDA'; cor: string; icone: string }
+type Category = {
+  id: string
+  nome: string
+  tipo: 'ENTRADA' | 'SAIDA'
+  cor: string
+  icone: string
+  parentId?: string | null
+}
 
 export type TransactionForModal = {
   id: string
@@ -23,6 +30,8 @@ export type TransactionForModal = {
   accountId: string
   categoryId: string
   workOrderId: string | null
+  agendado?: boolean
+  dataAgendada?: string | null
 }
 
 interface Props {
@@ -40,6 +49,13 @@ function isoToLocalDatetimeInput(iso: string | undefined): string {
   const d = iso ? new Date(iso) : new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function isoToDateInput(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 export function TransactionModal({
@@ -68,6 +84,8 @@ export function TransactionModal({
   const [woSearch, setWoSearch] = useState('')
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [agendado, setAgendado] = useState<boolean>(transaction?.agendado ?? false)
+  const [dataAgendada, setDataAgendada] = useState(isoToDateInput(transaction?.dataAgendada))
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -85,6 +103,28 @@ export function TransactionModal({
   const filteredCategories = categories.filter((c) => c.tipo === tipo)
   const selectedCategory = filteredCategories.find((c) => c.id === categoryId) ?? null
   const selectedAccount = accounts.find((a) => a.id === accountId) ?? null
+  const selectedCategoryParent = selectedCategory?.parentId
+    ? filteredCategories.find((c) => c.id === selectedCategory.parentId) ?? null
+    : null
+
+  // Constrói árvore: pais primeiro, depois filhos por baixo
+  const categoryTree = (() => {
+    const roots = filteredCategories.filter((c) => !c.parentId)
+    const list: { cat: Category; child: boolean }[] = []
+    for (const r of roots) {
+      list.push({ cat: r, child: false })
+      const children = filteredCategories
+        .filter((c) => c.parentId === r.id)
+        .sort((a, b) => a.nome.localeCompare(b.nome))
+      for (const c of children) list.push({ cat: c, child: true })
+    }
+    // Órfãos (parentId aponta para algo fora do filtro, ex: tipo diferente)
+    const orphans = filteredCategories.filter(
+      (c) => c.parentId && !filteredCategories.some((p) => p.id === c.parentId),
+    )
+    for (const o of orphans) list.push({ cat: o, child: false })
+    return list
+  })()
 
   // Sincroniza o formulário sempre que o modal abre ou muda o movimento a editar
   useEffect(() => {
@@ -100,6 +140,8 @@ export function TransactionModal({
     setWoSearch('')
     setCategoryOpen(false)
     setAccountOpen(false)
+    setAgendado(transaction?.agendado ?? false)
+    setDataAgendada(isoToDateInput(transaction?.dataAgendada))
     setFile(null)
     setError(null)
     setErrors({})
@@ -118,6 +160,8 @@ export function TransactionModal({
     setWoSearch('')
     setCategoryOpen(false)
     setAccountOpen(false)
+    setAgendado(transaction?.agendado ?? false)
+    setDataAgendada(isoToDateInput(transaction?.dataAgendada))
     setFile(null)
     setError(null)
     setErrors({})
@@ -148,6 +192,10 @@ export function TransactionModal({
       fd.set('workOrderId', workOrderId)
       const wo = workOrderOptions.find((w) => w.id === workOrderId)
       if (wo) fd.set('customerId', wo.customerId)
+    }
+    if (agendado) {
+      fd.set('agendado', 'true')
+      if (dataAgendada) fd.set('dataAgendada', dataAgendada)
     }
     if (file) fd.set('attachment', file)
 
@@ -253,7 +301,17 @@ export function TransactionModal({
                     )}>
                       <DynamicIcon name={selectedCategory.icone} className="w-3 h-3" />
                     </span>
-                    <span className="flex-1 truncate">{selectedCategory.nome}</span>
+                    <span className="flex-1 truncate">
+                      {selectedCategoryParent ? (
+                        <>
+                          <span className="text-zinc-400">{selectedCategoryParent.nome}</span>
+                          <span className="text-zinc-400 mx-1">›</span>
+                          {selectedCategory.nome}
+                        </>
+                      ) : (
+                        selectedCategory.nome
+                      )}
+                    </span>
                   </>
                 ) : (
                   <span className="flex-1">Seleciona...</span>
@@ -263,22 +321,24 @@ export function TransactionModal({
               {categoryOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setCategoryOpen(false)} />
-                  <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
-                    {filteredCategories.length === 0 ? (
+                  <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                    {categoryTree.length === 0 ? (
                       <div className="px-3 py-2 text-sm text-zinc-400">
                         Sem categorias de {tipo === 'SAIDA' ? 'despesa' : 'receita'}.
                       </div>
                     ) : (
-                      filteredCategories.map((c) => (
+                      categoryTree.map(({ cat: c, child }) => (
                         <button
                           key={c.id}
                           type="button"
                           onClick={() => { setCategoryId(c.id); setCategoryOpen(false) }}
                           className={cn(
                             'w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2.5 text-sm transition',
+                            child && 'pl-8',
                             c.id === categoryId && 'bg-zinc-50 font-semibold'
                           )}
                         >
+                          {child && <span className="text-zinc-300">└</span>}
                           <span className={cn(
                             'w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0',
                             colorIconBg[c.cor] || colorIconBg.violet
@@ -371,6 +431,47 @@ export function TransactionModal({
             onChange={(e) => setData(e.target.value)}
             className="input-base"
           />
+        </div>
+
+        {/* Pagamento agendado */}
+        <div className={cn(
+          'rounded-xl border p-3 transition',
+          agendado ? 'bg-amber-50 border-amber-300' : 'bg-zinc-50 border-zinc-200'
+        )}>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={agendado}
+              onChange={(e) => setAgendado(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-zinc-300 text-amber-500 focus:ring-amber-400"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-zinc-800">
+                <CalendarClock className="w-4 h-4 text-amber-600" />
+                Pagamento agendado?
+              </div>
+              <div className="text-xs text-zinc-500 mt-0.5">
+                {tipo === 'ENTRADA'
+                  ? 'O valor ainda não entrou na conta — fica em amarelo até confirmares.'
+                  : 'O pagamento ainda não saiu da conta — fica em amarelo até confirmares.'}
+              </div>
+            </div>
+          </label>
+          {agendado && (
+            <div className="mt-3 ml-7">
+              <label className="label">Data prevista *</label>
+              <input
+                type="date"
+                value={dataAgendada}
+                onChange={(e) => setDataAgendada(e.target.value)}
+                required
+                className="input-base"
+              />
+              {errors.dataAgendada && (
+                <p className="text-xs text-red-500 mt-1">{errors.dataAgendada}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Folha de obra */}

@@ -52,7 +52,7 @@ enum AccountType {
   CARTAO
 }
 
-// Categorias de receita/despesa
+// Categorias de receita/despesa (suporta 2 níveis via parentId)
 model Category {
   id           String          @id @default(cuid())
   nome         String
@@ -60,10 +60,14 @@ model Category {
   cor          String          @default("violet")
   icone        String          @default("package")
   archived     Boolean         @default(false)
+  parentId     String?         @map("parent_id")
+  parent       Category?       @relation("CategoryChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Category[]      @relation("CategoryChildren")
   createdAt    DateTime        @default(now()) @map("created_at")
   transactions Transaction[]
 
-  @@unique([nome, tipo])
+  @@unique([nome, tipo, parentId])
+  @@index([parentId])
   @@map("categories")
 }
 
@@ -85,6 +89,11 @@ model Transaction {
   userId      String                    @map("user_id")
   workOrderId String?                   @map("work_order_id")
   customerId  String?                   @map("customer_id")
+  // Pagamento agendado — quando agendado=true, o movimento ainda não foi confirmado
+  // e não conta no saldo das contas nem nos KPIs até confirmadoEm ser preenchido.
+  agendado     Boolean                  @default(false)
+  dataAgendada DateTime?                @map("data_agendada")
+  confirmadoEm DateTime?                @map("confirmado_em")
   account     Account                   @relation(fields: [accountId], references: [id], onDelete: Restrict)
   category    Category                  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   user        User                      @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -100,6 +109,7 @@ model Transaction {
   @@index([categoryId])
   @@index([workOrderId])
   @@index([customerId])
+  @@index([agendado, dataAgendada])
   @@map("transactions")
 }
 

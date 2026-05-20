@@ -15,15 +15,17 @@ interface Props {
   onClose: () => void
   category?: CategoryWithStats | null
   defaultTipo: 'ENTRADA' | 'SAIDA'
+  allCategories?: CategoryWithStats[]
 }
 
-export function CategoryModal({ open, onClose, category, defaultTipo }: Props) {
+export function CategoryModal({ open, onClose, category, defaultTipo, allCategories = [] }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [nome, setNome] = useState(category?.nome ?? '')
   const [tipo, setTipo] = useState<'ENTRADA' | 'SAIDA'>(category?.tipo ?? defaultTipo)
   const [cor, setCor] = useState(category?.cor ?? 'violet')
   const [icone, setIcone] = useState(category?.icone ?? 'package')
+  const [parentId, setParentId] = useState(category?.parentId ?? '')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -32,8 +34,20 @@ export function CategoryModal({ open, onClose, category, defaultTipo }: Props) {
     setTipo(category?.tipo ?? defaultTipo)
     setCor(category?.cor ?? 'violet')
     setIcone(category?.icone ?? 'package')
+    setParentId(category?.parentId ?? '')
     setError(null)
   }, [open, category?.id, defaultTipo])
+
+  // Possíveis pais: mesmo tipo, não ele próprio, sem pai (nível 1 só)
+  const parentOptions = allCategories.filter(
+    (c) =>
+      c.tipo === tipo &&
+      c.parentId === null &&
+      c.id !== category?.id,
+  )
+
+  // Se esta categoria já é pai (tem filhos), não pode virar filha
+  const hasChildren = !!category && allCategories.some((c) => c.parentId === category.id)
 
   function reset() {
     if (category) {
@@ -41,11 +55,13 @@ export function CategoryModal({ open, onClose, category, defaultTipo }: Props) {
       setTipo(category.tipo)
       setCor(category.cor)
       setIcone(category.icone)
+      setParentId(category.parentId ?? '')
     } else {
       setNome('')
       setTipo(defaultTipo)
       setCor('violet')
       setIcone('package')
+      setParentId('')
     }
     setError(null)
   }
@@ -59,6 +75,7 @@ export function CategoryModal({ open, onClose, category, defaultTipo }: Props) {
     fd.set('tipo', tipo)
     fd.set('cor', cor)
     fd.set('icone', icone)
+    if (parentId) fd.set('parentId', parentId)
 
     startTransition(async () => {
       const res = await saveCategory({ ok: false }, fd)
@@ -119,6 +136,26 @@ export function CategoryModal({ open, onClose, category, defaultTipo }: Props) {
             autoFocus
             className="input-base"
           />
+        </div>
+
+        <div>
+          <label className="label">Categoria pai (opcional)</label>
+          <select
+            value={parentId}
+            onChange={(e) => setParentId(e.target.value)}
+            disabled={hasChildren}
+            className="input-base disabled:opacity-50"
+          >
+            <option value="">— Categoria principal —</option>
+            {parentOptions.map((p) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
+          <p className="text-xs text-zinc-500 mt-1">
+            {hasChildren
+              ? 'Esta categoria já tem subcategorias, não pode tornar-se subcategoria.'
+              : 'Escolhe uma categoria pai para criar uma subcategoria (2 níveis no máximo).'}
+          </p>
         </div>
 
         <div>
