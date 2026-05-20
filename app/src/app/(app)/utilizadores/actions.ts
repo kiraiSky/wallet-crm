@@ -5,6 +5,7 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { requireOwner } from '@/lib/current-user'
+import { logAudit } from '@/lib/audit'
 
 const UserSchema = z.object({
   id: z.string().optional(),
@@ -48,14 +49,28 @@ export async function saveUser(prevState: UserFormState, formData: FormData): Pr
         }
         update.senha = await bcrypt.hash(data.senha, 10)
       }
-      await prisma.user.update({ where: { id: data.id }, data: update })
+      const updated = await prisma.user.update({ where: { id: data.id }, data: update })
+      await logAudit({
+        entityType: 'USER',
+        entityId: updated.id,
+        action: 'UPDATE',
+        summary: `Utilizador • ${updated.nome}`,
+        after: { nome: updated.nome, email: updated.email, role: updated.role },
+      })
     } else {
       if (!data.senha || data.senha.length < 6) {
         return { ok: false, errors: { senha: 'Senha obrigatória (mínimo 6 caracteres)' } }
       }
       const senha = await bcrypt.hash(data.senha, 10)
-      await prisma.user.create({
+      const created = await prisma.user.create({
         data: { nome: data.nome, email, senha, role: data.role },
+      })
+      await logAudit({
+        entityType: 'USER',
+        entityId: created.id,
+        action: 'CREATE',
+        summary: `Utilizador • ${created.nome} (${created.role})`,
+        after: { nome: created.nome, email: created.email, role: created.role },
       })
     }
     revalidatePath('/utilizadores')

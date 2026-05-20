@@ -21,6 +21,7 @@ model User {
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
   transactions Transaction[]
+  auditLogs    AuditLog[]
 
   @@map("users")
 }
@@ -239,4 +240,32 @@ model TransactionAttachment {
 
   @@index([transactionId])
   @@map("transaction_attachments")
+}
+
+// Registo de auditoria — quem mudou o quê e quando
+model AuditLog {
+  id         String      @id @default(cuid())
+  userId     String?     @map("user_id")
+  entityType String      @map("entity_type")
+  entityId   String      @map("entity_id")
+  action     AuditAction
+  summary    String?     // descrição curta legível (ex: "Folha #12 → CONCLUIDA")
+  before     Json?
+  after      Json?
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  ARCHIVE
+  STATUS_CHANGE
 }

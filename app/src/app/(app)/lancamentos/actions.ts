@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { parseEURToCents } from '@/lib/format'
 import { getCurrentUser } from '@/lib/current-user'
 import { saveUpload, deleteUpload } from '@/lib/uploads'
+import { logAudit } from '@/lib/audit'
 
 const TransactionSchema = z.object({
   id: z.string().optional(),
@@ -113,10 +114,26 @@ export async function saveTransaction(
     }
 
     if (data.id) {
-      await prisma.transaction.update({ where: { id: data.id }, data: baseData })
+      const before = await prisma.transaction.findUnique({ where: { id: data.id } })
+      const updated = await prisma.transaction.update({ where: { id: data.id }, data: baseData })
+      await logAudit({
+        entityType: 'TRANSACTION',
+        entityId: updated.id,
+        action: 'UPDATE',
+        summary: `${updated.tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} • ${updated.descricao}`,
+        before,
+        after: updated,
+      })
     } else {
-      await prisma.transaction.create({
+      const created = await prisma.transaction.create({
         data: { ...baseData, userId: user.id },
+      })
+      await logAudit({
+        entityType: 'TRANSACTION',
+        entityId: created.id,
+        action: 'CREATE',
+        summary: `${created.tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} • ${created.descricao}`,
+        after: created,
       })
     }
 
@@ -148,6 +165,13 @@ export async function deleteTransaction(id: string): Promise<TransactionFormStat
     await deleteUpload(att.storagePath).catch(() => {})
   }
   await prisma.transaction.delete({ where: { id } })
+  await logAudit({
+    entityType: 'TRANSACTION',
+    entityId: id,
+    action: 'DELETE',
+    summary: `${tx.tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} • ${tx.descricao}`,
+    before: tx,
+  })
 
   revalidatePath('/lancamentos')
   revalidatePath('/dashboard')

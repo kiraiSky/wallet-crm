@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Wallet, Plus, LogOut, User as UserIcon, Users, ChevronDown } from 'lucide-react'
+import { Wallet, Plus, LogOut, User as UserIcon, Users, ChevronDown, ShieldCheck, BarChart3 } from 'lucide-react'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { logoutAction } from '@/app/login/actions'
@@ -11,8 +11,9 @@ import { dispatchNewTx } from '@/lib/newTxBus'
 const navItems = [
   { href: '/dashboard', label: 'Painel' },
   { href: '/lancamentos', label: 'Movimentos' },
-  { href: '/clientes', label: 'Clientes' },
+  { href: '/crm', label: 'CRM' },
   { href: '/folhas', label: 'Folhas' },
+  { href: '/relatorios', label: 'Relatórios' },
   { href: '/caixas', label: 'Contas' },
   { href: '/categorias', label: 'Categorias' },
 ]
@@ -108,14 +109,24 @@ export function TopNav({
                   </div>
                   <div className="py-1">
                     {userRole === 'OWNER' && (
-                      <Link
-                        href="/utilizadores"
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
-                      >
-                        <Users className="w-4 h-4" />
-                        Utilizadores
-                      </Link>
+                      <>
+                        <Link
+                          href="/utilizadores"
+                          onClick={() => setOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+                        >
+                          <Users className="w-4 h-4" />
+                          Utilizadores
+                        </Link>
+                        <Link
+                          href="/auditoria"
+                          onClick={() => setOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                          Auditoria
+                        </Link>
+                      </>
                     )}
                     <button
                       onClick={logout}

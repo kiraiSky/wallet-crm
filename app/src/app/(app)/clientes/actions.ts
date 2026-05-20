@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { logAudit } from '@/lib/audit'
 
 const CustomerSchema = z.object({
   id: z.string().optional(),
@@ -65,12 +66,28 @@ export async function saveCustomer(
 
   try {
     if (data.id) {
-      await prisma.customer.update({ where: { id: data.id }, data: payload })
+      const before = await prisma.customer.findUnique({ where: { id: data.id } })
+      const updated = await prisma.customer.update({ where: { id: data.id }, data: payload })
+      await logAudit({
+        entityType: 'CUSTOMER',
+        entityId: updated.id,
+        action: 'UPDATE',
+        summary: `Cliente • ${updated.nome}`,
+        before,
+        after: updated,
+      })
       revalidatePath('/clientes')
       revalidatePath(`/clientes/${data.id}`)
       return { ok: true, id: data.id }
     }
     const created = await prisma.customer.create({ data: payload })
+    await logAudit({
+      entityType: 'CUSTOMER',
+      entityId: created.id,
+      action: 'CREATE',
+      summary: `Cliente • ${created.nome}`,
+      after: created,
+    })
     revalidatePath('/clientes')
     return { ok: true, id: created.id }
   } catch (e) {
@@ -81,8 +98,17 @@ export async function saveCustomer(
 
 export async function deleteCustomer(id: string): Promise<CustomerFormState> {
   try {
-    // Como vehicles têm cascade, e ainda não há transactions ligadas, basta apagar
+    const before = await prisma.customer.findUnique({ where: { id } })
     await prisma.customer.delete({ where: { id } })
+    if (before) {
+      await logAudit({
+        entityType: 'CUSTOMER',
+        entityId: id,
+        action: 'DELETE',
+        summary: `Cliente • ${before.nome}`,
+        before,
+      })
+    }
     revalidatePath('/clientes')
     return { ok: true }
   } catch (e) {
@@ -93,7 +119,13 @@ export async function deleteCustomer(id: string): Promise<CustomerFormState> {
 
 export async function archiveCustomer(id: string): Promise<CustomerFormState> {
   try {
-    await prisma.customer.update({ where: { id }, data: { archived: true } })
+    const updated = await prisma.customer.update({ where: { id }, data: { archived: true } })
+    await logAudit({
+      entityType: 'CUSTOMER',
+      entityId: id,
+      action: 'ARCHIVE',
+      summary: `Cliente arquivado • ${updated.nome}`,
+    })
     revalidatePath('/clientes')
     return { ok: true }
   } catch (e) {
@@ -168,10 +200,26 @@ export async function saveVehicle(
 
   try {
     if (data.id) {
-      await prisma.vehicle.update({ where: { id: data.id }, data: payload })
+      const before = await prisma.vehicle.findUnique({ where: { id: data.id } })
+      const updated = await prisma.vehicle.update({ where: { id: data.id }, data: payload })
+      await logAudit({
+        entityType: 'VEHICLE',
+        entityId: updated.id,
+        action: 'UPDATE',
+        summary: `Viatura • ${updated.matricula} ${updated.marca} ${updated.modelo}`,
+        before,
+        after: updated,
+      })
     } else {
-      await prisma.vehicle.create({
+      const created = await prisma.vehicle.create({
         data: { ...payload, customerId: data.customerId },
+      })
+      await logAudit({
+        entityType: 'VEHICLE',
+        entityId: created.id,
+        action: 'CREATE',
+        summary: `Viatura • ${created.matricula} ${created.marca} ${created.modelo}`,
+        after: created,
       })
     }
     revalidatePath(`/clientes/${data.customerId}`)
@@ -184,7 +232,17 @@ export async function saveVehicle(
 
 export async function deleteVehicle(id: string, customerId: string): Promise<VehicleFormState> {
   try {
+    const before = await prisma.vehicle.findUnique({ where: { id } })
     await prisma.vehicle.delete({ where: { id } })
+    if (before) {
+      await logAudit({
+        entityType: 'VEHICLE',
+        entityId: id,
+        action: 'DELETE',
+        summary: `Viatura • ${before.matricula} ${before.marca} ${before.modelo}`,
+        before,
+      })
+    }
     revalidatePath(`/clientes/${customerId}`)
     return { ok: true }
   } catch (e) {

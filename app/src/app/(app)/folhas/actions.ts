@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { parseEURToCents } from '@/lib/format'
+import { logAudit } from '@/lib/audit'
 
 const STATUSES = [
   'ABERTA',
@@ -81,12 +82,28 @@ export async function saveWorkOrder(
 
   try {
     if (data.id) {
-      await prisma.workOrder.update({ where: { id: data.id }, data: payload })
+      const before = await prisma.workOrder.findUnique({ where: { id: data.id } })
+      const updated = await prisma.workOrder.update({ where: { id: data.id }, data: payload })
+      await logAudit({
+        entityType: 'WORK_ORDER',
+        entityId: updated.id,
+        action: 'UPDATE',
+        summary: `Folha #${updated.numero} • ${updated.problema.slice(0, 60)}`,
+        before,
+        after: updated,
+      })
       revalidatePath('/folhas')
       revalidatePath(`/folhas/${data.id}`)
       return { ok: true, id: data.id }
     }
     const created = await prisma.workOrder.create({ data: payload })
+    await logAudit({
+      entityType: 'WORK_ORDER',
+      entityId: created.id,
+      action: 'CREATE',
+      summary: `Folha #${created.numero} • ${created.problema.slice(0, 60)}`,
+      after: created,
+    })
     revalidatePath('/folhas')
     revalidatePath(`/clientes/${data.customerId}`)
     return { ok: true, id: created.id }
@@ -100,8 +117,17 @@ export async function deleteWorkOrder(id: string): Promise<WorkOrderFormState> {
   try {
     const wo = await prisma.workOrder.findUnique({ where: { id } })
     await prisma.workOrder.delete({ where: { id } })
+    if (wo) {
+      await logAudit({
+        entityType: 'WORK_ORDER',
+        entityId: id,
+        action: 'DELETE',
+        summary: `Folha #${wo.numero} • ${wo.problema.slice(0, 60)}`,
+        before: wo,
+      })
+      revalidatePath(`/clientes/${wo.customerId}`)
+    }
     revalidatePath('/folhas')
-    if (wo) revalidatePath(`/clientes/${wo.customerId}`)
     return { ok: true }
   } catch (e) {
     console.error(e)
@@ -122,12 +148,21 @@ export async function changeStatus(
       parsed.data === 'CONCLUIDA' || parsed.data === 'FATURADA'
         ? new Date()
         : null
-    await prisma.workOrder.update({
+    const before = await prisma.workOrder.findUnique({ where: { id } })
+    const updated = await prisma.workOrder.update({
       where: { id },
       data: {
         estado: parsed.data,
         ...(dataConclusao !== null && { dataConclusao }),
       },
+    })
+    await logAudit({
+      entityType: 'WORK_ORDER',
+      entityId: id,
+      action: 'STATUS_CHANGE',
+      summary: `Folha #${updated.numero} → ${parsed.data}`,
+      before: before ? { estado: before.estado } : undefined,
+      after: { estado: updated.estado },
     })
     revalidatePath('/folhas')
     revalidatePath(`/folhas/${id}`)
