@@ -26,7 +26,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import {
   Plus, Search, ClipboardList, Car as CarIcon,
-  LayoutList, Columns2, ArrowRight,
+  LayoutList, Columns2, ArrowRight, CheckCircle, XCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatEUR, formatDate } from '@/lib/format'
@@ -646,7 +646,21 @@ function CardContent({
         <p className="text-xs text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
           {wo.problema}
         </p>
-        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-zinc-100">
+        {wo.lastMessage && (
+          <div className={cn(
+            'flex items-center gap-1 text-xs mt-1.5 px-1.5 py-0.5 rounded-md w-fit',
+            wo.lastMessage.webhookOk
+              ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-red-50 text-red-500'
+          )}>
+            {wo.lastMessage.webhookOk
+              ? <CheckCircle className="w-3 h-3 flex-shrink-0" />
+              : <XCircle className="w-3 h-3 flex-shrink-0" />
+            }
+            <span className="truncate max-w-[140px]">{wo.lastMessage.templateNome}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-100">
           {wo.total > 0 ? (
             <span className="text-xs font-bold text-zinc-800">{formatEUR(wo.total)}</span>
           ) : (

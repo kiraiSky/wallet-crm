@@ -15,6 +15,7 @@ export type WorkOrderRow = {
   dataPrevista: string | null
   customer: { id: string; nome: string }
   vehicle: { id: string; matricula: string; marca: string; modelo: string } | null
+  lastMessage: { templateNome: string; webhookOk: boolean; createdAt: string } | null
 }
 
 export type CustomerOption = { id: string; nome: string }
@@ -53,6 +54,11 @@ export default async function FolhasPage({
       include: {
         customer: { select: { id: true, nome: true } },
         vehicle: { select: { id: true, matricula: true, marca: true, modelo: true } },
+        automationLogs: {
+          orderBy: { createdAt: 'desc' as const },
+          take: 1,
+          select: { templateNome: true, webhookOk: true, createdAt: true },
+        },
       },
     }),
     prisma.workOrder.groupBy({ by: ['estado'], _count: true, _sum: { total: true } }),
@@ -73,6 +79,9 @@ export default async function FolhasPage({
     dataPrevista: wo.dataPrevista ? wo.dataPrevista.toISOString() : null,
     customer: wo.customer,
     vehicle: wo.vehicle,
+    lastMessage: wo.automationLogs[0]
+      ? { ...wo.automationLogs[0], createdAt: wo.automationLogs[0].createdAt.toISOString() }
+      : null,
   }))
 
   const counts: Record<WorkOrderStatus | 'TOTAL', number> = {
