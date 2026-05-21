@@ -41,7 +41,8 @@ model Account {
   icone        String        @default("banknote") // nome do ícone lucide
   archived     Boolean       @default(false)
   createdAt    DateTime      @default(now()) @map("created_at")
-  transactions Transaction[]
+  transactions      Transaction[] @relation("AccountTransactions")
+  receivedTransfers Transaction[] @relation("TransferDestination")
 
   @@map("accounts")
 }
@@ -72,8 +73,9 @@ model Category {
 }
 
 enum TransactionType {
-  ENTRADA // receita
-  SAIDA   // despesa
+  ENTRADA       // receita
+  SAIDA         // despesa
+  TRANSFERENCIA // transferência entre contas (sem impacto nas métricas)
 }
 
 // Movimentos (entrada/saída de dinheiro)
@@ -85,17 +87,19 @@ model Transaction {
   data        DateTime
   observacao  String?
   accountId   String                    @map("account_id")
-  categoryId  String                    @map("category_id")
+  categoryId  String?                   @map("category_id")
   userId      String                    @map("user_id")
   workOrderId String?                   @map("work_order_id")
   customerId  String?                   @map("customer_id")
   // Pagamento agendado — quando agendado=true, o movimento ainda não foi confirmado
   // e não conta no saldo das contas nem nos KPIs até confirmadoEm ser preenchido.
+  toAccountId  String?                  @map("to_account_id")
   agendado     Boolean                  @default(false)
   dataAgendada DateTime?                @map("data_agendada")
   confirmadoEm DateTime?                @map("confirmado_em")
-  account     Account                   @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  category    Category                  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  account     Account                   @relation("AccountTransactions", fields: [accountId], references: [id], onDelete: Restrict)
+  toAccount   Account?                  @relation("TransferDestination", fields: [toAccountId], references: [id], onDelete: SetNull)
+  category    Category?                 @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   user        User                      @relation(fields: [userId], references: [id], onDelete: Restrict)
   workOrder   WorkOrder?                @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
   customer    Customer?                 @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -110,6 +114,7 @@ model Transaction {
   @@index([workOrderId])
   @@index([customerId])
   @@index([agendado, dataAgendada])
+  @@index([toAccountId])
   @@map("transactions")
 }
 

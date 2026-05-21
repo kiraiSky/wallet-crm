@@ -38,12 +38,13 @@ export function ConfirmacaoEnvioModal({ template, customerId, workOrderId, onClo
 
   if (!template) return null
 
-  const meta = TIPO_META[template.tipo] ?? { label: template.tipo, color: 'bg-zinc-100 text-zinc-600' }
+  const activeTemplate = template
+  const meta = TIPO_META[activeTemplate.tipo] ?? { label: activeTemplate.tipo, color: 'bg-zinc-100 text-zinc-600' }
 
   function handleConfirm() {
     setState('sending')
     startTransition(async () => {
-      const res = await dispararAutomacao(template.id, customerId, workOrderId)
+      const res = await dispararAutomacao(activeTemplate.id, customerId, workOrderId)
       if (res.ok) {
         setState('success')
         onSent?.()
@@ -82,14 +83,14 @@ export function ConfirmacaoEnvioModal({ template, customerId, workOrderId, onClo
             <>
               <div className="mb-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="font-semibold text-zinc-900">{template.nome}</span>
+                  <span className="font-semibold text-zinc-900">{activeTemplate.nome}</span>
                   <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', meta.color)}>
                     {meta.label}
                   </span>
                 </div>
                 <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-200">
                   <p className="text-sm text-zinc-800 leading-relaxed whitespace-pre-wrap font-mono">
-                    {template.mensagem}
+                    {activeTemplate.mensagem}
                   </p>
                 </div>
                 <p className="text-xs text-zinc-400 mt-2 flex items-center gap-1.5">

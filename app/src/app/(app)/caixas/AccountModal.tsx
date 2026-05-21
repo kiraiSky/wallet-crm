@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Banknote, Landmark, CreditCard } from 'lucide-react'
+import { Banknote, Landmark, CreditCard, SlidersHorizontal } from 'lucide-react'
 import { Modal } from '@/components/Modal'
 import { ColorPicker } from '@/components/ColorPicker'
 import { cn } from '@/lib/utils'
@@ -13,6 +13,7 @@ interface Props {
   open: boolean
   onClose: () => void
   account?: AccountWithBalance | null
+  onAjusteSaldo?: () => void
 }
 
 function initialState(account: AccountWithBalance | null | undefined) {
@@ -30,7 +31,7 @@ const tipos = [
   { value: 'CARTAO', label: 'Cartão', Icon: CreditCard, defaultIcon: 'credit-card', defaultColor: 'sky' },
 ] as const
 
-export function AccountModal({ open, onClose, account }: Props) {
+export function AccountModal({ open, onClose, account, onAjusteSaldo }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const init = initialState(account)
@@ -155,6 +156,21 @@ export function AccountModal({ open, onClose, account }: Props) {
           <label className="label">Cor</label>
           <ColorPicker value={cor} onChange={setCor} />
         </div>
+
+        {account && onAjusteSaldo && (
+          <button
+            type="button"
+            onClick={() => {
+              onClose()
+              reset()
+              onAjusteSaldo()
+            }}
+            className="w-full flex items-center justify-center gap-2 text-sm text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg px-3 py-2 transition"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            Corrigir saldo real
+          </button>
+        )}
 
         <div className="flex gap-2 pt-2">
           <button

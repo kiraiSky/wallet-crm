@@ -3,11 +3,13 @@
 import { useState, useTransition, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Plus, TrendingUp, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Plus, TrendingUp, MoreVertical, Pencil, Trash2, ArrowRightLeft } from 'lucide-react'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { colorGradient } from '@/lib/colors'
 import { formatEUR } from '@/lib/format'
 import { AccountModal } from './AccountModal'
+import { TransferModal } from './TransferModal'
+import { AjusteSaldoModal } from './AjusteSaldoModal'
 import { deleteAccount } from './actions'
 import type { AccountWithBalance } from './page'
 
@@ -22,6 +24,8 @@ export function AccountsClient({ accounts, totalConsolidado }: Props) {
   const [editing, setEditing] = useState<AccountWithBalance | null>(null)
   const [modalOpen, setModalOpen] = useState(searchParams.get('new') === '1')
   const [menuOpen, setMenuOpen] = useState<{ id: string; x: number; y: number } | null>(null)
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [ajusteAccount, setAjusteAccount] = useState<AccountWithBalance | null>(null)
   const [, startTransition] = useTransition()
 
   function toggleMenu(id: string, e: React.MouseEvent<HTMLButtonElement>) {
@@ -60,10 +64,21 @@ export function AccountsClient({ accounts, totalConsolidado }: Props) {
           <h1 className="text-2xl font-bold text-zinc-900">Contas</h1>
           <p className="text-zinc-500 text-sm">Gere onde o dinheiro entra e sai.</p>
         </div>
-        <button onClick={openNew} className="btn-primary">
-          <Plus className="w-4 h-4" />
-          <span>Nova conta</span>
-        </button>
+        <div className="flex gap-2">
+          {accounts.length >= 2 && (
+            <button
+              onClick={() => setTransferOpen(true)}
+              className="btn-secondary"
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Transferência</span>
+            </button>
+          )}
+          <button onClick={openNew} className="btn-primary">
+            <Plus className="w-4 h-4" />
+            <span>Nova conta</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 text-white rounded-2xl p-6 mb-5 flex items-center justify-between">
@@ -145,7 +160,22 @@ export function AccountsClient({ accounts, totalConsolidado }: Props) {
           setEditing(null)
         }}
         account={editing}
+        onAjusteSaldo={editing ? () => setAjusteAccount(editing) : undefined}
       />
+
+      <TransferModal
+        open={transferOpen}
+        onClose={() => setTransferOpen(false)}
+        accounts={accounts}
+      />
+
+      {ajusteAccount && (
+        <AjusteSaldoModal
+          open={!!ajusteAccount}
+          onClose={() => setAjusteAccount(null)}
+          account={ajusteAccount}
+        />
+      )}
     </>
   )
 }

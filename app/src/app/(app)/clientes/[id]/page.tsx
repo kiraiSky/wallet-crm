@@ -77,7 +77,7 @@ export default async function CustomerDetailPage({
       },
     }),
     prisma.transaction.findMany({
-      where: { customerId: id },
+      where: { customerId: id, tipo: { in: ['ENTRADA', 'SAIDA'] } },
       orderBy: { data: 'desc' },
       take: 100,
       include: {
@@ -132,11 +132,11 @@ export default async function CustomerDetailPage({
     data: t.data.toISOString(),
     observacao: t.observacao,
     accountId: t.accountId,
-    categoryId: t.categoryId,
+    categoryId: t.categoryId!,
     workOrderId: t.workOrderId,
     customerId: t.customerId,
     account: t.account,
-    category: t.category,
+    category: t.category!,
     workOrder: t.workOrder,
     hasAttachment: t._count.attachments > 0,
   }))

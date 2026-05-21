@@ -16,7 +16,7 @@ export type CategoryWithStats = {
 
 export default async function CategoriasPage() {
   const cats = await prisma.category.findMany({
-    where: { archived: false },
+    where: { archived: false, tipo: { in: ['ENTRADA', 'SAIDA'] } },
     orderBy: { nome: 'asc' },
     include: {
       _count: { select: { transactions: true } },
@@ -27,7 +27,7 @@ export default async function CategoriasPage() {
   const data: CategoryWithStats[] = cats.map((c) => ({
     id: c.id,
     nome: c.nome,
-    tipo: c.tipo,
+    tipo: c.tipo as 'ENTRADA' | 'SAIDA',
     cor: c.cor,
     icone: c.icone,
     parentId: c.parentId,

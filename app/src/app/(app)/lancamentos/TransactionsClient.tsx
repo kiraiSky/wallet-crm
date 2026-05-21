@@ -5,13 +5,13 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Search, FileText, Pencil, Copy, Paperclip, Trash2,
-  MoreVertical, CalendarClock,
+  MoreVertical, CalendarClock, ArrowRightLeft,
 } from 'lucide-react'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { colorIconBg } from '@/lib/colors'
 import { formatEUR, formatDateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { TransactionModal } from './TransactionModal'
+import { TransactionModal, type TransactionForModal } from './TransactionModal'
 import { deleteTransaction, duplicateTransaction } from './actions'
 import type { TransactionRow, WorkOrderOption } from './page'
 import { dispatchNewTx } from '@/lib/newTxBus'
@@ -90,11 +90,49 @@ export function TransactionsClient({
   }
 
   function openEdit(tx: TransactionRow) {
+    if (tx.tipo === 'TRANSFERENCIA') return
     setEditing(tx)
     setModalTipo(tx.tipo)
     setModalOpen(true)
     setMenuOpen(null)
   }
+
+  const editingForModal: TransactionForModal | null =
+    editing && editing.tipo !== 'TRANSFERENCIA'
+      ? {
+          id: editing.id,
+          tipo: editing.tipo,
+          valor: editing.valor,
+          descricao: editing.descricao,
+          data: editing.data,
+          observacao: editing.observacao,
+          accountId: editing.accountId,
+          categoryId: editing.categoryId!,
+          workOrderId: editing.workOrderId,
+          agendado: editing.agendado,
+          dataAgendada: editing.dataAgendada,
+      }
+      : null
+
+  const viewerForAttachment: ViewerTransaction | null =
+    viewerTx && viewerTx.tipo !== 'TRANSFERENCIA'
+      ? {
+          id: viewerTx.id,
+          tipo: viewerTx.tipo,
+          valor: viewerTx.valor,
+          descricao: viewerTx.descricao,
+          data: viewerTx.data,
+          observacao: viewerTx.observacao,
+          agendado: viewerTx.agendado,
+          dataAgendada: viewerTx.dataAgendada,
+          account: { nome: viewerTx.account.nome },
+          category: viewerTx.category!,
+          workOrder: viewerTx.workOrder
+            ? { numero: viewerTx.workOrder.numero, customer: viewerTx.workOrder.customer }
+            : null,
+          attachments: viewerTx.attachments,
+        }
+      : null
 
   function handleDelete(tx: TransactionRow) {
     if (!confirm(`Eliminar "${tx.descricao}"?`)) return
@@ -260,20 +298,37 @@ export function TransactionsClient({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={cn(
-                        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium',
-                        colorIconBg[tx.category.cor] || colorIconBg.violet
-                      )}>
-                        <DynamicIcon name={tx.category.icone} className="w-3 h-3" />
-                        {tx.category.nome}
-                      </span>
+                      {tx.tipo === 'TRANSFERENCIA' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-500">
+                          <ArrowRightLeft className="w-3 h-3" />
+                          Transferência
+                        </span>
+                      ) : tx.category ? (
+                        <span className={cn(
+                          'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium',
+                          colorIconBg[tx.category.cor] || colorIconBg.violet
+                        )}>
+                          <DynamicIcon name={tx.category.icone} className="w-3 h-3" />
+                          {tx.category.nome}
+                        </span>
+                      ) : null}
                     </td>
-                    <td className="px-4 py-3 text-zinc-600">{tx.account.nome}</td>
-                    <td className={cn(
-                      'px-4 py-3 text-right font-bold whitespace-nowrap',
-                      tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'
-                    )}>
-                      {tx.tipo === 'ENTRADA' ? '+ ' : '- '}{formatEUR(tx.valor)}
+                    <td className="px-4 py-3 text-zinc-600">
+                      {tx.tipo === 'TRANSFERENCIA'
+                        ? `${tx.account.nome} → ${tx.toAccount?.nome ?? '?'}`
+                        : tx.account.nome}
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold whitespace-nowrap">
+                      {tx.tipo === 'TRANSFERENCIA' ? (
+                        <span className="inline-flex items-center gap-1 text-zinc-400">
+                          <ArrowRightLeft className="w-3 h-3" />
+                          {formatEUR(tx.valor)}
+                        </span>
+                      ) : tx.tipo === 'ENTRADA' ? (
+                        <span className="text-emerald-600">+ {formatEUR(tx.valor)}</span>
+                      ) : (
+                        <span className="text-red-500">- {formatEUR(tx.valor)}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <button
@@ -318,12 +373,16 @@ export function TransactionsClient({
                         setViewerAttachmentId(tx.attachments[0].id)
                       }}
                     />
+                  ) : tx.tipo === 'TRANSFERENCIA' ? (
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-zinc-100">
+                      <ArrowRightLeft className="w-5 h-5 text-zinc-400" />
+                    </div>
                   ) : (
                     <div className={cn(
                       'w-10 h-10 rounded-lg flex items-center justify-center',
-                      colorIconBg[tx.category.cor] || colorIconBg.violet
+                      colorIconBg[tx.category?.cor ?? 'violet'] || colorIconBg.violet
                     )}>
-                      <DynamicIcon name={tx.category.icone} className="w-5 h-5" />
+                      <DynamicIcon name={tx.category?.icone ?? 'circle'} className="w-5 h-5" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
@@ -341,14 +400,22 @@ export function TransactionsClient({
                       )}
                     </div>
                     <div className="text-xs text-zinc-500">
-                      {tx.category.nome} · {tx.account.nome} · {tx.agendado && tx.dataAgendada ? formatDateTime(tx.dataAgendada) : formatDateTime(tx.data)}
+                      {tx.tipo === 'TRANSFERENCIA'
+                        ? `${tx.account.nome} → ${tx.toAccount?.nome ?? '?'}`
+                        : `${tx.category?.nome ?? ''} · ${tx.account.nome}`} · {tx.agendado && tx.dataAgendada ? formatDateTime(tx.dataAgendada) : formatDateTime(tx.data)}
                     </div>
                   </div>
-                  <div className={cn(
-                    'text-sm font-bold whitespace-nowrap',
-                    tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'
-                  )}>
-                    {tx.tipo === 'ENTRADA' ? '+ ' : '- '}{formatEUR(tx.valor)}
+                  <div className="text-sm font-bold whitespace-nowrap">
+                    {tx.tipo === 'TRANSFERENCIA' ? (
+                      <span className="inline-flex items-center gap-1 text-zinc-400">
+                        <ArrowRightLeft className="w-3 h-3" />
+                        {formatEUR(tx.valor)}
+                      </span>
+                    ) : tx.tipo === 'ENTRADA' ? (
+                      <span className="text-emerald-600">+ {formatEUR(tx.valor)}</span>
+                    ) : (
+                      <span className="text-red-500">- {formatEUR(tx.valor)}</span>
+                    )}
                   </div>
                   <button
                     onClick={(e) => toggleMenu(tx.id, e)}
@@ -378,7 +445,7 @@ export function TransactionsClient({
         open={modalOpen}
         onClose={closeModal}
         tipo={modalTipo}
-        transaction={editing}
+        transaction={editingForModal}
         accounts={accounts}
         categories={categories}
         workOrderOptions={workOrderOptions}
@@ -391,26 +458,7 @@ export function TransactionsClient({
           setViewerAttachmentId(undefined)
         }}
         initialAttachmentId={viewerAttachmentId}
-        transaction={
-          viewerTx
-            ? ({
-                id: viewerTx.id,
-                tipo: viewerTx.tipo,
-                valor: viewerTx.valor,
-                descricao: viewerTx.descricao,
-                data: viewerTx.data,
-                observacao: viewerTx.observacao,
-                agendado: viewerTx.agendado,
-                dataAgendada: viewerTx.dataAgendada,
-                account: { nome: viewerTx.account.nome },
-                category: viewerTx.category,
-                workOrder: viewerTx.workOrder
-                  ? { numero: viewerTx.workOrder.numero, customer: viewerTx.workOrder.customer }
-                  : null,
-                attachments: viewerTx.attachments,
-              } satisfies ViewerTransaction)
-            : null
-        }
+        transaction={viewerForAttachment}
         onEdit={(tx) => {
           const original = transactions.find((t) => t.id === tx.id)
           if (original) {

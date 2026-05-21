@@ -48,24 +48,24 @@ export default async function RelatoriosPage({
   ] = await Promise.all([
     prisma.transaction.groupBy({
       by: ['tipo'],
-      where: { data: { gte: period.start, lt: period.end } },
+      where: { data: { gte: period.start, lt: period.end }, tipo: { in: ['ENTRADA', 'SAIDA'] } },
       _sum: { valor: true },
       _count: true,
     }),
     prisma.transaction.groupBy({
       by: ['categoryId'],
-      where: { tipo: 'SAIDA', data: { gte: period.start, lt: period.end } },
+      where: { tipo: 'SAIDA', data: { gte: period.start, lt: period.end }, categoryId: { not: null } },
       _sum: { valor: true },
       orderBy: { _sum: { valor: 'desc' } },
     }),
     prisma.transaction.groupBy({
       by: ['categoryId'],
-      where: { tipo: 'ENTRADA', data: { gte: period.start, lt: period.end } },
+      where: { tipo: 'ENTRADA', data: { gte: period.start, lt: period.end }, categoryId: { not: null } },
       _sum: { valor: true },
       orderBy: { _sum: { valor: 'desc' } },
     }),
     prisma.transaction.findMany({
-      where: { data: { gte: period.start, lt: period.end } },
+      where: { data: { gte: period.start, lt: period.end }, tipo: { in: ['ENTRADA', 'SAIDA'] } },
       select: { data: true, valor: true, tipo: true },
     }),
     prisma.transaction.groupBy({
@@ -106,7 +106,7 @@ export default async function RelatoriosPage({
   const categoryIds = [
     ...expensesByCategory.map((e) => e.categoryId),
     ...incomeByCategory.map((e) => e.categoryId),
-  ]
+  ].filter((id): id is string => Boolean(id))
   const categories = await prisma.category.findMany({ where: { id: { in: categoryIds } } })
   const customerIds = topCustomers.map((c) => c.customerId).filter(Boolean) as string[]
   const customers = await prisma.customer.findMany({ where: { id: { in: customerIds } } })

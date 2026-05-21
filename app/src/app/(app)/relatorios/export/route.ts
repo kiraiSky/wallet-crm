@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   })
 
   const txs = await prisma.transaction.findMany({
-    where: { data: { gte: period.start, lt: period.end } },
+    where: { data: { gte: period.start, lt: period.end }, tipo: { in: ['ENTRADA', 'SAIDA'] } },
     orderBy: { data: 'asc' },
     include: {
       account: { select: { nome: true } },
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
         ymd(tx.data),
         tx.tipo === 'ENTRADA' ? 'Entrada' : 'Saída',
         tx.descricao,
-        tx.category.nome,
+        tx.category?.nome ?? '',
         tx.account.nome,
         tx.customer?.nome ?? '',
         tx.customer?.nif ?? '',

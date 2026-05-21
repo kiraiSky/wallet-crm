@@ -92,6 +92,7 @@ export default async function AtividadePage({
     prisma.transaction.findMany({
       where: {
         data: { gte: since },
+        tipo: { in: ['ENTRADA', 'SAIDA'] },
         OR: [{ customerId: { not: null } }, { workOrderId: { not: null } }],
       },
       orderBy: { data: 'desc' },
@@ -152,7 +153,7 @@ export default async function AtividadePage({
       hint: [
         tx.customer?.nome,
         tx.workOrder ? `Folha #${tx.workOrder.numero}` : null,
-        tx.category.nome,
+        tx.category?.nome,
       ]
         .filter(Boolean)
         .join(' · '),

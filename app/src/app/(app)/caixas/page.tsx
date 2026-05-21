@@ -31,7 +31,7 @@ export default async function CaixasPage() {
 
   const accountsWithBalance: AccountWithBalance[] = await Promise.all(
     accounts.map(async (acc) => {
-      const [agg, monthAgg] = await Promise.all([
+      const [agg, monthAgg, transfersIn] = await Promise.all([
         prisma.transaction.groupBy({
           by: ['tipo'],
           where: { accountId: acc.id, agendado: false },
@@ -39,13 +39,19 @@ export default async function CaixasPage() {
         }),
         prisma.transaction.groupBy({
           by: ['tipo'],
-          where: { accountId: acc.id, agendado: false, data: { gte: startOfMonth } },
+          where: { accountId: acc.id, agendado: false, data: { gte: startOfMonth }, tipo: { in: ['ENTRADA', 'SAIDA'] } },
+          _sum: { valor: true },
+        }),
+        prisma.transaction.aggregate({
+          where: { toAccountId: acc.id, tipo: 'TRANSFERENCIA', agendado: false },
           _sum: { valor: true },
         }),
       ])
 
       const entradas = Number(agg.find((g) => g.tipo === 'ENTRADA')?._sum.valor ?? 0)
       const saidas = Number(agg.find((g) => g.tipo === 'SAIDA')?._sum.valor ?? 0)
+      const transferenciasOut = Number(agg.find((g) => g.tipo === 'TRANSFERENCIA')?._sum.valor ?? 0)
+      const transferenciasIn = Number(transfersIn._sum.valor ?? 0)
       const entradasMes = Number(monthAgg.find((g) => g.tipo === 'ENTRADA')?._sum.valor ?? 0)
       const saidasMes = Number(monthAgg.find((g) => g.tipo === 'SAIDA')?._sum.valor ?? 0)
 
@@ -54,7 +60,7 @@ export default async function CaixasPage() {
         nome: acc.nome,
         tipo: acc.tipo,
         saldoInicial: Number(acc.saldoInicial),
-        saldoAtual: Number(acc.saldoInicial) + entradas - saidas,
+        saldoAtual: Number(acc.saldoInicial) + entradas - saidas - transferenciasOut + transferenciasIn,
         entradasMes,
         saidasMes,
         cor: acc.cor,

@@ -8,17 +8,19 @@ type SearchParams = Record<string, string | undefined>
 
 export type TransactionRow = {
   id: string
-  tipo: 'ENTRADA' | 'SAIDA'
+  tipo: 'ENTRADA' | 'SAIDA' | 'TRANSFERENCIA'
   valor: number
   descricao: string
   data: string // ISO
   observacao: string | null
   accountId: string
-  categoryId: string
+  categoryId: string | null
   workOrderId: string | null
   customerId: string | null
+  toAccountId: string | null
   account: { nome: string; cor: string }
-  category: { nome: string; cor: string; icone: string }
+  category: { nome: string; cor: string; icone: string } | null
+  toAccount: { nome: string } | null
   user: { nome: string }
   workOrder: { numero: number; customer: { nome: string } } | null
   hasAttachment: boolean
@@ -68,6 +70,7 @@ export default async function LancamentosPage({
       include: {
         account: { select: { nome: true, cor: true } },
         category: { select: { nome: true, cor: true, icone: true } },
+        toAccount: { select: { nome: true } },
         user: { select: { nome: true } },
         workOrder: { select: { numero: true, customer: { select: { nome: true } } } },
         attachments: { select: { id: true, filename: true, mimeType: true } },
@@ -80,13 +83,13 @@ export default async function LancamentosPage({
       select: { id: true, nome: true, cor: true, icone: true, tipo: true },
     }),
     prisma.category.findMany({
-      where: { archived: false },
+      where: { archived: false, tipo: { in: ['ENTRADA', 'SAIDA'] } },
       orderBy: { nome: 'asc' },
       select: { id: true, nome: true, cor: true, icone: true, tipo: true, parentId: true },
     }),
     prisma.transaction.groupBy({
       by: ['tipo'],
-      where: { ...where, agendado: false },
+      where: { ...where, agendado: false, tipo: { in: ['ENTRADA', 'SAIDA'] } },
       _sum: { valor: true },
       _count: true,
     }),
@@ -115,8 +118,10 @@ export default async function LancamentosPage({
     categoryId: t.categoryId,
     workOrderId: t.workOrderId,
     customerId: t.customerId,
+    toAccountId: t.toAccountId,
     account: t.account,
     category: t.category,
+    toAccount: t.toAccount,
     user: t.user,
     workOrder: t.workOrder,
     hasAttachment: t._count.attachments > 0,
@@ -141,7 +146,7 @@ export default async function LancamentosPage({
     <TransactionsClient
       transactions={rows}
       accounts={accounts}
-      categories={categories}
+      categories={categories.map((c) => ({ ...c, tipo: c.tipo as 'ENTRADA' | 'SAIDA' }))}
       workOrderOptions={workOrderOptions}
       filters={{
         tipo: tipoFilter,

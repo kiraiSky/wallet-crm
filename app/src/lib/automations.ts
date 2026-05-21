@@ -10,7 +10,7 @@ export async function fireAutomation(
   templateId: string,
   customerId: string,
   workOrderId?: string
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: true } | { ok: false; error: string; detail?: string }> {
   const template = await prisma.automationTemplate.findUnique({ where: { id: templateId } })
   if (!template || !template.ativo) return { ok: false, error: 'Template inativo ou inexistente' }
 

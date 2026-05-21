@@ -77,7 +77,7 @@ export default async function WorkOrderDetailPage({
       },
     }),
     prisma.transaction.findMany({
-      where: { workOrderId: id },
+      where: { workOrderId: id, tipo: { in: ['ENTRADA', 'SAIDA'] } },
       orderBy: { data: 'desc' },
       include: {
         account: { select: { nome: true } },
@@ -92,7 +92,7 @@ export default async function WorkOrderDetailPage({
       select: { id: true, nome: true, cor: true, icone: true },
     }),
     prisma.category.findMany({
-      where: { archived: false },
+      where: { archived: false, tipo: { in: ['ENTRADA', 'SAIDA'] } },
       orderBy: { nome: 'asc' },
       select: { id: true, nome: true, tipo: true, cor: true, icone: true, parentId: true },
     }),
@@ -155,11 +155,11 @@ export default async function WorkOrderDetailPage({
     data: t.data.toISOString(),
     observacao: t.observacao,
     accountId: t.accountId,
-    categoryId: t.categoryId,
+    categoryId: t.categoryId!,
     workOrderId: t.workOrderId,
     customerId: t.customerId,
     account: t.account,
-    category: t.category,
+    category: t.category!,
     hasAttachment: t._count.attachments > 0,
     attachments: t.attachments,
     agendado: t.agendado,

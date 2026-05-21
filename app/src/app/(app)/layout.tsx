@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       select: { id: true, nome: true, cor: true, icone: true },
     }),
     prisma.category.findMany({
-      where: { archived: false },
+      where: { archived: false, tipo: { in: ['ENTRADA', 'SAIDA'] } },
       orderBy: { nome: 'asc' },
       select: { id: true, nome: true, cor: true, icone: true, tipo: true, parentId: true },
     }),
@@ -60,7 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <MobileBottomNav isOwner={user.role === 'OWNER'} />
       <GlobalNewTxModal
         accounts={accounts}
-        categories={categories}
+        categories={categories.map((c) => ({ ...c, tipo: c.tipo as 'ENTRADA' | 'SAIDA' }))}
         workOrderOptions={workOrderOptions}
       />
       <CustomerQuickModal />

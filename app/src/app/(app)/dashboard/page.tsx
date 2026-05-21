@@ -5,7 +5,7 @@ import { getCurrentUser } from '@/lib/current-user'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { Gauge, Sparkline, Donut } from '@/components/Charts'
 import { colorGradient, colorHex, colorIconBg } from '@/lib/colors'
-import { ArrowRight, Plus, Paperclip } from 'lucide-react'
+import { ArrowRight, Plus, Paperclip, ArrowRightLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScheduledBlock, type ScheduledItem } from './ScheduledBlock'
 
@@ -27,17 +27,17 @@ export default async function DashboardPage() {
   const in7Days = new Date(today)
   in7Days.setDate(in7Days.getDate() + 7)
 
-  const [accounts, monthAgg, lastMonthAgg, recentTxs, expensesByCategory, totalAgg, allTxs, scheduledTxs] =
+  const [accounts, monthAgg, lastMonthAgg, recentTxs, expensesByCategory, totalAgg, incomingTransfers, allTxs, scheduledTxs] =
     await Promise.all([
       prisma.account.findMany({ where: { archived: false }, orderBy: { createdAt: 'asc' } }),
       prisma.transaction.groupBy({
         by: ['tipo'],
-        where: { agendado: false, data: { gte: startOfMonth } },
+        where: { agendado: false, data: { gte: startOfMonth }, tipo: { in: ['ENTRADA', 'SAIDA'] } },
         _sum: { valor: true },
       }),
       prisma.transaction.groupBy({
         by: ['tipo'],
-        where: { agendado: false, data: { gte: startOfLastMonth, lt: startOfMonth } },
+        where: { agendado: false, data: { gte: startOfLastMonth, lt: startOfMonth }, tipo: { in: ['ENTRADA', 'SAIDA'] } },
         _sum: { valor: true },
       }),
       prisma.transaction.findMany({
@@ -47,13 +47,14 @@ export default async function DashboardPage() {
         include: {
           account: { select: { nome: true } },
           category: { select: { nome: true, cor: true, icone: true } },
+          toAccount: { select: { nome: true } },
           user: { select: { nome: true } },
           _count: { select: { attachments: true } },
         },
       }),
       prisma.transaction.groupBy({
         by: ['categoryId'],
-        where: { agendado: false, tipo: 'SAIDA', data: { gte: startOfMonth } },
+        where: { agendado: false, tipo: 'SAIDA', data: { gte: startOfMonth }, categoryId: { not: null } },
         _sum: { valor: true },
         orderBy: { _sum: { valor: 'desc' } },
         take: 5,
@@ -63,13 +64,18 @@ export default async function DashboardPage() {
         where: { agendado: false },
         _sum: { valor: true },
       }),
+      prisma.transaction.groupBy({
+        by: ['toAccountId'],
+        where: { tipo: 'TRANSFERENCIA', agendado: false, toAccountId: { not: null } },
+        _sum: { valor: true },
+      }),
       prisma.transaction.findMany({
-        where: { agendado: false },
+        where: { agendado: false, tipo: { in: ['ENTRADA', 'SAIDA'] } },
         orderBy: { data: 'asc' },
         select: { tipo: true, valor: true, data: true },
       }),
       prisma.transaction.findMany({
-        where: { agendado: true },
+        where: { agendado: true, tipo: { in: ['ENTRADA', 'SAIDA'] }, categoryId: { not: null } },
         orderBy: { dataAgendada: 'asc' },
         include: {
           account: { select: { nome: true } },
@@ -79,7 +85,7 @@ export default async function DashboardPage() {
       }),
     ])
 
-  // Saldo por conta
+  // Saldo por conta (inclui transferências in/out)
   const balancesByAccount = new Map<string, number>()
   for (const acc of accounts) {
     const entradas = Number(
@@ -88,7 +94,13 @@ export default async function DashboardPage() {
     const saidas = Number(
       totalAgg.find((g) => g.accountId === acc.id && g.tipo === 'SAIDA')?._sum.valor ?? 0
     )
-    balancesByAccount.set(acc.id, Number(acc.saldoInicial) + entradas - saidas)
+    const transfersOut = Number(
+      totalAgg.find((g) => g.accountId === acc.id && g.tipo === 'TRANSFERENCIA')?._sum.valor ?? 0
+    )
+    const transfersIn = Number(
+      incomingTransfers.find((g) => g.toAccountId === acc.id)?._sum.valor ?? 0
+    )
+    balancesByAccount.set(acc.id, Number(acc.saldoInicial) + entradas - saidas - transfersOut + transfersIn)
   }
   const saldoTotal = Array.from(balancesByAccount.values()).reduce((s, v) => s + v, 0)
 
@@ -147,12 +159,14 @@ export default async function DashboardPage() {
       : Math.min(100, (saidasMes / Math.max(entradasMes, 1)) * 100)
 
   // Donut de categorias (top 4 + Outros)
-  const categoryIds = expensesByCategory.map((e) => e.categoryId)
+  const categoryIds = expensesByCategory
+    .map((e) => e.categoryId)
+    .filter((id): id is string => Boolean(id))
   const categories = await prisma.category.findMany({ where: { id: { in: categoryIds } } })
   const totalDespesasMes = expensesByCategory.reduce((s, e) => s + Number(e._sum.valor ?? 0), 0)
   const allExpensesAgg = await prisma.transaction.groupBy({
     by: ['categoryId'],
-    where: { agendado: false, tipo: 'SAIDA', data: { gte: startOfMonth } },
+    where: { agendado: false, tipo: 'SAIDA', data: { gte: startOfMonth }, categoryId: { not: null } },
     _sum: { valor: true },
   })
   const totalMesGeral = allExpensesAgg.reduce((s, e) => s + Number(e._sum.valor ?? 0), 0)
@@ -268,7 +282,7 @@ export default async function DashboardPage() {
           descricao: t.descricao,
           dataAgendada: (t.dataAgendada ?? t.data).toISOString(),
           account: t.account,
-          category: t.category,
+          category: t.category!,
           workOrder: t.workOrder
             ? { id: t.workOrder.id, numero: t.workOrder.numero }
             : null,
@@ -430,31 +444,39 @@ export default async function DashboardPage() {
             <div className="divide-y divide-zinc-100">
               {recentTxs.map((tx) => (
                 <div key={tx.id} className="flex items-center gap-3 py-2.5">
-                  <div
-                    className={cn(
-                      'w-9 h-9 rounded-lg flex items-center justify-center',
-                      colorIconBg[tx.category.cor] || colorIconBg.zinc
-                    )}
-                  >
-                    <DynamicIcon name={tx.category.icone} className="w-4 h-4" />
-                  </div>
+                  {tx.tipo === 'TRANSFERENCIA' ? (
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-zinc-100">
+                      <ArrowRightLeft className="w-4 h-4 text-zinc-500" />
+                    </div>
+                  ) : (
+                    <div
+                      className={cn(
+                        'w-9 h-9 rounded-lg flex items-center justify-center',
+                        colorIconBg[tx.category?.cor ?? 'zinc'] || colorIconBg.zinc
+                      )}
+                    >
+                      <DynamicIcon name={tx.category?.icone ?? 'circle'} className="w-4 h-4" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-zinc-900 truncate flex items-center gap-1">
                       {tx.descricao}
                       {tx._count.attachments > 0 && <Paperclip className="w-3 h-3 text-zinc-400" />}
                     </div>
                     <div className="text-xs text-zinc-500">
-                      {tx.category.nome} · {tx.account.nome} · {formatDateTime(tx.data)}
+                      {tx.tipo === 'TRANSFERENCIA'
+                        ? `${tx.account.nome} -> ${tx.toAccount?.nome ?? '?'}`
+                        : `${tx.category?.nome ?? 'Sem categoria'} · ${tx.account.nome}`} · {formatDateTime(tx.data)}
                     </div>
                   </div>
-                  <div
-                    className={cn(
-                      'text-sm font-bold whitespace-nowrap',
-                      tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'
+                  <div className="text-sm font-bold whitespace-nowrap">
+                    {tx.tipo === 'TRANSFERENCIA' ? (
+                      <span className="text-zinc-400">{formatEUR(Number(tx.valor))}</span>
+                    ) : tx.tipo === 'ENTRADA' ? (
+                      <span className="text-emerald-600">+ {formatEUR(Number(tx.valor))}</span>
+                    ) : (
+                      <span className="text-red-500">- {formatEUR(Number(tx.valor))}</span>
                     )}
-                  >
-                    {tx.tipo === 'ENTRADA' ? '+ ' : '- '}
-                    {formatEUR(Number(tx.valor))}
                   </div>
                 </div>
               ))}
