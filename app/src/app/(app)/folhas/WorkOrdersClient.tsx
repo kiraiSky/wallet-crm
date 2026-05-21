@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils'
 import { formatEUR, formatDate } from '@/lib/format'
 import { STATUS_LIST, STATUS_META, STATUS_FLOW, nextStatus, type WorkOrderStatus } from './status'
 import { WorkOrderModal } from './WorkOrderModal'
+import { WorkOrderPreviewModal } from './WorkOrderPreviewModal'
 import { changeStatus } from './actions'
 import type { WorkOrderRow, CustomerOption } from './page'
 
@@ -93,6 +94,7 @@ export function WorkOrdersClient({
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [modalOpen, setModalOpen] = useState(false)
+  const [previewId, setPreviewId] = useState<string | null>(null)
   const [view, setView] = useState<'list' | 'kanban'>('kanban')
   const [mounted, setMounted] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -445,7 +447,7 @@ export function WorkOrdersClient({
                     colTotal={colTotal}
                     activeId={activeId}
                     onAdvance={handleAdvanceStatus}
-                    onCardClick={(id) => router.push(`/folhas/${id}`)}
+                    onCardClick={(id) => setPreviewId(id)}
                   />
                 )
               })}
@@ -464,6 +466,16 @@ export function WorkOrdersClient({
         workOrder={null}
         customers={customers}
         defaultCustomerId={filters.customerId}
+      />
+
+      <WorkOrderPreviewModal
+        workOrderId={previewId}
+        onClose={() => setPreviewId(null)}
+        onStatusChanged={(woId, newStatus) => {
+          const fromCol = findColumn(columns, woId) ?? (wosById[woId]?.estado as WorkOrderStatus)
+          if (fromCol && fromCol !== newStatus) moveCard(woId, fromCol, newStatus)
+          commitStatus(woId, newStatus)
+        }}
       />
     </>
   )

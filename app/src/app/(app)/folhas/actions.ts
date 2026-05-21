@@ -175,6 +175,46 @@ export async function changeStatus(
   }
 }
 
+// === Preview ===
+
+export async function getWorkOrderPreview(id: string) {
+  const wo = await prisma.workOrder.findUnique({
+    where: { id },
+    include: {
+      customer: { select: { id: true, nome: true, telefone: true } },
+      vehicle: { select: { id: true, matricula: true, marca: true, modelo: true, ano: true } },
+      items: { orderBy: { createdAt: 'asc' } },
+    },
+  })
+  if (!wo) return null
+  return {
+    id: wo.id,
+    numero: wo.numero,
+    estado: wo.estado as string,
+    problema: wo.problema,
+    diagnostico: wo.diagnostico,
+    trabalho: wo.trabalho,
+    observacoes: wo.observacoes,
+    kmEntrada: wo.kmEntrada,
+    dataAbertura: wo.dataAbertura.toISOString(),
+    dataPrevista: wo.dataPrevista?.toISOString() ?? null,
+    dataConclusao: wo.dataConclusao?.toISOString() ?? null,
+    totalPecas: Number(wo.totalPecas),
+    totalMaoObra: Number(wo.totalMaoObra),
+    total: Number(wo.total),
+    customer: wo.customer,
+    vehicle: wo.vehicle,
+    items: wo.items.map((i) => ({
+      id: i.id,
+      tipo: i.tipo as string,
+      descricao: i.descricao,
+      quantidade: Number(i.quantidade),
+      precoUnit: Number(i.precoUnit),
+      total: Number(i.total),
+    })),
+  }
+}
+
 // === Items ===
 
 const ItemSchema = z.object({
