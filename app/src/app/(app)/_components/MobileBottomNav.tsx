@@ -9,7 +9,6 @@ import {
   Plus,
   Wallet,
   Users,
-  ClipboardList,
   MoreHorizontal,
   BarChart3,
   Tag,
@@ -55,7 +54,7 @@ export function MobileBottomNav({ isOwner }: { isOwner: boolean }) {
   return (
     <>
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30">
-        <div className="grid grid-cols-6 h-16">
+        <div className="grid grid-cols-5 h-16">
           <Link
             href="/dashboard"
             className={cn(
@@ -86,16 +85,6 @@ export function MobileBottomNav({ isOwner }: { isOwner: boolean }) {
               <Plus className="w-6 h-6" />
             </div>
           </button>
-          <Link
-            href="/folhas"
-            className={cn(
-              'flex flex-col items-center justify-center gap-0.5',
-              isActive('/folhas') ? 'text-emerald-600' : 'text-zinc-500'
-            )}
-          >
-            <ClipboardList className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Folhas</span>
-          </Link>
           <Link
             href="/lancamentos"
             className={cn(

@@ -15,28 +15,35 @@ const items = [
 
 export function CrmSubNav() {
   const pathname = usePathname()
+  const isCrmArea =
+    pathname.startsWith('/crm') || pathname.startsWith('/clientes') || pathname.startsWith('/folhas')
+
+  if (!isCrmArea) return null
+
   return (
-    <div className="mb-5 -mx-4 sm:mx-0 sm:rounded-xl sm:border sm:border-zinc-200 sm:bg-white sm:px-2 border-b border-zinc-200 sm:border-b">
-      <div className="flex gap-1 overflow-x-auto px-4 sm:px-0 py-2 scrollbar-thin">
-        {items.map((it) => {
-          const active = it.match(pathname)
-          const Icon = it.icon
-          return (
-            <Link
-              key={it.href}
-              href={it.href}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition flex-shrink-0',
-                active
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'text-zinc-600 hover:bg-zinc-100'
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {it.label}
-            </Link>
-          )
-        })}
+    <div className="border-t border-zinc-100 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex gap-1 overflow-x-auto py-2 scrollbar-thin">
+          {items.map((it) => {
+            const active = it.match(pathname)
+            const Icon = it.icon
+            return (
+              <Link
+                key={it.href}
+                href={it.href}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition flex-shrink-0',
+                  active
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'text-zinc-600 hover:bg-zinc-100'
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {it.label}
+              </Link>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
