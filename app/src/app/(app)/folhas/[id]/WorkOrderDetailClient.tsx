@@ -24,7 +24,9 @@ import {
 } from '../actions'
 import type { WorkOrderDetail, WorkOrderItemRow, WorkOrderTransactionRow } from './page'
 import { openCustomerQuickView } from '@/lib/customerBus'
-import { EnviarMensagemButton } from '@/components/EnviarMensagemButton'
+import { MensagensSection, type TemplateRow, type AutomationLogRow } from './MensagensSection'
+import { AutoSendModal } from '../AutoSendModal'
+import type { TemplateParaEnvio } from '../ConfirmacaoEnvioModal'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string }
 type CategoryOption = {
@@ -41,9 +43,11 @@ interface Props {
   transactions: WorkOrderTransactionRow[]
   accounts: AccountOption[]
   categories: CategoryOption[]
+  templates: TemplateRow[]
+  automationLogs: AutomationLogRow[]
 }
 
-export function WorkOrderDetailClient({ workOrder, transactions, accounts, categories }: Props) {
+export function WorkOrderDetailClient({ workOrder, transactions, accounts, categories, templates, automationLogs }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [editOpen, setEditOpen] = useState(false)
@@ -56,6 +60,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
   const [editingTx, setEditingTx] = useState<WorkOrderTransactionRow | null>(null)
   const [viewerTx, setViewerTx] = useState<WorkOrderTransactionRow | null>(null)
   const [viewerAttachmentId, setViewerAttachmentId] = useState<string | undefined>()
+  const [autoSend, setAutoSend] = useState<{ templates: TemplateParaEnvio[]; estado: WorkOrderStatus } | null>(null)
 
   const workOrderOption = [{
     id: workOrder.id,
@@ -117,6 +122,13 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
     startTransition(async () => {
       await changeStatus(workOrder.id, novo)
       setStatusOpen(false)
+      // Verificar templates automáticos para o novo estado
+      const matching = templates.filter((t) => {
+        if (t.trigger !== 'STATUS_FOLHA') return false
+        try { return (JSON.parse(t.triggerEstados) as string[]).includes(novo) }
+        catch { return false }
+      })
+      if (matching.length > 0) setAutoSend({ templates: matching, estado: novo })
       router.refresh()
     })
   }
@@ -151,7 +163,6 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <EnviarMensagemButton customerId={workOrder.customer.id} workOrderId={workOrder.id} />
           {proximoEstado && (
             <button
               onClick={() => handleChangeStatus(proximoEstado)}
@@ -297,6 +308,14 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
               <p className="text-sm text-zinc-800 whitespace-pre-wrap">{workOrder.observacoes}</p>
             </div>
           )}
+
+          <MensagensSection
+            customerId={workOrder.customer.id}
+            workOrderId={workOrder.id}
+            workOrderEstado={workOrder.estado}
+            templates={templates}
+            logs={automationLogs}
+          />
         </div>
 
         {/* Coluna direita: items + totais */}
@@ -470,6 +489,16 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
         workOrderOptions={workOrderOption}
         defaultWorkOrderId={workOrder.id}
       />
+
+      {autoSend && (
+        <AutoSendModal
+          templates={autoSend.templates}
+          novoEstado={autoSend.estado}
+          customerId={workOrder.customer.id}
+          workOrderId={workOrder.id}
+          onClose={() => setAutoSend(null)}
+        />
+      )}
 
       <AttachmentViewer
         open={!!viewerTx}

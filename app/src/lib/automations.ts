@@ -96,8 +96,8 @@ export async function fireAutomation(
   })
 
   return webhookOk
-    ? { ok: true }
-    : { ok: false, error: 'Webhook falhou: ' + webhookResponse.slice(0, 200) }
+    ? { ok: true as const }
+    : { ok: false as const, error: 'Webhook n8n falhou', detail: webhookResponse.slice(0, 1000) }
 }
 
 export async function fireAutomationsByStatus(

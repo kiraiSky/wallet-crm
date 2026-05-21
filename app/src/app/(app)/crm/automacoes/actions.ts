@@ -25,7 +25,23 @@ export async function getActiveTemplates() {
   return prisma.automationTemplate.findMany({
     where: { ativo: true },
     orderBy: { createdAt: 'asc' },
-    select: { id: true, nome: true, tipo: true, mensagem: true, trigger: true },
+    select: { id: true, nome: true, tipo: true, mensagem: true, trigger: true, triggerEstados: true },
+  })
+}
+
+export async function getWorkOrderAutomationLogs(workOrderId: string) {
+  return prisma.automationLog.findMany({
+    where: { workOrderId },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+    select: {
+      id: true,
+      templateNome: true,
+      mensagemEnviada: true,
+      webhookOk: true,
+      webhookResponse: true,
+      createdAt: true,
+    },
   })
 }
 
@@ -60,7 +76,7 @@ export async function dispararAutomacao(
   templateId: string,
   customerId: string,
   workOrderId?: string
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: true } | { ok: false; error: string; detail?: string }> {
   return fireAutomation(templateId, customerId, workOrderId)
 }
 

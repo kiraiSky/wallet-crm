@@ -7,7 +7,9 @@ import { cn } from '@/lib/utils'
 import { formatEUR, formatDate } from '@/lib/format'
 import { STATUS_META, nextStatus, type WorkOrderStatus } from './status'
 import { getWorkOrderPreview, changeStatus } from './actions'
-import { EnviarMensagemButton } from '@/components/EnviarMensagemButton'
+import { getActiveTemplates } from '@/app/(app)/crm/automacoes/actions'
+import { AutoSendModal } from './AutoSendModal'
+import type { TemplateParaEnvio } from './ConfirmacaoEnvioModal'
 
 type Preview = NonNullable<Awaited<ReturnType<typeof getWorkOrderPreview>>>
 
@@ -20,6 +22,7 @@ interface Props {
 export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged }: Props) {
   const [data, setData] = useState<Preview | null>(null)
   const [loading, setLoading] = useState(false)
+  const [autoSend, setAutoSend] = useState<{ templates: TemplateParaEnvio[]; estado: WorkOrderStatus } | null>(null)
   const [, startTransition] = useTransition()
 
   const open = workOrderId !== null
@@ -58,15 +61,37 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged }:
     startTransition(async () => {
       await changeStatus(data.id, next)
       onStatusChanged(data.id, next)
-      onClose()
+      // Verificar templates automáticos para o novo estado
+      const all = await getActiveTemplates()
+      const matching = all.filter((t) => {
+        if (t.trigger !== 'STATUS_FOLHA') return false
+        try { return (JSON.parse(t.triggerEstados) as string[]).includes(next) }
+        catch { return false }
+      })
+      if (matching.length > 0) {
+        setAutoSend({ templates: matching, estado: next })
+      } else {
+        onClose()
+      }
     })
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-zinc-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
-      onClick={onClose}
-    >
+    <>
+      {autoSend && (
+        <AutoSendModal
+          templates={autoSend.templates}
+          novoEstado={autoSend.estado}
+          customerId={data?.customer.id ?? ''}
+          workOrderId={workOrderId ?? ''}
+          onClose={() => { setAutoSend(null); onClose() }}
+        />
+      )}
+
+      <div
+        className="fixed inset-0 z-50 bg-zinc-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+        onClick={onClose}
+      >
       <div
         className={cn(
           'bg-white w-full sm:rounded-2xl sm:max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl',
@@ -219,7 +244,6 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged }:
 
             {/* Footer de ações */}
             <div className="sticky bottom-0 bg-white border-t border-zinc-100 px-5 py-4 flex flex-wrap items-center gap-2 rounded-b-2xl">
-              <EnviarMensagemButton customerId={data.customer.id} workOrderId={data.id} />
               <Link
                 href={`/folhas/${data.id}`}
                 onClick={onClose}
@@ -245,6 +269,7 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged }:
         )}
       </div>
     </div>
+    </>
   )
 }
 

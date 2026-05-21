@@ -67,7 +67,7 @@ export default async function WorkOrderDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [wo, txList, accounts, categories] = await Promise.all([
+  const [wo, txList, accounts, categories, templates, automationLogs] = await Promise.all([
     prisma.workOrder.findUnique({
       where: { id },
       include: {
@@ -95,6 +95,17 @@ export default async function WorkOrderDetailPage({
       where: { archived: false },
       orderBy: { nome: 'asc' },
       select: { id: true, nome: true, tipo: true, cor: true, icone: true, parentId: true },
+    }),
+    prisma.automationTemplate.findMany({
+      where: { ativo: true },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, nome: true, tipo: true, trigger: true, triggerEstados: true, mensagem: true },
+    }),
+    prisma.automationLog.findMany({
+      where: { workOrderId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: { id: true, templateNome: true, mensagemEnviada: true, webhookOk: true, webhookResponse: true, createdAt: true },
     }),
   ])
   if (!wo) notFound()
@@ -161,6 +172,12 @@ export default async function WorkOrderDetailPage({
       transactions={transactions}
       accounts={accounts}
       categories={categories.map((c) => ({ ...c, tipo: c.tipo as 'ENTRADA' | 'SAIDA' }))}
+      templates={templates}
+      automationLogs={automationLogs.map((l) => ({
+        ...l,
+        createdAt: l.createdAt.toISOString(),
+        webhookResponse: l.webhookResponse ?? null,
+      }))}
     />
   )
 }
