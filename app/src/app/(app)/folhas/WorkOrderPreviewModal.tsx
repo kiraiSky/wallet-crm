@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation'
 import {
   X, ExternalLink, Loader2, Car, Phone, Package, Wrench,
   Plus, Pencil, Trash2, TrendingUp, TrendingDown, ChevronRight,
-  ArrowRight, CheckCircle2,
+  ArrowRight, CheckCircle2, MessageCircle,
 } from 'lucide-react'
+import { whatsappUrl } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { formatEUR, formatDate } from '@/lib/format'
 import { STATUS_META, STATUS_LIST, nextStatus, type WorkOrderStatus } from './status'
@@ -213,12 +214,35 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                     <Link href={`/clientes/${data.customer.id}`} onClick={onClose} className="font-semibold text-zinc-900 hover:text-emerald-700 transition block">
                       {data.customer.nome}
                     </Link>
-                    {data.customer.telefone && (
-                      <a href={`tel:${data.customer.telefone}`} className="flex items-center gap-1.5 text-sm text-emerald-600 hover:underline mt-0.5">
-                        <Phone className="w-3.5 h-3.5" />{data.customer.telefone}
-                      </a>
-                    )}
+                    {data.customer.telefone && (() => {
+                      const wa = whatsappUrl(data.customer.telefone)
+                      return (
+                        <div className="flex items-center gap-2 mt-1">
+                          {wa && (
+                            <a href={wa} target="_blank" rel="noreferrer" title="Abrir no WhatsApp"
+                              className="flex items-center gap-1.5 text-sm text-zinc-700 hover:text-emerald-600 transition">
+                              <MessageCircle className="w-4 h-4 text-emerald-500" />
+                              {data.customer.telefone}
+                            </a>
+                          )}
+                          {!wa && <span className="text-sm text-zinc-600">{data.customer.telefone}</span>}
+                          <a href={`tel:${data.customer.telefone}`} title="Ligar"
+                            className="text-zinc-400 hover:text-zinc-700 transition">
+                            <Phone className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      )
+                    })()}
                   </div>
+
+                  {/* Mensagens — logo após o cliente */}
+                  <MensagensSection
+                    customerId={data.customer.id}
+                    workOrderId={data.id}
+                    workOrderEstado={estado!}
+                    templates={data.templates}
+                    logs={data.automationLogs}
+                  />
 
                   {/* Viatura */}
                   {data.vehicle && (
@@ -270,15 +294,6 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                       <p className="text-sm text-zinc-600 whitespace-pre-wrap">{data.observacoes}</p>
                     </div>
                   )}
-
-                  {/* Mensagens */}
-                  <MensagensSection
-                    customerId={data.customer.id}
-                    workOrderId={data.id}
-                    workOrderEstado={estado!}
-                    templates={data.templates}
-                    logs={data.automationLogs}
-                  />
                 </div>
 
                 {/* Coluna direita */}
