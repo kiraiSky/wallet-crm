@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutGrid, Users, Activity, ClipboardList } from 'lucide-react'
+import { LayoutGrid, Users, Activity, ClipboardList, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const items = [
@@ -10,6 +10,7 @@ const items = [
   { href: '/clientes', label: 'Clientes', icon: Users, match: (p: string) => p.startsWith('/clientes') },
   { href: '/crm/atividade', label: 'Atividade', icon: Activity, match: (p: string) => p.startsWith('/crm/atividade') },
   { href: '/folhas', label: 'Folhas', icon: ClipboardList, match: (p: string) => p.startsWith('/folhas') },
+  { href: '/crm/automacoes', label: 'Automações', icon: Zap, match: (p: string) => p.startsWith('/crm/automacoes') },
 ]
 
 export function CrmSubNav() {

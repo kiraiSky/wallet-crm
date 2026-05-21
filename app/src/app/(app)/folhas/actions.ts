@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { parseEURToCents } from '@/lib/format'
 import { logAudit } from '@/lib/audit'
+import { fireAutomationsByStatus } from '@/lib/automations'
 
 const STATUSES = [
   'ABERTA',
@@ -164,6 +165,8 @@ export async function changeStatus(
       before: before ? { estado: before.estado } : undefined,
       after: { estado: updated.estado },
     })
+    // Disparar automações configuradas para este estado (fire-and-forget)
+    fireAutomationsByStatus(id, parsed.data, updated.customerId).catch(console.error)
     revalidatePath('/folhas')
     revalidatePath(`/folhas/${id}`)
     return { ok: true }

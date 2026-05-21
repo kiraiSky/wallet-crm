@@ -128,9 +128,10 @@ model Customer {
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
-  vehicles     Vehicle[]
-  workOrders   WorkOrder[]
-  transactions Transaction[]
+  vehicles       Vehicle[]
+  workOrders     WorkOrder[]
+  transactions   Transaction[]
+  automationLogs AutomationLog[]
 
   @@index([nome])
   @@index([telefone])
@@ -194,10 +195,11 @@ model WorkOrder {
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
 
-  customer      Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  vehicle       Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
-  items         WorkOrderItem[]
-  transactions  Transaction[]
+  customer       Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle        Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  items          WorkOrderItem[]
+  transactions   Transaction[]
+  automationLogs AutomationLog[]
 
   @@index([estado])
   @@index([customerId])
@@ -278,4 +280,54 @@ enum AuditAction {
   DELETE
   ARCHIVE
   STATUS_CHANGE
+}
+
+// Automações de mensagens CRM
+model AutomationTemplate {
+  id             String            @id @default(cuid())
+  nome           String
+  tipo           AutomationType
+  trigger        AutomationTrigger
+  triggerEstados String            @default("[]") @map("trigger_estados") @db.Text
+  mensagem       String            @db.Text
+  ativo          Boolean           @default(true)
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  logs           AutomationLog[]
+
+  @@map("automation_templates")
+}
+
+enum AutomationType {
+  FOLLOW_UP
+  LEMBRETE_PAGAMENTO
+  LEMBRETE_LEVANTAMENTO
+  CUSTOM
+}
+
+enum AutomationTrigger {
+  MANUAL
+  STATUS_FOLHA
+}
+
+model AutomationLog {
+  id              String              @id @default(cuid())
+  templateId      String?             @map("template_id")
+  templateNome    String              @map("template_nome")
+  customerId      String              @map("customer_id")
+  workOrderId     String?             @map("work_order_id")
+  mensagemEnviada String              @map("mensagem_enviada") @db.Text
+  webhookOk       Boolean             @default(false) @map("webhook_ok")
+  webhookResponse String?             @map("webhook_response") @db.Text
+  createdAt       DateTime            @default(now()) @map("created_at")
+
+  template  AutomationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  customer  Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workOrder WorkOrder?          @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+
+  @@index([customerId])
+  @@index([templateId])
+  @@index([workOrderId])
+  @@index([createdAt])
+  @@map("automation_logs")
 }

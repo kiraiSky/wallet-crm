@@ -17,6 +17,7 @@ import { deleteCustomer, deleteVehicle } from '../actions'
 import { STATUS_META } from '../../folhas/status'
 import type { CustomerDetail, VehicleRow, CustomerWorkOrderRow, CustomerTransactionRow } from './page'
 import type { CustomerTag } from '../page'
+import { EnviarMensagemButton } from '@/components/EnviarMensagemButton'
 
 interface Props {
   customer: CustomerDetail
@@ -118,7 +119,8 @@ export function CustomerDetailClient({ customer, vehicles, workOrders, transacti
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <EnviarMensagemButton customerId={customer.id} />
           <button onClick={() => setEditOpen(true)} className="btn-secondary">
             <Pencil className="w-4 h-4" /> Editar
           </button>

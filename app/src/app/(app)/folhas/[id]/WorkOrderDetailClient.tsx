@@ -24,6 +24,7 @@ import {
 } from '../actions'
 import type { WorkOrderDetail, WorkOrderItemRow, WorkOrderTransactionRow } from './page'
 import { openCustomerQuickView } from '@/lib/customerBus'
+import { EnviarMensagemButton } from '@/components/EnviarMensagemButton'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string }
 type CategoryOption = {
@@ -150,6 +151,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <EnviarMensagemButton customerId={workOrder.customer.id} workOrderId={workOrder.id} />
           {proximoEstado && (
             <button
               onClick={() => handleChangeStatus(proximoEstado)}
