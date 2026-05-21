@@ -14,6 +14,7 @@ next-env.d.ts
 
 # Uploads (dados do app)
 uploads/
+backups/
 
 # OS / Editor
 .DS_Store
@@ -40,4 +41,3 @@ Caddyfile
 app/Dockerfile
 app/.dockerignore
 /.env.example
-

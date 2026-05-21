@@ -46,13 +46,6 @@ export async function middleware(req: NextRequest) {
   }
 
   // Redireciona para dashboard se já autenticado e vai para /login
-  if (isLogged && pathname === '/login') {
-    const url = req.nextUrl.clone()
-    url.pathname = '/dashboard'
-    url.searchParams.delete('callbackUrl')
-    return NextResponse.redirect(url)
-  }
-
   return NextResponse.next()
 }
 

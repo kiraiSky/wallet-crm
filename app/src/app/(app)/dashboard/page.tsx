@@ -3,23 +3,49 @@ import { prisma } from '@/lib/prisma'
 import { formatEUR, formatDateTime } from '@/lib/format'
 import { getCurrentUser } from '@/lib/current-user'
 import { DynamicIcon } from '@/components/DynamicIcon'
-import { Gauge, Sparkline, Donut } from '@/components/Charts'
+import { Gauge, Sparkline } from '@/components/Charts'
 import { colorGradient, colorHex, colorIconBg } from '@/lib/colors'
 import { ArrowRight, Plus, Paperclip, ArrowRightLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScheduledBlock, type ScheduledItem } from './ScheduledBlock'
+import { ExpenseCategoryDonut, type ExpenseCategoryGroup } from './ExpenseCategoryDonut'
 
 export const dynamic = 'force-dynamic'
 
-const DAYS_IN_SERIES = 30
+type DashboardSearchParams = {
+  saldo?: string
+}
 
-export default async function DashboardPage() {
+const SALDO_PERIODS = [
+  { key: 'month', label: 'Este mês', caption: 'este mês' },
+  { key: '7d', label: 'Últimos 7 dias', caption: 'últimos 7 dias' },
+  { key: '31d', label: 'Últimos 31 dias', caption: 'últimos 31 dias' },
+] as const
+
+type SaldoPeriod = (typeof SALDO_PERIODS)[number]['key']
+
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<DashboardSearchParams> }) {
+  const params = await searchParams
+  const requestedSaldoPeriod = params.saldo
+  const saldoPeriod: SaldoPeriod =
+    requestedSaldoPeriod === 'month' || requestedSaldoPeriod === '7d' || requestedSaldoPeriod === '31d'
+      ? requestedSaldoPeriod
+      : '31d'
+
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const seriesStart = new Date(today)
-  seriesStart.setDate(seriesStart.getDate() - (DAYS_IN_SERIES - 1))
+  const seriesStart = saldoPeriod === 'month' ? new Date(startOfMonth) : new Date(today)
+  if (saldoPeriod === '7d') {
+    seriesStart.setDate(seriesStart.getDate() - 6)
+  }
+  if (saldoPeriod === '31d') {
+    seriesStart.setDate(seriesStart.getDate() - 30)
+  }
+  const seriesDays =
+    Math.floor((today.getTime() - seriesStart.getTime()) / (24 * 60 * 60 * 1000)) + 1
+  const saldoPeriodLabel = SALDO_PERIODS.find((period) => period.key === saldoPeriod)?.caption ?? 'últimos 31 dias'
 
   const user = await getCurrentUser()
   const primeiroNome = user.nome.split(' ')[0]
@@ -27,7 +53,7 @@ export default async function DashboardPage() {
   const in7Days = new Date(today)
   in7Days.setDate(in7Days.getDate() + 7)
 
-  const [accounts, monthAgg, lastMonthAgg, recentTxs, expensesByCategory, totalAgg, incomingTransfers, allTxs, scheduledTxs] =
+  const [accounts, monthAgg, lastMonthAgg, recentTxs, allExpensesAgg, totalAgg, incomingTransfers, allTxs, scheduledTxs] =
     await Promise.all([
       prisma.account.findMany({ where: { archived: false }, orderBy: { createdAt: 'asc' } }),
       prisma.transaction.groupBy({
@@ -56,8 +82,6 @@ export default async function DashboardPage() {
         by: ['categoryId'],
         where: { agendado: false, tipo: 'SAIDA', data: { gte: startOfMonth }, categoryId: { not: null } },
         _sum: { valor: true },
-        orderBy: { _sum: { valor: 'desc' } },
-        take: 5,
       }),
       prisma.transaction.groupBy({
         by: ['tipo', 'accountId'],
@@ -111,7 +135,7 @@ export default async function DashboardPage() {
   const entradasMesAnterior = Number(lastMonthAgg.find((g) => g.tipo === 'ENTRADA')?._sum.valor ?? 0)
   const saidasMesAnterior = Number(lastMonthAgg.find((g) => g.tipo === 'SAIDA')?._sum.valor ?? 0)
 
-  // Série de saldo dos últimos 30 dias
+  // Serie de saldo do periodo selecionado
   const initialAccountsSaldo = accounts.reduce((s, a) => s + Number(a.saldoInicial), 0)
   let cumulative = initialAccountsSaldo
   let txIdx = 0
@@ -122,7 +146,7 @@ export default async function DashboardPage() {
     txIdx++
   }
   const series: number[] = []
-  for (let i = 0; i < DAYS_IN_SERIES; i++) {
+  for (let i = 0; i < seriesDays; i++) {
     const dayEnd = new Date(seriesStart)
     dayEnd.setDate(dayEnd.getDate() + i)
     dayEnd.setHours(23, 59, 59, 999)
@@ -158,30 +182,62 @@ export default async function DashboardPage() {
         : 0
       : Math.min(100, (saidasMes / Math.max(entradasMes, 1)) * 100)
 
-  // Donut de categorias (top 4 + Outros)
-  const categoryIds = expensesByCategory
+  // Donut de categorias: agrupa subcategorias na categoria pai.
+  const categoryIds = allExpensesAgg
     .map((e) => e.categoryId)
     .filter((id): id is string => Boolean(id))
-  const categories = await prisma.category.findMany({ where: { id: { in: categoryIds } } })
-  const totalDespesasMes = expensesByCategory.reduce((s, e) => s + Number(e._sum.valor ?? 0), 0)
-  const allExpensesAgg = await prisma.transaction.groupBy({
-    by: ['categoryId'],
-    where: { agendado: false, tipo: 'SAIDA', data: { gte: startOfMonth }, categoryId: { not: null } },
-    _sum: { valor: true },
+  const directCategories = await prisma.category.findMany({
+    where: { id: { in: categoryIds } },
+    select: { id: true, nome: true, parentId: true },
   })
+  const parentIds = directCategories
+    .map((cat) => cat.parentId)
+    .filter((id): id is string => Boolean(id))
+  const parentCategories = await prisma.category.findMany({
+    where: { id: { in: parentIds } },
+    select: { id: true, nome: true, parentId: true },
+  })
+  const categories = [...directCategories, ...parentCategories]
+  const categoryById = new Map(categories.map((cat) => [cat.id, cat]))
   const totalMesGeral = allExpensesAgg.reduce((s, e) => s + Number(e._sum.valor ?? 0), 0)
-  const top4 = expensesByCategory.slice(0, 4).map((e) => {
-    const cat = categories.find((c) => c.id === e.categoryId)
-    const valor = Number(e._sum.valor ?? 0)
-    return {
-      id: e.categoryId,
-      nome: cat?.nome ?? '?',
-      cor: cat?.cor ?? 'zinc',
-      valor,
-      pct: totalMesGeral > 0 ? (valor / totalMesGeral) * 100 : 0,
+
+  const groupedExpenses = new Map<string, ExpenseCategoryGroup>()
+  for (const entry of allExpensesAgg) {
+    if (!entry.categoryId) continue
+    const cat = categoryById.get(entry.categoryId)
+    if (!cat) continue
+
+    const valor = Number(entry._sum.valor ?? 0)
+    const parentId = cat.parentId
+    const groupId = parentId ?? cat.id
+    const groupName = parentId ? categoryById.get(parentId)?.nome ?? cat.nome : cat.nome
+    const group = groupedExpenses.get(groupId) ?? {
+      id: groupId,
+      nome: groupName,
+      valor: 0,
+      pct: 0,
+      cor: colorHex.zinc,
+      children: [],
     }
-  })
-  const outrosValor = Math.max(0, totalMesGeral - top4.reduce((s, c) => s + c.valor, 0))
+    group.valor += valor
+    if (parentId) {
+      group.children.push({
+        id: cat.id,
+        nome: cat.nome,
+        valor,
+        pctOfParent: 0,
+      })
+    }
+    groupedExpenses.set(groupId, group)
+  }
+
+  const top4 = Array.from(groupedExpenses.values())
+    .sort((a, b) => b.valor - a.valor)
+    .slice(0, 4)
+  const outrosValor = Math.max(
+    0,
+    Array.from(groupedExpenses.values()).reduce((s, c) => s + c.valor, 0) - top4.reduce((s, c) => s + c.valor, 0)
+  )
 
   // Cores visualmente distintas para os segmentos do donut.
   // Ignoramos a `cor` da categoria aqui porque categorias diferentes podem partilhar
@@ -199,19 +255,33 @@ export default async function DashboardPage() {
   ]
   const donutColors = top4.map((_c, i) => DONUT_PALETTE[i % DONUT_PALETTE.length])
 
+  const expenseGroups: ExpenseCategoryGroup[] = [
+    ...top4.map((group, i) => ({
+      ...group,
+      cor: donutColors[i],
+      pct: totalMesGeral > 0 ? (group.valor / totalMesGeral) * 100 : 0,
+      children: group.children
+        .sort((a, b) => b.valor - a.valor)
+        .map((child) => ({
+          ...child,
+          pctOfParent: group.valor > 0 ? (child.valor / group.valor) * 100 : 0,
+        })),
+    })),
+    ...(outrosValor > 0
+      ? [{
+          id: 'outros',
+          nome: 'Outros',
+          valor: outrosValor,
+          pct: totalMesGeral > 0 ? (outrosValor / totalMesGeral) * 100 : 0,
+          cor: colorHex.zinc,
+          children: [],
+        }]
+      : []),
+  ]
+
   const donutSegments = [
     ...top4.map((c, i) => ({ value: c.valor, color: donutColors[i] })),
     ...(outrosValor > 0 ? [{ value: outrosValor, color: colorHex.zinc }] : []),
-  ]
-  const legenda = [
-    ...top4.map((c, i) => ({
-      nome: c.nome,
-      cor: donutColors[i],
-      pct: totalMesGeral > 0 ? (c.valor / totalMesGeral) * 100 : 0,
-    })),
-    ...(outrosValor > 0
-      ? [{ nome: 'Outros', cor: colorHex.zinc, pct: (outrosValor / totalMesGeral) * 100 }]
-      : []),
   ]
 
   return (
@@ -315,24 +385,48 @@ export default async function DashboardPage() {
         </div>
 
         <div className="card p-5">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-zinc-900">Evolução do saldo</h3>
-            {variacaoSerie !== 0 && (
-              <span
-                className={cn(
-                  'text-xs px-2 py-0.5 rounded-full font-semibold',
-                  variacaoSerie >= 0
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-red-50 text-red-600'
-                )}
-              >
-                {variacaoSerie >= 0 ? '+' : ''}
-                {variacaoSerie.toFixed(0)}%
-              </span>
-            )}
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <h3 className="font-semibold text-zinc-900">Evolução do saldo</h3>
+              <div className="text-2xl font-bold text-zinc-900 mb-0.5">{formatEUR(saldoTotal)}</div>
+              <div className="text-xs text-zinc-500">{saldoPeriodLabel}</div>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              {variacaoSerie !== 0 && (
+                <span
+                  className={cn(
+                    'text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0',
+                    variacaoSerie >= 0
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'bg-red-50 text-red-600'
+                  )}
+                >
+                  {variacaoSerie >= 0 ? '+' : ''}
+                  {variacaoSerie.toFixed(0)}%
+                </span>
+              )}
+              <div className="flex flex-wrap justify-end gap-1 text-[11px]">
+                {SALDO_PERIODS.map((period) => {
+                  const active = saldoPeriod === period.key
+
+                  return (
+                    <Link
+                      key={period.key}
+                      href={`/dashboard?saldo=${period.key}`}
+                      className={cn(
+                        'rounded-md px-2 py-1 font-medium transition-colors',
+                        active
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
+                      )}
+                    >
+                      {period.label}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-zinc-900 mb-0.5">{formatEUR(saldoTotal)}</div>
-          <div className="text-xs text-zinc-500 mb-3">últimos 30 dias</div>
           <Sparkline data={series} color="#10b981" height={96} />
         </div>
 
@@ -398,28 +492,10 @@ export default async function DashboardPage() {
               Ver →
             </Link>
           </div>
-          {donutSegments.length === 0 ? (
+          {expenseGroups.length === 0 ? (
             <div className="text-center text-sm text-zinc-400 py-8">Sem despesas este mês.</div>
           ) : (
-            <div className="flex items-center gap-4">
-              <div className="flex-shrink-0">
-                <Donut segments={donutSegments} size={128} />
-              </div>
-              <div className="flex-1 space-y-2 text-sm">
-                {legenda.map((l) => (
-                  <div key={l.nome} className="flex items-center gap-2 min-w-0">
-                    <span
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: l.cor }}
-                    />
-                    <span className="truncate flex-1 min-w-0" title={l.nome}>{l.nome}</span>
-                    <span className="font-semibold text-zinc-700 flex-shrink-0 ml-2">
-                      {l.pct.toFixed(0)}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ExpenseCategoryDonut groups={expenseGroups} segments={donutSegments} />
           )}
         </div>
 

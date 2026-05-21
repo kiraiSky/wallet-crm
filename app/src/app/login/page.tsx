@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { LoginForm } from './LoginForm'
 import { Wallet } from 'lucide-react'
@@ -14,7 +15,13 @@ export default async function LoginPage({
   } catch {
     // cookie de sessão inválido/expirado — ignora e mostra o login normalmente
   }
-  if (session) redirect('/dashboard')
+  if (session?.user?.id) {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { active: true },
+    })
+    if (user?.active) redirect('/dashboard')
+  }
 
   const { callbackUrl, error } = await searchParams
 
