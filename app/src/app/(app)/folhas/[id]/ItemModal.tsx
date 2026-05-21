@@ -15,6 +15,7 @@ interface Props {
   workOrderId: string
   item: WorkOrderItemRow | null
   defaultTipo?: 'PECA' | 'MAO_OBRA'
+  onSaved?: () => void
 }
 
 function initialState(item: WorkOrderItemRow | null, defaultTipo: 'PECA' | 'MAO_OBRA') {
@@ -35,7 +36,7 @@ function parseDec(value: string): number {
   return isNaN(num) ? 0 : num
 }
 
-export function ItemModal({ open, onClose, workOrderId, item, defaultTipo = 'PECA' }: Props) {
+export function ItemModal({ open, onClose, workOrderId, item, defaultTipo = 'PECA', onSaved }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const init = initialState(item, defaultTipo)
@@ -79,6 +80,7 @@ export function ItemModal({ open, onClose, workOrderId, item, defaultTipo = 'PEC
       const res = await saveWorkOrderItem({ ok: false }, fd)
       if (res.ok) {
         onClose()
+        onSaved?.()
         router.refresh()
       } else if (res.errors) {
         setErrors(res.errors)

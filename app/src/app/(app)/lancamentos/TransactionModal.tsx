@@ -43,6 +43,7 @@ interface Props {
   categories: Category[]
   workOrderOptions?: WorkOrderOption[]
   defaultWorkOrderId?: string
+  onSaved?: () => void
 }
 
 function isoToLocalDatetimeInput(iso: string | undefined): string {
@@ -67,6 +68,7 @@ export function TransactionModal({
   categories,
   workOrderOptions = [],
   defaultWorkOrderId,
+  onSaved,
 }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -203,6 +205,7 @@ export function TransactionModal({
       const res = await saveTransaction({ ok: false }, fd)
       if (res.ok) {
         onClose()
+        onSaved?.()
         router.refresh()
         reset()
       } else if (res.errors) {

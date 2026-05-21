@@ -476,6 +476,12 @@ export function WorkOrdersClient({
           if (fromCol && fromCol !== newStatus) moveCard(woId, fromCol, newStatus)
           commitStatus(woId, newStatus)
         }}
+        onDeleted={(woId) => {
+          const col = findColumn(columns, woId)
+          if (col) setColumns((prev) => ({ ...prev, [col]: prev[col].filter((id) => id !== woId) }))
+          setPreviewId(null)
+          router.refresh()
+        }}
       />
     </>
   )

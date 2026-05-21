@@ -175,14 +175,28 @@ export async function changeStatus(
 // === Preview ===
 
 export async function getWorkOrderPreview(id: string) {
-  const wo = await prisma.workOrder.findUnique({
-    where: { id },
-    include: {
-      customer: { select: { id: true, nome: true, telefone: true } },
-      vehicle: { select: { id: true, matricula: true, marca: true, modelo: true, ano: true } },
-      items: { orderBy: { createdAt: 'asc' } },
-    },
-  })
+  const [wo, txList, accounts, categories, templates, automationLogs] = await Promise.all([
+    prisma.workOrder.findUnique({
+      where: { id },
+      include: {
+        customer: { select: { id: true, nome: true, telefone: true } },
+        vehicle: { select: { id: true, matricula: true, marca: true, modelo: true, ano: true } },
+        items: { orderBy: { createdAt: 'asc' } },
+      },
+    }),
+    prisma.transaction.findMany({
+      where: { workOrderId: id },
+      orderBy: { data: 'desc' },
+      include: {
+        account: { select: { nome: true } },
+        category: { select: { nome: true, cor: true, icone: true } },
+      },
+    }),
+    prisma.account.findMany({ where: { archived: false }, orderBy: { nome: 'asc' }, select: { id: true, nome: true, cor: true, icone: true } }),
+    prisma.category.findMany({ where: { archived: false }, orderBy: { nome: 'asc' }, select: { id: true, nome: true, tipo: true, cor: true, icone: true, parentId: true } }),
+    prisma.automationTemplate.findMany({ where: { ativo: true }, orderBy: { createdAt: 'asc' }, select: { id: true, nome: true, tipo: true, trigger: true, triggerEstados: true, mensagem: true } }),
+    prisma.automationLog.findMany({ where: { workOrderId: id }, orderBy: { createdAt: 'desc' }, take: 10, select: { id: true, templateNome: true, mensagemEnviada: true, webhookOk: true, webhookResponse: true, createdAt: true } }),
+  ])
   if (!wo) return null
   return {
     id: wo.id,
@@ -201,14 +215,12 @@ export async function getWorkOrderPreview(id: string) {
     total: Number(wo.total),
     customer: wo.customer,
     vehicle: wo.vehicle,
-    items: wo.items.map((i) => ({
-      id: i.id,
-      tipo: i.tipo as string,
-      descricao: i.descricao,
-      quantidade: Number(i.quantidade),
-      precoUnit: Number(i.precoUnit),
-      total: Number(i.total),
-    })),
+    items: wo.items.map((i) => ({ id: i.id, tipo: i.tipo as 'PECA' | 'MAO_OBRA', descricao: i.descricao, quantidade: Number(i.quantidade), precoUnit: Number(i.precoUnit), total: Number(i.total) })),
+    transactions: txList.map((t) => ({ id: t.id, tipo: t.tipo as 'ENTRADA' | 'SAIDA', valor: Number(t.valor), descricao: t.descricao, data: t.data.toISOString(), accountId: t.accountId, categoryId: t.categoryId, account: t.account, category: t.category, agendado: t.agendado })),
+    accounts,
+    categories: categories.map((c) => ({ ...c, tipo: c.tipo as 'ENTRADA' | 'SAIDA' })),
+    templates,
+    automationLogs: automationLogs.map((l) => ({ ...l, createdAt: l.createdAt.toISOString(), webhookResponse: l.webhookResponse ?? null })),
   }
 }
 

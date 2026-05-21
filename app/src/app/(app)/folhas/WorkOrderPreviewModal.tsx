@@ -1,52 +1,78 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { X, ExternalLink, Loader2, Car, ArrowRight, Phone, Wrench, Package } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import {
+  X, ExternalLink, Loader2, Car, Phone, Package, Wrench,
+  Plus, Pencil, Trash2, TrendingUp, TrendingDown, ChevronRight,
+  ArrowRight, CheckCircle2,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatEUR, formatDate } from '@/lib/format'
-import { STATUS_META, nextStatus, type WorkOrderStatus } from './status'
-import { getWorkOrderPreview, changeStatus } from './actions'
+import { STATUS_META, STATUS_LIST, nextStatus, type WorkOrderStatus } from './status'
+import { getWorkOrderPreview, changeStatus, deleteWorkOrder, deleteWorkOrderItem } from './actions'
 import { getActiveTemplates } from '@/app/(app)/crm/automacoes/actions'
 import { AutoSendModal } from './AutoSendModal'
+import { WorkOrderModal } from './WorkOrderModal'
+import { ItemModal } from './[id]/ItemModal'
+import { TransactionModal } from '@/app/(app)/lancamentos/TransactionModal'
+import { MensagensSection } from './[id]/MensagensSection'
 import type { TemplateParaEnvio } from './ConfirmacaoEnvioModal'
 
 type Preview = NonNullable<Awaited<ReturnType<typeof getWorkOrderPreview>>>
+type ItemRow = Preview['items'][0]
+type TxRow = Preview['transactions'][0]
 
 interface Props {
   workOrderId: string | null
   onClose: () => void
   onStatusChanged: (woId: string, newStatus: WorkOrderStatus) => void
+  onDeleted?: (woId: string) => void
 }
 
-export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged }: Props) {
+export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, onDeleted }: Props) {
+  const router = useRouter()
   const [data, setData] = useState<Preview | null>(null)
   const [loading, setLoading] = useState(false)
-  const [autoSend, setAutoSend] = useState<{ templates: TemplateParaEnvio[]; estado: WorkOrderStatus } | null>(null)
   const [, startTransition] = useTransition()
 
+  // sub-modals
+  const [editWoOpen, setEditWoOpen] = useState(false)
+  const [itemModalOpen, setItemModalOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<ItemRow | null>(null)
+  const [itemTipo, setItemTipo] = useState<'PECA' | 'MAO_OBRA'>('PECA')
+  const [statusOpen, setStatusOpen] = useState(false)
+  const [txModalOpen, setTxModalOpen] = useState(false)
+  const [txTipo, setTxTipo] = useState<'ENTRADA' | 'SAIDA'>('SAIDA')
+  const [editingTx, setEditingTx] = useState<TxRow | null>(null)
+  const [autoSend, setAutoSend] = useState<{ templates: TemplateParaEnvio[]; estado: WorkOrderStatus } | null>(null)
+
   const open = workOrderId !== null
+  const prevId = useRef<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    if (!workOrderId) return
+    const d = await getWorkOrderPreview(workOrderId)
+    setData(d)
+  }, [workOrderId])
 
   useEffect(() => {
     if (!workOrderId) { setData(null); return }
+    if (prevId.current === workOrderId) return
+    prevId.current = workOrderId
     setLoading(true)
     setData(null)
-    getWorkOrderPreview(workOrderId).then((d) => {
-      setData(d)
-      setLoading(false)
-    })
+    getWorkOrderPreview(workOrderId).then((d) => { setData(d); setLoading(false) })
   }, [workOrderId])
 
   useEffect(() => {
     if (!open) return
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape' && !editWoOpen && !itemModalOpen && !txModalOpen && !statusOpen) onClose() }
     window.addEventListener('keydown', onEsc)
     document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', onEsc)
-      document.body.style.overflow = ''
-    }
-  }, [open, onClose])
+    return () => { window.removeEventListener('keydown', onEsc); document.body.style.overflow = '' }
+  }, [open, onClose, editWoOpen, itemModalOpen, txModalOpen, statusOpen])
 
   if (!open) return null
 
@@ -61,257 +87,395 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged }:
     startTransition(async () => {
       await changeStatus(data.id, next)
       onStatusChanged(data.id, next)
-      // Verificar templates automáticos para o novo estado
       const all = await getActiveTemplates()
       const matching = all.filter((t) => {
         if (t.trigger !== 'STATUS_FOLHA') return false
-        try { return (JSON.parse(t.triggerEstados) as string[]).includes(next) }
-        catch { return false }
+        try { return (JSON.parse(t.triggerEstados) as string[]).includes(next) } catch { return false }
       })
-      if (matching.length > 0) {
-        setAutoSend({ templates: matching, estado: next })
-      } else {
-        onClose()
-      }
+      if (matching.length > 0) { setAutoSend({ templates: matching, estado: next }) }
+      else { onClose() }
+      router.refresh()
     })
   }
 
+  function handleChangeStatus(novo: WorkOrderStatus) {
+    if (!data) return
+    startTransition(async () => {
+      await changeStatus(data.id, novo)
+      onStatusChanged(data.id, novo)
+      setStatusOpen(false)
+      const all = await getActiveTemplates()
+      const matching = all.filter((t) => {
+        if (t.trigger !== 'STATUS_FOLHA') return false
+        try { return (JSON.parse(t.triggerEstados) as string[]).includes(novo) } catch { return false }
+      })
+      if (matching.length > 0) setAutoSend({ templates: matching, estado: novo })
+      await refresh()
+      router.refresh()
+    })
+  }
+
+  function handleDelete() {
+    if (!data) return
+    if (!confirm(`Eliminar a folha #${data.numero}? Esta ação é permanente.`)) return
+    startTransition(async () => {
+      await deleteWorkOrder(data.id)
+      onDeleted?.(data.id)
+      onClose()
+      router.refresh()
+    })
+  }
+
+  function handleDeleteItem(item: ItemRow) {
+    if (!confirm(`Eliminar "${item.descricao}"?`)) return
+    startTransition(async () => {
+      await deleteWorkOrderItem(item.id)
+      await refresh()
+      router.refresh()
+    })
+  }
+
+  const woForModal = data ? {
+    id: data.id, customerId: data.customer.id, vehicleId: data.vehicle?.id ?? null,
+    problema: data.problema, diagnostico: data.diagnostico, trabalho: data.trabalho,
+    observacoes: data.observacoes, kmEntrada: data.kmEntrada, dataPrevista: data.dataPrevista,
+  } : null
+
   return (
     <>
-      {autoSend && (
+      {autoSend && data && (
         <AutoSendModal
           templates={autoSend.templates}
           novoEstado={autoSend.estado}
-          customerId={data?.customer.id ?? ''}
-          workOrderId={workOrderId ?? ''}
+          customerId={data.customer.id}
+          workOrderId={data.id}
           onClose={() => { setAutoSend(null); onClose() }}
         />
       )}
 
       <div
         className="fixed inset-0 z-50 bg-zinc-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
-        onClick={onClose}
+        onClick={() => !statusOpen && onClose()}
       >
-      <div
-        className={cn(
-          'bg-white w-full sm:rounded-2xl sm:max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl',
-          'rounded-t-2xl'
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header fixo */}
-        <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-5 py-4 border-b border-zinc-100 rounded-t-2xl">
-          <div className="flex items-center gap-3 min-w-0">
-            {data ? (
-              <>
-                <span className="font-bold text-zinc-900 text-lg">Folha #{data.numero}</span>
-                {meta && (
-                  <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium', meta.chip)}>
-                    <span className={cn('w-1.5 h-1.5 rounded-full', meta.dot)} />
-                    {meta.label}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-zinc-400 text-sm">A carregar…</span>
-            )}
-          </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100 transition flex-shrink-0">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Conteúdo */}
-        {loading || !data ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
-          </div>
-        ) : (
-          <>
-            <div className="p-5 space-y-5">
-
-              {/* Cliente + Viatura + Datas */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <div className="text-xs text-zinc-400 font-medium uppercase tracking-wide mb-1">Cliente</div>
-                  <Link
-                    href={`/clientes/${data.customer.id}`}
-                    onClick={onClose}
-                    className="font-semibold text-zinc-900 hover:text-emerald-700 transition"
-                  >
-                    {data.customer.nome}
-                  </Link>
-                  {data.customer.telefone && (
-                    <a
-                      href={`tel:${data.customer.telefone}`}
-                      className="flex items-center gap-1 text-sm text-emerald-600 hover:underline mt-0.5"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      {data.customer.telefone}
-                    </a>
+        <div
+          className="bg-white w-full sm:rounded-2xl sm:max-w-5xl max-h-[96vh] overflow-y-auto shadow-2xl rounded-t-2xl flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* ── Header ── */}
+          <div className="sticky top-0 bg-white z-20 flex items-center justify-between px-5 py-4 border-b border-zinc-100 rounded-t-2xl">
+            <div className="flex items-center gap-3 min-w-0">
+              {data ? (
+                <>
+                  <span className="font-bold text-zinc-900 text-lg">Folha #{data.numero}</span>
+                  {meta && (
+                    <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium', meta.chip)}>
+                      <span className={cn('w-1.5 h-1.5 rounded-full', meta.dot)} />
+                      {meta.label}
+                    </span>
                   )}
-                </div>
+                </>
+              ) : <span className="text-zinc-400 text-sm">A carregar…</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              {data && (
+                <>
+                  <button onClick={() => setEditWoOpen(true)} className="btn-secondary text-xs py-1.5">
+                    <Pencil className="w-3.5 h-3.5" /> Editar
+                  </button>
+                  <button onClick={handleDelete} className="btn-secondary text-xs py-1.5 text-red-600 hover:bg-red-50">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  <Link href={`/folhas/${data.id}`} onClick={onClose} className="btn-secondary text-xs py-1.5">
+                    <ExternalLink className="w-3.5 h-3.5" /> Abrir
+                  </Link>
+                </>
+              )}
+              <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
 
-                {data.vehicle ? (
-                  <div>
-                    <div className="text-xs text-zinc-400 font-medium uppercase tracking-wide mb-1">Viatura</div>
-                    <div className="flex items-center gap-1.5 font-semibold text-zinc-900">
-                      <Car className="w-4 h-4 text-zinc-400 flex-shrink-0" />
-                      <span className="font-mono tracking-wider">{data.vehicle.matricula}</span>
-                    </div>
-                    <div className="text-sm text-zinc-600 mt-0.5">
-                      {data.vehicle.marca} {data.vehicle.modelo}
-                      {data.vehicle.ano ? ` (${data.vehicle.ano})` : ''}
-                    </div>
-                    {data.kmEntrada && (
-                      <div className="text-xs text-zinc-400 mt-0.5">{data.kmEntrada.toLocaleString('pt-PT')} km entrada</div>
+          {/* ── Body ── */}
+          {loading || !data ? (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                {/* Coluna esquerda */}
+                <div className="lg:col-span-1 space-y-4">
+                  {/* Cliente */}
+                  <div className="card p-4">
+                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Cliente</p>
+                    <Link href={`/clientes/${data.customer.id}`} onClick={onClose} className="font-semibold text-zinc-900 hover:text-emerald-700 transition block">
+                      {data.customer.nome}
+                    </Link>
+                    {data.customer.telefone && (
+                      <a href={`tel:${data.customer.telefone}`} className="flex items-center gap-1.5 text-sm text-emerald-600 hover:underline mt-0.5">
+                        <Phone className="w-3.5 h-3.5" />{data.customer.telefone}
+                      </a>
                     )}
                   </div>
-                ) : <div />}
 
-                <div>
-                  <div className="text-xs text-zinc-400 font-medium uppercase tracking-wide mb-1">Datas</div>
-                  <div className="text-sm text-zinc-700">Aberta: {formatDate(data.dataAbertura)}</div>
-                  {data.dataPrevista && (
-                    <div className={cn(
-                      'text-sm',
-                      new Date(data.dataPrevista) < new Date() && !data.dataConclusao
-                        ? 'text-red-500 font-medium'
-                        : 'text-zinc-500'
-                    )}>
-                      Prevista: {formatDate(data.dataPrevista)}
+                  {/* Viatura */}
+                  {data.vehicle && (
+                    <div className="card p-4">
+                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Viatura</p>
+                      <div className="flex items-center gap-1.5 font-mono font-bold tracking-wider text-zinc-900">
+                        <Car className="w-4 h-4 text-zinc-400" />{data.vehicle.matricula}
+                      </div>
+                      <p className="text-sm text-zinc-600 mt-0.5">{data.vehicle.marca} {data.vehicle.modelo}{data.vehicle.ano ? ` (${data.vehicle.ano})` : ''}</p>
+                      {data.kmEntrada && <p className="text-xs text-zinc-400 mt-0.5">{data.kmEntrada.toLocaleString('pt-PT')} km entrada</p>}
                     </div>
                   )}
-                  {data.dataConclusao && (
-                    <div className="text-sm text-emerald-600">Concluída: {formatDate(data.dataConclusao)}</div>
+
+                  {/* Datas */}
+                  <div className="card p-4">
+                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Datas</p>
+                    <p className="text-sm text-zinc-700">Aberta: {formatDate(data.dataAbertura)}</p>
+                    {data.dataPrevista && (
+                      <p className={cn('text-sm', new Date(data.dataPrevista) < new Date() && !data.dataConclusao ? 'text-red-500 font-medium' : 'text-zinc-500')}>
+                        Prevista: {formatDate(data.dataPrevista)}
+                      </p>
+                    )}
+                    {data.dataConclusao && <p className="text-sm text-emerald-600">Concluída: {formatDate(data.dataConclusao)}</p>}
+                  </div>
+
+                  {/* Problema */}
+                  <div className="card p-4">
+                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Problema</p>
+                    <p className="text-sm text-zinc-800 whitespace-pre-wrap">{data.problema}</p>
+                  </div>
+
+                  {data.diagnostico && (
+                    <div className="card p-4">
+                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Diagnóstico</p>
+                      <p className="text-sm text-zinc-800 whitespace-pre-wrap">{data.diagnostico}</p>
+                    </div>
                   )}
+
+                  {data.trabalho && (
+                    <div className="card p-4">
+                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Trabalho efetuado</p>
+                      <p className="text-sm text-zinc-800 whitespace-pre-wrap">{data.trabalho}</p>
+                    </div>
+                  )}
+
+                  {data.observacoes && (
+                    <div className="card p-4">
+                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Observações</p>
+                      <p className="text-sm text-zinc-600 whitespace-pre-wrap">{data.observacoes}</p>
+                    </div>
+                  )}
+
+                  {/* Mensagens */}
+                  <MensagensSection
+                    customerId={data.customer.id}
+                    workOrderId={data.id}
+                    workOrderEstado={estado!}
+                    templates={data.templates}
+                    logs={data.automationLogs}
+                  />
+                </div>
+
+                {/* Coluna direita */}
+                <div className="lg:col-span-2 space-y-4">
+                  {/* Peças */}
+                  <PreviewItemList
+                    title="Peças" icon={Package} iconBg="bg-violet-100 text-violet-700"
+                    items={pecas} emptyText="Sem peças."
+                    onAdd={() => { setEditingItem(null); setItemTipo('PECA'); setItemModalOpen(true) }}
+                    onEdit={(it) => { setEditingItem(it); setItemTipo(it.tipo); setItemModalOpen(true) }}
+                    onDelete={handleDeleteItem}
+                  />
+
+                  {/* Mão de obra */}
+                  <PreviewItemList
+                    title="Mão de obra" icon={Wrench} iconBg="bg-orange-100 text-orange-700"
+                    items={maoObra} emptyText="Sem mão de obra."
+                    onAdd={() => { setEditingItem(null); setItemTipo('MAO_OBRA'); setItemModalOpen(true) }}
+                    onEdit={(it) => { setEditingItem(it); setItemTipo(it.tipo); setItemModalOpen(true) }}
+                    onDelete={handleDeleteItem}
+                  />
+
+                  {/* Totais */}
+                  <div className="card p-4">
+                    <h3 className="font-semibold text-zinc-900 mb-3">Totais</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between"><span className="text-zinc-500">Peças</span><span className="font-semibold">{formatEUR(data.totalPecas)}</span></div>
+                      <div className="flex justify-between"><span className="text-zinc-500">Mão de obra</span><span className="font-semibold">{formatEUR(data.totalMaoObra)}</span></div>
+                      <div className="flex justify-between pt-2 border-t border-zinc-100">
+                        <span className="font-bold text-zinc-900">Total</span>
+                        <span className="text-xl font-bold text-zinc-900">{formatEUR(data.total)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Movimentos */}
+                  <div className="card overflow-hidden">
+                    <div className="flex items-center justify-between p-4 border-b border-zinc-100">
+                      <h3 className="font-semibold text-zinc-900">Movimentos</h3>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setTxTipo('ENTRADA'); setEditingTx(null); setTxModalOpen(true) }} className="btn-secondary text-xs py-1.5 text-emerald-600 hover:bg-emerald-50">
+                          <TrendingUp className="w-3.5 h-3.5" /> Receita
+                        </button>
+                        <button onClick={() => { setTxTipo('SAIDA'); setEditingTx(null); setTxModalOpen(true) }} className="btn-primary text-xs py-1.5">
+                          <TrendingDown className="w-3.5 h-3.5" /> Despesa
+                        </button>
+                      </div>
+                    </div>
+                    {data.transactions.length === 0 ? (
+                      <p className="p-6 text-center text-sm text-zinc-400">Sem movimentos financeiros.</p>
+                    ) : (
+                      <div className="divide-y divide-zinc-100">
+                        {data.transactions.map((tx) => (
+                          <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 cursor-pointer" onClick={() => { setEditingTx(tx); setTxTipo(tx.tipo); setTxModalOpen(true) }}>
+                            <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', tx.tipo === 'ENTRADA' ? 'bg-emerald-100' : 'bg-red-100')}>
+                              {tx.tipo === 'ENTRADA' ? <TrendingUp className="w-4 h-4 text-emerald-600" /> : <TrendingDown className="w-4 h-4 text-red-500" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-zinc-900 truncate">{tx.descricao}</p>
+                              <p className="text-xs text-zinc-500">{tx.account.nome} · {formatDate(tx.data)}</p>
+                            </div>
+                            <span className={cn('font-bold text-sm', tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500')}>
+                              {tx.tipo === 'ENTRADA' ? '+' : '-'}{formatEUR(tx.valor)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-
-              {/* Problema */}
-              <Section label="Problema">
-                <p className="text-sm text-zinc-800 leading-relaxed">{data.problema}</p>
-              </Section>
-
-              {/* Diagnóstico */}
-              {data.diagnostico && (
-                <Section label="Diagnóstico">
-                  <p className="text-sm text-zinc-800 leading-relaxed">{data.diagnostico}</p>
-                </Section>
-              )}
-
-              {/* Trabalho */}
-              {data.trabalho && (
-                <Section label="Trabalho realizado">
-                  <p className="text-sm text-zinc-800 leading-relaxed">{data.trabalho}</p>
-                </Section>
-              )}
-
-              {/* Items */}
-              {data.items.length > 0 && (
-                <Section label="Itens">
-                  <div className="rounded-xl overflow-hidden border border-zinc-200">
-                    {pecas.length > 0 && (
-                      <ItemGroup
-                        icon={<Package className="w-3.5 h-3.5" />}
-                        label="Peças"
-                        items={pecas}
-                        borderTop={false}
-                      />
-                    )}
-                    {maoObra.length > 0 && (
-                      <ItemGroup
-                        icon={<Wrench className="w-3.5 h-3.5" />}
-                        label="Mão de obra"
-                        items={maoObra}
-                        borderTop={pecas.length > 0}
-                      />
-                    )}
-                    <div className="flex justify-between items-center px-4 py-3 bg-zinc-50 border-t border-zinc-200">
-                      <span className="text-sm text-zinc-500">Total</span>
-                      <span className="font-bold text-zinc-900 text-base">{formatEUR(data.total)}</span>
-                    </div>
-                  </div>
-                </Section>
-              )}
-
-              {data.observacoes && (
-                <Section label="Observações">
-                  <p className="text-sm text-zinc-600 leading-relaxed">{data.observacoes}</p>
-                </Section>
-              )}
             </div>
+          )}
 
-            {/* Footer de ações */}
-            <div className="sticky bottom-0 bg-white border-t border-zinc-100 px-5 py-4 flex flex-wrap items-center gap-2 rounded-b-2xl">
-              <Link
-                href={`/folhas/${data.id}`}
-                onClick={onClose}
-                className="inline-flex items-center gap-2 border border-zinc-300 text-zinc-700 hover:bg-zinc-50 text-sm font-medium px-3 py-2 rounded-xl transition"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Ver detalhes
-              </Link>
+          {/* ── Footer: status ── */}
+          {data && (
+            <div className="sticky bottom-0 bg-white border-t border-zinc-100 px-5 py-3 flex items-center gap-2 flex-wrap rounded-b-2xl">
               {next && (
-                <button
-                  onClick={handleAdvance}
-                  className={cn(
-                    'ml-auto inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl transition',
-                    STATUS_META[next].chip
-                  )}
-                >
-                  {STATUS_META[next].label}
-                  <ArrowRight className="w-4 h-4" />
+                <button onClick={handleAdvance} className="btn-primary">
+                  <CheckCircle2 className="w-4 h-4" /> {STATUS_META[next].label}
                 </button>
               )}
+              <div className="relative">
+                <button onClick={() => setStatusOpen((v) => !v)} className="btn-secondary">
+                  Estado <ChevronRight className="w-4 h-4 rotate-90" />
+                </button>
+                {statusOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setStatusOpen(false)} />
+                    <div className="absolute left-0 bottom-full mb-1 bg-white border border-zinc-200 rounded-xl shadow-lg w-52 py-1 z-20">
+                      {STATUS_LIST.map((s) => (
+                        <button key={s} onClick={() => handleChangeStatus(s)} className={cn('w-full text-left px-3 py-2 text-sm hover:bg-zinc-50 flex items-center gap-2', s === data.estado && 'bg-zinc-50 font-semibold')}>
+                          <span className={cn('w-2 h-2 rounded-full', STATUS_META[s].dot)} />{STATUS_META[s].label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              <Link href={`/folhas/${data.id}`} onClick={onClose} className="btn-secondary ml-auto">
+                <ExternalLink className="w-4 h-4" /> Ver página completa
+              </Link>
             </div>
-          </>
-        )}
-      </div>
-    </div>
-    </>
-  )
-}
-
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-xs text-zinc-400 font-semibold uppercase tracking-wide mb-1.5">{label}</div>
-      {children}
-    </div>
-  )
-}
-
-function ItemGroup({
-  icon,
-  label,
-  items,
-  borderTop,
-}: {
-  icon: React.ReactNode
-  label: string
-  items: { id: string; descricao: string; quantidade: number; precoUnit: number; total: number }[]
-  borderTop: boolean
-}) {
-  return (
-    <>
-      <div className={cn(
-        'flex items-center gap-1.5 px-4 py-2 bg-zinc-50 text-xs font-semibold text-zinc-500 uppercase tracking-wide',
-        borderTop && 'border-t border-zinc-200'
-      )}>
-        {icon}
-        {label}
-      </div>
-      {items.map((item) => (
-        <div key={item.id} className="flex items-center justify-between px-4 py-2 text-sm border-t border-zinc-100 first:border-t-0">
-          <span className="text-zinc-700 flex-1 truncate pr-4">{item.descricao}</span>
-          <span className="text-zinc-500 whitespace-nowrap text-xs">
-            {item.quantidade}× {formatEUR(item.precoUnit)}
-            {' = '}
-            <span className="font-semibold text-zinc-800">{formatEUR(item.total)}</span>
-          </span>
+          )}
         </div>
-      ))}
+      </div>
+
+      {/* Sub-modais */}
+      {data && (
+        <>
+          <WorkOrderModal
+            open={editWoOpen}
+            onClose={() => setEditWoOpen(false)}
+            workOrder={woForModal}
+            customers={[{ id: data.customer.id, nome: data.customer.nome }]}
+          />
+
+          <ItemModal
+            open={itemModalOpen}
+            onClose={() => setItemModalOpen(false)}
+            workOrderId={data.id}
+            item={editingItem}
+            defaultTipo={itemTipo}
+            onSaved={refresh}
+          />
+
+          <TransactionModal
+            open={txModalOpen}
+            onClose={() => { setTxModalOpen(false); setEditingTx(null) }}
+            tipo={txTipo}
+            transaction={editingTx ? {
+              id: editingTx.id, tipo: editingTx.tipo, valor: editingTx.valor,
+              descricao: editingTx.descricao, data: editingTx.data,
+              observacao: null, agendado: editingTx.agendado, dataAgendada: null,
+              accountId: editingTx.accountId, categoryId: editingTx.categoryId,
+              workOrderId: data.id,
+            } : null}
+            accounts={data.accounts}
+            categories={data.categories}
+            defaultWorkOrderId={data.id}
+            onSaved={refresh}
+          />
+        </>
+      )}
     </>
+  )
+}
+
+/* ── Item list inline ── */
+function PreviewItemList({ title, icon: Icon, iconBg, items, emptyText, onAdd, onEdit, onDelete }: {
+  title: string
+  icon: React.ComponentType<{ className?: string }>
+  iconBg: string
+  items: ItemRow[]
+  emptyText: string
+  onAdd: () => void
+  onEdit: (it: ItemRow) => void
+  onDelete: (it: ItemRow) => void
+}) {
+  const subtotal = items.reduce((s, i) => s + i.total, 0)
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex items-center justify-between p-4 border-b border-zinc-100">
+        <div className="flex items-center gap-2">
+          <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center', iconBg)}>
+            <Icon className="w-3.5 h-3.5" />
+          </div>
+          <span className="font-semibold text-zinc-900 text-sm">{title}</span>
+          {subtotal > 0 && <span className="text-xs text-zinc-400">{formatEUR(subtotal)}</span>}
+        </div>
+        <button onClick={onAdd} className="btn-secondary text-xs py-1.5">
+          <Plus className="w-3.5 h-3.5" /> Adicionar
+        </button>
+      </div>
+      {items.length === 0 ? (
+        <p className="px-4 py-3 text-sm text-zinc-400">{emptyText}</p>
+      ) : (
+        <div className="divide-y divide-zinc-100">
+          {items.map((it) => (
+            <div key={it.id} className="flex items-center gap-3 px-4 py-2.5 group hover:bg-zinc-50">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-zinc-800 truncate">{it.descricao}</p>
+                <p className="text-xs text-zinc-400">{it.quantidade}× {formatEUR(it.precoUnit)}</p>
+              </div>
+              <span className="text-sm font-semibold text-zinc-800 flex-shrink-0">{formatEUR(it.total)}</span>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                <button onClick={() => onEdit(it)} className="p-1 text-zinc-400 hover:text-zinc-700 rounded hover:bg-zinc-100">
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => onDelete(it)} className="p-1 text-zinc-400 hover:text-red-500 rounded hover:bg-red-50">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
