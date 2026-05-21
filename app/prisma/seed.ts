@@ -49,13 +49,10 @@ async function main() {
     { nome: 'Marketing', cor: 'rose', icone: 'megaphone' },
     { nome: 'Outras despesas', cor: 'zinc', icone: 'more-horizontal' },
   ]
-  for (const cat of despesas) {
-    await prisma.category.upsert({
-      where: { nome_tipo: { nome: cat.nome, tipo: 'SAIDA' } },
-      update: {},
-      create: { ...cat, tipo: 'SAIDA' },
-    })
-  }
+  await prisma.category.createMany({
+    data: despesas.map(cat => ({ ...cat, tipo: 'SAIDA' as const })),
+    skipDuplicates: true,
+  })
   console.log('✓ Categorias de despesa criadas')
 
   // Categorias de receita (oficina mecânica, pt-PT)
@@ -70,13 +67,10 @@ async function main() {
     { nome: 'Venda de peças', cor: 'violet', icone: 'package-2' },
     { nome: 'Outras receitas', cor: 'zinc', icone: 'more-horizontal' },
   ]
-  for (const cat of receitas) {
-    await prisma.category.upsert({
-      where: { nome_tipo: { nome: cat.nome, tipo: 'ENTRADA' } },
-      update: {},
-      create: { ...cat, tipo: 'ENTRADA' },
-    })
-  }
+  await prisma.category.createMany({
+    data: receitas.map(cat => ({ ...cat, tipo: 'ENTRADA' as const })),
+    skipDuplicates: true,
+  })
   console.log('✓ Categorias de receita criadas')
 }
 
