@@ -22,8 +22,11 @@ function initialState(item: WorkOrderItemRow | null, defaultTipo: 'PECA' | 'MAO_
   return {
     tipo: (item?.tipo ?? defaultTipo) as 'PECA' | 'MAO_OBRA',
     descricao: item?.descricao ?? '',
+    referencia: item?.referencia ?? '',
     quantidade: item ? String(item.quantidade).replace('.', ',') : '1',
     precoUnit: item ? item.precoUnit.toFixed(2).replace('.', ',') : '',
+    margem: item?.margem != null ? String(item.margem).replace('.', ',') : '',
+    iva: item?.iva != null ? String(item.iva).replace('.', ',') : '',
   }
 }
 
@@ -42,8 +45,11 @@ export function ItemModal({ open, onClose, workOrderId, item, defaultTipo = 'PEC
   const init = initialState(item, defaultTipo)
   const [tipo, setTipo] = useState<'PECA' | 'MAO_OBRA'>(init.tipo)
   const [descricao, setDescricao] = useState(init.descricao)
+  const [referencia, setReferencia] = useState(init.referencia)
   const [quantidade, setQuantidade] = useState(init.quantidade)
   const [precoUnit, setPrecoUnit] = useState(init.precoUnit)
+  const [margem, setMargem] = useState(init.margem)
+  const [iva, setIva] = useState(init.iva)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
 
@@ -52,8 +58,11 @@ export function ItemModal({ open, onClose, workOrderId, item, defaultTipo = 'PEC
     const s = initialState(item, defaultTipo)
     setTipo(s.tipo)
     setDescricao(s.descricao)
+    setReferencia(s.referencia)
     setQuantidade(s.quantidade)
     setPrecoUnit(s.precoUnit)
+    setMargem(s.margem)
+    setIva(s.iva)
     setErrors({})
     setError(null)
   }, [open, item?.id, defaultTipo])
@@ -73,8 +82,11 @@ export function ItemModal({ open, onClose, workOrderId, item, defaultTipo = 'PEC
     fd.set('workOrderId', workOrderId)
     fd.set('tipo', tipo)
     fd.set('descricao', descricao)
+    fd.set('referencia', referencia)
     fd.set('quantidade', quantidade)
     fd.set('precoUnit', precoUnit)
+    fd.set('margem', margem)
+    fd.set('iva', iva)
 
     startTransition(async () => {
       const res = await saveWorkOrderItem({ ok: false }, fd)
@@ -130,6 +142,20 @@ export function ItemModal({ open, onClose, workOrderId, item, defaultTipo = 'PEC
           {errors.descricao && <p className="text-xs text-red-500 mt-1">{errors.descricao}</p>}
         </div>
 
+        {tipo === 'PECA' && (
+          <div>
+            <label className="label">Referência</label>
+            <input
+              type="text"
+              value={referencia}
+              onChange={(e) => setReferencia(e.target.value)}
+              placeholder="Ex: 0 986 494 044"
+              className="input-base"
+            />
+            {errors.referencia && <p className="text-xs text-red-500 mt-1">{errors.referencia}</p>}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Quantidade *</label>
@@ -159,6 +185,39 @@ export function ItemModal({ open, onClose, workOrderId, item, defaultTipo = 'PEC
               />
             </div>
             {errors.precoUnit && <p className="text-xs text-red-500 mt-1">{errors.precoUnit}</p>}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Margem (%)</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={margem}
+                onChange={(e) => setMargem(e.target.value)}
+                inputMode="decimal"
+                placeholder="0"
+                className="input-base pr-8"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 font-semibold">%</span>
+            </div>
+            {errors.margem && <p className="text-xs text-red-500 mt-1">{errors.margem}</p>}
+          </div>
+          <div>
+            <label className="label">IVA (%)</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={iva}
+                onChange={(e) => setIva(e.target.value)}
+                inputMode="decimal"
+                placeholder="23"
+                className="input-base pr-8"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 font-semibold">%</span>
+            </div>
+            {errors.iva && <p className="text-xs text-red-500 mt-1">{errors.iva}</p>}
           </div>
         </div>
 

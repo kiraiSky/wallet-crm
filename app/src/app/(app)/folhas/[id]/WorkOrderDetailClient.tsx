@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -21,6 +21,7 @@ import {
   deleteWorkOrder,
   changeStatus,
   deleteWorkOrderItem,
+  updateWorkOrderItemField,
 } from '../actions'
 import type { WorkOrderDetail, WorkOrderItemRow, WorkOrderTransactionRow } from './page'
 import { openCustomerQuickView } from '@/lib/customerBus'
@@ -583,24 +584,91 @@ function ItemList({
           <thead className="bg-zinc-50 border-b border-zinc-100">
             <tr className="text-left text-xs uppercase tracking-wide text-zinc-500">
               <th className="px-4 py-2 font-semibold">Descrição</th>
-              <th className="px-4 py-2 font-semibold text-right">Qtd</th>
-              <th className="px-4 py-2 font-semibold text-right">Preço</th>
-              <th className="px-4 py-2 font-semibold text-right">Total</th>
+              <th className="px-4 py-2 font-semibold text-right w-16">Qtd</th>
+              <th className="px-4 py-2 font-semibold text-right w-24">Preço</th>
+              <th className="px-4 py-2 font-semibold text-right w-20">Margem</th>
+              <th className="px-4 py-2 font-semibold text-right w-20">IVA</th>
+              <th className="px-4 py-2 font-semibold text-right w-24">Total</th>
               <th className="px-4 py-2 w-16"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {items.map((it) => (
               <tr key={it.id} className="group hover:bg-zinc-50">
-                <td className="px-4 py-2.5 text-zinc-800">{it.descricao}</td>
-                <td className="px-4 py-2.5 text-right text-zinc-600">
-                  {it.quantidade.toLocaleString('pt-PT')}
+                <td className="px-4 py-1 text-zinc-800">
+                  <EditableCell
+                    value={it.descricao}
+                    kind="text"
+                    onSave={(v) => updateWorkOrderItemField(it.id, { descricao: String(v) })}
+                  />
+                  <EditableCell
+                    value={it.referencia ?? ''}
+                    kind="text"
+                    placeholder="Ref."
+                    displayClass="text-xs text-zinc-400 font-mono"
+                    inputClass="text-xs font-mono"
+                    formatDisplay={(v) => (v ? `Ref: ${v}` : '')}
+                    onSave={(v) => updateWorkOrderItemField(it.id, { referencia: v ? String(v) : null })}
+                  />
                 </td>
-                <td className="px-4 py-2.5 text-right text-zinc-600">
-                  {formatEUR(it.precoUnit)}
+                <td className="px-1 py-1 text-right text-zinc-600">
+                  <EditableCell
+                    value={it.quantidade}
+                    kind="decimal"
+                    align="right"
+                    onSave={(v) => updateWorkOrderItemField(it.id, { quantidade: Number(v) })}
+                  />
                 </td>
-                <td className="px-4 py-2.5 text-right font-semibold text-zinc-900">
-                  {formatEUR(it.total)}
+                <td className="px-1 py-1 text-right text-zinc-600">
+                  <EditableCell
+                    value={it.precoUnit}
+                    kind="decimal"
+                    align="right"
+                    formatDisplay={(v) => formatEUR(Number(v))}
+                    onSave={(v) => updateWorkOrderItemField(it.id, { precoUnit: Number(v) })}
+                  />
+                </td>
+                <td className="px-1 py-1 text-right text-zinc-600">
+                  <EditableCell
+                    value={it.margem ?? ''}
+                    kind="decimal"
+                    align="right"
+                    placeholder="—"
+                    formatDisplay={(v) => v === '' ? '—' : `${v}%`}
+                    onSave={(v) => updateWorkOrderItemField(it.id, { margem: v === '' ? null : Number(v) })}
+                  />
+                </td>
+                <td className="px-1 py-1 text-right text-zinc-600">
+                  <EditableCell
+                    value={it.iva ?? ''}
+                    kind="decimal"
+                    align="right"
+                    placeholder="—"
+                    formatDisplay={(v) => v === '' ? '—' : `${v}%`}
+                    onSave={(v) => updateWorkOrderItemField(it.id, { iva: v === '' ? null : Number(v) })}
+                  />
+                </td>
+                <td className="px-1 py-1 text-right font-semibold text-zinc-900">
+                  <EditableCell
+                    value={it.total}
+                    kind="decimal"
+                    align="right"
+                    formatDisplay={(v) => formatEUR(Number(v))}
+                    onSave={(v) => {
+                      const newTotal = Number(v)
+                      if (it.quantidade <= 0) {
+                        return Promise.resolve({ ok: false, message: 'Quantidade tem de ser > 0' })
+                      }
+                      const m = it.margem ?? 0
+                      const i = it.iva ?? 0
+                      const factor = it.quantidade * (1 + m / 100) * (1 + i / 100)
+                      if (factor <= 0) {
+                        return Promise.resolve({ ok: false, message: 'Fatores inválidos' })
+                      }
+                      const newPreco = +(newTotal / factor).toFixed(4)
+                      return updateWorkOrderItemField(it.id, { precoUnit: newPreco })
+                    }}
+                  />
                 </td>
                 <td className="px-4 py-2.5 text-right">
                   <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition">
@@ -626,6 +694,151 @@ function ItemList({
         </table>
       )}
     </div>
+  )
+}
+
+function parseDecPt(v: string): number {
+  const cleaned = v.replace(/\s/g, '').replace(/[^\d,.-]/g, '')
+  const normalized = cleaned.includes(',')
+    ? cleaned.replace(/\./g, '').replace(',', '.')
+    : cleaned
+  const n = parseFloat(normalized)
+  return isNaN(n) ? 0 : n
+}
+
+function EditableCell({
+  value,
+  kind,
+  align = 'left',
+  placeholder = '',
+  displayClass = '',
+  inputClass = '',
+  formatDisplay,
+  onSave,
+}: {
+  value: string | number
+  kind: 'text' | 'decimal'
+  align?: 'left' | 'right'
+  placeholder?: string
+  displayClass?: string
+  inputClass?: string
+  formatDisplay?: (v: string | number) => string
+  onSave: (v: string | number) => Promise<{ ok: boolean; message?: string; errors?: Record<string, string> }>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
+
+  const displayValue =
+    formatDisplay
+      ? formatDisplay(value)
+      : kind === 'decimal' && typeof value === 'number'
+      ? value.toLocaleString('pt-PT')
+      : String(value)
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [editing])
+
+  function startEdit() {
+    if (pending) return
+    const initial =
+      kind === 'decimal' && value !== '' && value !== null
+        ? String(value).replace('.', ',')
+        : String(value)
+    setDraft(initial)
+    setError(null)
+    setEditing(true)
+  }
+
+  function commit() {
+    const parsed: string | number =
+      kind === 'decimal'
+        ? draft.trim() === ''
+          ? ''
+          : parseDecPt(draft)
+        : draft
+
+    const original =
+      kind === 'decimal' && value !== ''
+        ? Number(value)
+        : value
+
+    if (parsed === original || (parsed === '' && (value === '' || value === null))) {
+      setEditing(false)
+      return
+    }
+
+    startTransition(async () => {
+      const res = await onSave(parsed)
+      if (res.ok) {
+        setEditing(false)
+        router.refresh()
+      } else {
+        setError(res.message || Object.values(res.errors || {})[0] || 'Erro')
+      }
+    })
+  }
+
+  function cancel() {
+    setEditing(false)
+    setError(null)
+  }
+
+  const alignClass = align === 'right' ? 'text-right' : 'text-left'
+
+  if (editing) {
+    return (
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commit() }
+            else if (e.key === 'Escape') { e.preventDefault(); cancel() }
+          }}
+          inputMode={kind === 'decimal' ? 'decimal' : undefined}
+          disabled={pending}
+          className={cn(
+            'w-full px-2 py-1 rounded border border-emerald-400 bg-white outline-none focus:ring-2 focus:ring-emerald-200',
+            alignClass,
+            inputClass
+          )}
+          placeholder={placeholder}
+        />
+        {error && (
+          <div className="absolute z-10 top-full left-0 mt-0.5 text-xs text-red-600 bg-white border border-red-200 rounded px-1.5 py-0.5 shadow-sm whitespace-nowrap">
+            {error}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const isEmpty = displayValue === '' || displayValue === '—'
+
+  return (
+    <button
+      type="button"
+      onClick={startEdit}
+      className={cn(
+        'w-full px-2 py-1 rounded border border-transparent hover:border-zinc-200 hover:bg-white text-left cursor-text transition',
+        alignClass,
+        isEmpty && 'text-zinc-300',
+        displayClass
+      )}
+    >
+      {displayValue || placeholder || '—'}
+    </button>
   )
 }
 

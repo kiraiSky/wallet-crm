@@ -9,8 +9,11 @@ export type WorkOrderItemRow = {
   id: string
   tipo: 'PECA' | 'MAO_OBRA'
   descricao: string
+  referencia: string | null
   quantidade: number
   precoUnit: number
+  margem: number | null
+  iva: number | null
   total: number
 }
 
@@ -141,8 +144,11 @@ export default async function WorkOrderDetailPage({
       id: it.id,
       tipo: it.tipo as 'PECA' | 'MAO_OBRA',
       descricao: it.descricao,
+      referencia: it.referencia,
       quantidade: Number(it.quantidade),
       precoUnit: Number(it.precoUnit),
+      margem: it.margem !== null ? Number(it.margem) : null,
+      iva: it.iva !== null ? Number(it.iva) : null,
       total: Number(it.total),
     })),
   }
