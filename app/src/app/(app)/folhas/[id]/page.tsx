@@ -51,6 +51,8 @@ export type WorkOrderDetail = {
   totalPecas: number
   totalMaoObra: number
   total: number
+  moloniDocumentId: number | null
+  moloniDocumentType: string | null
   customer: { id: string; nome: string; telefone: string | null; nif: string | null; createdAt: string }
   vehicle: {
     id: string
@@ -128,6 +130,8 @@ export default async function WorkOrderDetailPage({
     totalPecas: Number(wo.totalPecas),
     totalMaoObra: Number(wo.totalMaoObra),
     total: Number(wo.total),
+    moloniDocumentId: wo.moloniDocumentId,
+    moloniDocumentType: wo.moloniDocumentType,
     customer: { ...wo.customer, createdAt: wo.customer.createdAt.toISOString() },
     vehicle: wo.vehicle
       ? {

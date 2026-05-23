@@ -202,6 +202,10 @@ model WorkOrder {
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
 
+  // Moloni — fatura criada a partir desta folha
+  moloniDocumentId   Int?    @map("moloni_document_id")
+  moloniDocumentType String? @map("moloni_document_type") // ex: "FT", "FR"
+
   customer       Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
   vehicle        Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   items          WorkOrderItem[]

@@ -28,6 +28,7 @@ import { openCustomerQuickView } from '@/lib/customerBus'
 import { MensagensSection, type TemplateRow, type AutomationLogRow } from './MensagensSection'
 import { AutoSendModal } from '../AutoSendModal'
 import type { TemplateParaEnvio } from '../ConfirmacaoEnvioModal'
+import { MoloniInvoiceButton } from './MoloniInvoiceButton'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string }
 type CategoryOption = {
@@ -199,6 +200,12 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
               </>
             )}
           </div>
+          <MoloniInvoiceButton
+            workOrderId={workOrder.id}
+            moloniDocumentId={workOrder.moloniDocumentId}
+            moloniDocumentType={workOrder.moloniDocumentType}
+            total={workOrder.total}
+          />
           <button onClick={() => setEditOpen(true)} className="btn-secondary">
             <Pencil className="w-4 h-4" /> Editar
           </button>

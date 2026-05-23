@@ -227,6 +227,195 @@ export function mapMoloniDocument(
   }
 }
 
+// ─── Tipos para criação de documentos ────────────────────────────────────────
+
+export type MoloniCustomer = {
+  customer_id: number
+  name: string
+  vat: string
+  email?: string
+  address?: string
+  city?: string
+  zip_code?: string
+  phone?: string
+  country_id?: number
+}
+
+export type MoloniDocumentSet = {
+  document_set_id: number
+  name: string
+}
+
+export type MoloniTax = {
+  tax_id: number
+  name: string
+  value: number
+  type: number // 1 = percentagem
+}
+
+type MoloniCreateDocumentProduct = {
+  product_id?: number
+  name: string
+  summary?: string
+  qty: number
+  price: number
+  discount?: number
+  order?: number
+  taxes?: Array<{ tax_id: number; value: number; order: number; cumulative: number }>
+  exemption_reason?: string
+}
+
+type MoloniCreateDocumentBody = {
+  company_id: number
+  date: string
+  expiration_date?: string
+  document_set_id: number
+  customer_id: number
+  our_reference?: string
+  notes?: string
+  status: number // 0 = rascunho, 1 = fechado
+  products: MoloniCreateDocumentProduct[]
+}
+
+type MoloniCreateDocumentResponse = {
+  document_id: number
+  valid?: number
+  errors?: Array<{ code: number; message: string }>
+}
+
+// ─── Clientes Moloni ──────────────────────────────────────────────────────────
+
+export async function searchMoloniCustomerByVat(connectionId: string, companyId: number, vat: string) {
+  const results = await moloniPost<MoloniCustomer[]>(connectionId, '/customers/getAll/', {
+    company_id: companyId,
+    qty: 5,
+    offset: 0,
+    vat,
+  })
+  return Array.isArray(results) ? results[0] ?? null : null
+}
+
+export async function createMoloniCustomer(
+  connectionId: string,
+  companyId: number,
+  data: {
+    name: string
+    vat?: string
+    email?: string
+    phone?: string
+    address?: string
+  },
+) {
+  const result = await moloniPost<{ customer_id: number }>(connectionId, '/customers/insert/', {
+    company_id: companyId,
+    name: data.name,
+    vat: data.vat ?? '999999990', // consumidor final PT
+    email: data.email ?? '',
+    phone: data.phone ?? '',
+    address: data.address ?? '',
+    zip_code: '',
+    city: '',
+    country_id: 1, // Portugal
+    language_id: 1,
+    payment_method_id: 0,
+    maturity_date_id: 0,
+    salesman_id: 0,
+  })
+  return result.customer_id
+}
+
+// ─── Document sets ────────────────────────────────────────────────────────────
+
+export async function fetchMoloniDocumentSets(connectionId: string, companyId: number) {
+  const results = await moloniPost<MoloniDocumentSet[]>(connectionId, '/documentSets/getAll/', {
+    company_id: companyId,
+  })
+  return Array.isArray(results) ? results : []
+}
+
+// ─── Taxes ───────────────────────────────────────────────────────────────────
+
+export async function fetchMoloniTaxes(connectionId: string, companyId: number) {
+  const results = await moloniPost<MoloniTax[]>(connectionId, '/taxes/getAll/', {
+    company_id: companyId,
+  })
+  return Array.isArray(results) ? results : []
+}
+
+// ─── Criar fatura ─────────────────────────────────────────────────────────────
+
+/**
+ * Cria uma fatura (FT) ou fatura-recibo (FR) no Moloni a partir de uma Folha de Obra.
+ * Devolve o document_id criado.
+ */
+export async function createMoloniInvoiceFromWorkOrder(
+  connectionId: string,
+  companyId: number,
+  documentSetId: number,
+  moloniCustomerId: number,
+  workOrderNumber: number,
+  items: Array<{
+    descricao: string
+    quantidade: number
+    precoUnit: number
+    iva: number | null
+  }>,
+  docType: 'invoices' | 'receipts' = 'invoices',
+) {
+  // Buscar taxa de IVA padrão (23%)
+  const taxes = await fetchMoloniTaxes(connectionId, companyId)
+  const tax23 = taxes.find((t) => Math.round(t.value) === 23 && t.type === 1)
+
+  const products: MoloniCreateDocumentProduct[] = items.map((item, i) => {
+    const ivaRate = item.iva ?? 23
+    const matchedTax = taxes.find((t) => Math.round(t.value) === ivaRate && t.type === 1) ?? tax23
+
+    const productItem: MoloniCreateDocumentProduct = {
+      name: item.descricao,
+      qty: item.quantidade,
+      price: Number(item.precoUnit.toFixed(4)),
+      order: i + 1,
+    }
+
+    if (matchedTax) {
+      productItem.taxes = [{ tax_id: matchedTax.tax_id, value: matchedTax.value, order: 1, cumulative: 0 }]
+    } else {
+      // Sem taxa — adicionar motivo de isenção genérico
+      productItem.exemption_reason = 'M99'
+    }
+
+    return productItem
+  })
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  const body: MoloniCreateDocumentBody = {
+    company_id: companyId,
+    date: today,
+    document_set_id: documentSetId,
+    customer_id: moloniCustomerId,
+    our_reference: `FO-${workOrderNumber}`,
+    notes: `Folha de Obra nº ${workOrderNumber}`,
+    status: 1, // fechado/emitido
+    products,
+  }
+
+  const result = await moloniPost<MoloniCreateDocumentResponse>(
+    connectionId,
+    `/${docType}/insert/`,
+    body,
+  )
+
+  if (!result.document_id || result.valid === 0) {
+    const errMsg = result.errors?.map((e) => e.message).join('; ') ?? 'Erro ao criar documento Moloni'
+    throw new Error(errMsg)
+  }
+
+  return result.document_id
+}
+
+// ─── Customer matching ────────────────────────────────────────────────────────
+
 /**
  * Após sync, faz match automático entre MoloniDocument.entityVat e Customer.nif
  * e preenche customerId nos documentos ainda sem customer.
