@@ -231,8 +231,11 @@ const ItemSchema = z.object({
   workOrderId: z.string().min(1),
   tipo: z.enum(['PECA', 'MAO_OBRA']),
   descricao: z.string().min(1, 'Descrição é obrigatória').max(200),
+  referencia: z.string().max(100).optional(),
   quantidade: z.string().min(1, 'Quantidade obrigatória'),
   precoUnit: z.string().min(1, 'Preço obrigatório'),
+  margem: z.string().optional(),
+  iva: z.string().optional(),
 })
 
 export type ItemFormState = {
@@ -249,6 +252,12 @@ function parseDec(value: string): number {
     : cleaned
   const num = parseFloat(normalized)
   return isNaN(num) ? 0 : num
+}
+
+function computeItemTotal(qtd: number, precoUnit: number, margem: number | null, iva: number | null): number {
+  const m = margem ?? 0
+  const i = iva ?? 0
+  return +(qtd * precoUnit * (1 + m / 100) * (1 + i / 100)).toFixed(2)
 }
 
 async function recomputeTotals(workOrderId: string) {
@@ -278,8 +287,11 @@ export async function saveWorkOrderItem(
     workOrderId: formData.get('workOrderId')?.toString() || '',
     tipo: formData.get('tipo')?.toString() || 'PECA',
     descricao: formData.get('descricao')?.toString() || '',
+    referencia: formData.get('referencia')?.toString() || undefined,
     quantidade: formData.get('quantidade')?.toString() || '1',
     precoUnit: formData.get('precoUnit')?.toString() || '0',
+    margem: formData.get('margem')?.toString() || undefined,
+    iva: formData.get('iva')?.toString() || undefined,
   }
   const parsed = ItemSchema.safeParse(raw)
   if (!parsed.success) {
@@ -292,10 +304,15 @@ export async function saveWorkOrderItem(
   const data = parsed.data
   const qtd = parseDec(data.quantidade)
   const precoUnit = parseEURToCents(data.precoUnit) / 100
-  const total = +(qtd * precoUnit).toFixed(2)
+  const referencia = data.referencia?.trim() || null
+  const margem = data.margem && data.margem.trim() !== '' ? parseDec(data.margem) : null
+  const iva = data.iva && data.iva.trim() !== '' ? parseDec(data.iva) : null
+  const total = computeItemTotal(qtd, precoUnit, margem, iva)
 
   if (qtd <= 0) return { ok: false, errors: { quantidade: 'Quantidade deve ser maior que zero' } }
   if (precoUnit < 0) return { ok: false, errors: { precoUnit: 'Preço não pode ser negativo' } }
+  if (margem !== null && (margem < 0 || margem > 999.99)) return { ok: false, errors: { margem: 'Margem inválida' } }
+  if (iva !== null && (iva < 0 || iva > 100)) return { ok: false, errors: { iva: 'IVA deve estar entre 0 e 100' } }
 
   try {
     if (data.id) {
@@ -304,8 +321,11 @@ export async function saveWorkOrderItem(
         data: {
           tipo: data.tipo,
           descricao: data.descricao,
+          referencia,
           quantidade: qtd,
           precoUnit,
+          margem,
+          iva,
           total,
         },
       })
@@ -315,8 +335,11 @@ export async function saveWorkOrderItem(
           workOrderId: data.workOrderId,
           tipo: data.tipo,
           descricao: data.descricao,
+          referencia,
           quantidade: qtd,
           precoUnit,
+          margem,
+          iva,
           total,
         },
       })
@@ -328,6 +351,67 @@ export async function saveWorkOrderItem(
   } catch (e) {
     console.error(e)
     return { ok: false, message: 'Erro ao guardar item' }
+  }
+}
+
+type ItemFieldPatch = {
+  descricao?: string
+  referencia?: string | null
+  quantidade?: number
+  precoUnit?: number
+  margem?: number | null
+  iva?: number | null
+}
+
+export async function updateWorkOrderItemField(
+  id: string,
+  patch: ItemFieldPatch
+): Promise<ItemFormState> {
+  try {
+    const item = await prisma.workOrderItem.findUnique({ where: { id } })
+    if (!item) return { ok: false, message: 'Item não encontrado' }
+
+    if (patch.quantidade !== undefined && patch.quantidade <= 0) {
+      return { ok: false, errors: { quantidade: 'Quantidade deve ser maior que zero' } }
+    }
+    if (patch.precoUnit !== undefined && patch.precoUnit < 0) {
+      return { ok: false, errors: { precoUnit: 'Preço não pode ser negativo' } }
+    }
+    if (patch.margem != null && (patch.margem < 0 || patch.margem > 999.99)) {
+      return { ok: false, errors: { margem: 'Margem inválida' } }
+    }
+    if (patch.iva != null && (patch.iva < 0 || patch.iva > 100)) {
+      return { ok: false, errors: { iva: 'IVA deve estar entre 0 e 100' } }
+    }
+    if (patch.descricao !== undefined && patch.descricao.trim() === '') {
+      return { ok: false, errors: { descricao: 'Descrição é obrigatória' } }
+    }
+
+    const newQtd = patch.quantidade ?? Number(item.quantidade)
+    const newPreco = patch.precoUnit ?? Number(item.precoUnit)
+    const newMargem = patch.margem !== undefined ? patch.margem : (item.margem !== null ? Number(item.margem) : null)
+    const newIva = patch.iva !== undefined ? patch.iva : (item.iva !== null ? Number(item.iva) : null)
+    const total = computeItemTotal(newQtd, newPreco, newMargem, newIva)
+
+    await prisma.workOrderItem.update({
+      where: { id },
+      data: {
+        ...(patch.descricao !== undefined && { descricao: patch.descricao.trim() }),
+        ...(patch.referencia !== undefined && { referencia: patch.referencia }),
+        ...(patch.quantidade !== undefined && { quantidade: patch.quantidade }),
+        ...(patch.precoUnit !== undefined && { precoUnit: patch.precoUnit }),
+        ...(patch.margem !== undefined && { margem: patch.margem }),
+        ...(patch.iva !== undefined && { iva: patch.iva }),
+        total,
+      },
+    })
+    await recomputeTotals(item.workOrderId)
+    revalidatePath(`/folhas/${item.workOrderId}`)
+    revalidatePath('/folhas')
+    return { ok: true }
+  } catch (e) {
+    console.error(e)
+    return { ok: false, message: 'Erro ao atualizar item' }
   }
 }
 
