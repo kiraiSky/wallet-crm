@@ -215,7 +215,7 @@ export async function getWorkOrderPreview(id: string) {
     total: Number(wo.total),
     customer: { ...wo.customer, createdAt: wo.customer.createdAt.toISOString() },
     vehicle: wo.vehicle,
-    items: wo.items.map((i) => ({ id: i.id, tipo: i.tipo as 'PECA' | 'MAO_OBRA', descricao: i.descricao, quantidade: Number(i.quantidade), precoUnit: Number(i.precoUnit), total: Number(i.total) })),
+    items: wo.items.map((i) => ({ id: i.id, tipo: i.tipo as 'PECA' | 'MAO_OBRA', descricao: i.descricao, referencia: i.referencia, quantidade: Number(i.quantidade), precoUnit: Number(i.precoUnit), margem: i.margem !== null ? Number(i.margem) : null, iva: i.iva !== null ? Number(i.iva) : null, total: Number(i.total) })),
     transactions: txList.map((t) => ({ id: t.id, tipo: t.tipo as 'ENTRADA' | 'SAIDA', valor: Number(t.valor), descricao: t.descricao, data: t.data.toISOString(), accountId: t.accountId, categoryId: t.categoryId!, account: t.account, category: t.category!, agendado: t.agendado })),
     accounts,
     categories: categories.map((c) => ({ ...c, tipo: c.tipo as 'ENTRADA' | 'SAIDA' })),
