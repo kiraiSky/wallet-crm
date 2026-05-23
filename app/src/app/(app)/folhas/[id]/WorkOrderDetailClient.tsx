@@ -467,7 +467,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
         open={editOpen}
         onClose={() => setEditOpen(false)}
         workOrder={woForModal}
-        customers={[{ id: workOrder.customer.id, nome: workOrder.customer.nome }]}
+        customers={[workOrder.customer]}
       />
       <ItemModal
         open={itemModalOpen}

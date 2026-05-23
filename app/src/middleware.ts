@@ -13,13 +13,20 @@ const SESSION_COOKIE_NAMES = [
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
+  // Auth.js v5: cookie name depends on HTTPS, not on NODE_ENV. Behind a HTTPS
+  // tunnel (Cloudflare, ngrok) the cookie is __Secure-authjs.session-token; in
+  // plain localhost dev it's authjs.session-token. Detect via x-forwarded-proto
+  // (trusted because AUTH_TRUST_HOST=true) with a fallback to the request URL.
+  const proto = req.headers.get('x-forwarded-proto') ?? req.nextUrl.protocol.replace(':', '')
+  const useSecureCookie = proto === 'https'
+
   let token = null
   let cookieError = false
   try {
     token = await getToken({
       req,
       secret: process.env.AUTH_SECRET,
-      secureCookie: process.env.NODE_ENV === 'production',
+      secureCookie: useSecureCookie,
     })
   } catch {
     cookieError = true

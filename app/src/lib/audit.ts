@@ -10,6 +10,7 @@ export type AuditEntity =
   | 'USER'
   | 'ACCOUNT'
   | 'CATEGORY'
+  | 'MOLONI_CONNECTION'
 
 export type AuditActionType = 'CREATE' | 'UPDATE' | 'DELETE' | 'ARCHIVE' | 'STATUS_CHANGE'
 

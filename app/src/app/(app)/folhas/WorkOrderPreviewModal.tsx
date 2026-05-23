@@ -408,7 +408,7 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
             open={editWoOpen}
             onClose={() => setEditWoOpen(false)}
             workOrder={woForModal}
-            customers={[{ id: data.customer.id, nome: data.customer.nome }]}
+            customers={[data.customer]}
           />
 
           <ItemModal

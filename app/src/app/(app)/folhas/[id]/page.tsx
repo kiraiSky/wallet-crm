@@ -48,7 +48,7 @@ export type WorkOrderDetail = {
   totalPecas: number
   totalMaoObra: number
   total: number
-  customer: { id: string; nome: string; telefone: string | null }
+  customer: { id: string; nome: string; telefone: string | null; nif: string | null; createdAt: string }
   vehicle: {
     id: string
     matricula: string
@@ -71,7 +71,7 @@ export default async function WorkOrderDetailPage({
     prisma.workOrder.findUnique({
       where: { id },
       include: {
-        customer: { select: { id: true, nome: true, telefone: true } },
+        customer: { select: { id: true, nome: true, telefone: true, nif: true, createdAt: true } },
         vehicle: true,
         items: { orderBy: { createdAt: 'asc' } },
       },
@@ -125,7 +125,7 @@ export default async function WorkOrderDetailPage({
     totalPecas: Number(wo.totalPecas),
     totalMaoObra: Number(wo.totalMaoObra),
     total: Number(wo.total),
-    customer: wo.customer,
+    customer: { ...wo.customer, createdAt: wo.customer.createdAt.toISOString() },
     vehicle: wo.vehicle
       ? {
           id: wo.vehicle.id,

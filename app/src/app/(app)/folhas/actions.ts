@@ -179,7 +179,7 @@ export async function getWorkOrderPreview(id: string) {
     prisma.workOrder.findUnique({
       where: { id },
       include: {
-        customer: { select: { id: true, nome: true, telefone: true } },
+        customer: { select: { id: true, nome: true, telefone: true, nif: true, createdAt: true } },
         vehicle: { select: { id: true, matricula: true, marca: true, modelo: true, ano: true } },
         items: { orderBy: { createdAt: 'asc' } },
       },
@@ -213,7 +213,7 @@ export async function getWorkOrderPreview(id: string) {
     totalPecas: Number(wo.totalPecas),
     totalMaoObra: Number(wo.totalMaoObra),
     total: Number(wo.total),
-    customer: wo.customer,
+    customer: { ...wo.customer, createdAt: wo.customer.createdAt.toISOString() },
     vehicle: wo.vehicle,
     items: wo.items.map((i) => ({ id: i.id, tipo: i.tipo as 'PECA' | 'MAO_OBRA', descricao: i.descricao, quantidade: Number(i.quantidade), precoUnit: Number(i.precoUnit), total: Number(i.total) })),
     transactions: txList.map((t) => ({ id: t.id, tipo: t.tipo as 'ENTRADA' | 'SAIDA', valor: Number(t.valor), descricao: t.descricao, data: t.data.toISOString(), accountId: t.accountId, categoryId: t.categoryId!, account: t.account, category: t.category!, agendado: t.agendado })),
