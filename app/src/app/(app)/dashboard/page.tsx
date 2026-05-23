@@ -1,14 +1,15 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { formatEUR, formatDateTime } from '@/lib/format'
+import { formatEUR } from '@/lib/format'
 import { getCurrentUser } from '@/lib/current-user'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { Gauge, Sparkline } from '@/components/Charts'
-import { colorGradient, colorHex, colorIconBg } from '@/lib/colors'
-import { ArrowRight, Plus, Paperclip, ArrowRightLeft } from 'lucide-react'
+import { colorGradient, colorHex } from '@/lib/colors'
+import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScheduledBlock, type ScheduledItem } from './ScheduledBlock'
 import { ExpenseCategoryDonut, type ExpenseCategoryGroup } from './ExpenseCategoryDonut'
+import { RecentTransactionsBlock, type RecentTransactionItem } from './RecentTransactionsBlock'
 
 export const dynamic = 'force-dynamic'
 
@@ -498,67 +499,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <ExpenseCategoryDonut groups={expenseGroups} segments={donutSegments} />
           )}
         </div>
-
-        <div className="card p-5 lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-zinc-900">Últimos movimentos</h3>
-            <Link
-              href="/lancamentos"
-              className="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1"
-            >
-              Ver todos <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          {recentTxs.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-sm text-zinc-500 mb-3">Sem movimentos ainda.</p>
-              <Link href="/lancamentos?new=despesa" className="btn-primary inline-flex">
-                <Plus className="w-4 h-4" /> Primeira despesa
-              </Link>
-            </div>
-          ) : (
-            <div className="divide-y divide-zinc-100">
-              {recentTxs.map((tx) => (
-                <div key={tx.id} className="flex items-center gap-3 py-2.5">
-                  {tx.tipo === 'TRANSFERENCIA' ? (
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-zinc-100">
-                      <ArrowRightLeft className="w-4 h-4 text-zinc-500" />
-                    </div>
-                  ) : (
-                    <div
-                      className={cn(
-                        'w-9 h-9 rounded-lg flex items-center justify-center',
-                        colorIconBg[tx.category?.cor ?? 'zinc'] || colorIconBg.zinc
-                      )}
-                    >
-                      <DynamicIcon name={tx.category?.icone ?? 'circle'} className="w-4 h-4" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-zinc-900 truncate flex items-center gap-1">
-                      {tx.descricao}
-                      {tx._count.attachments > 0 && <Paperclip className="w-3 h-3 text-zinc-400" />}
-                    </div>
-                    <div className="text-xs text-zinc-500">
-                      {tx.tipo === 'TRANSFERENCIA'
-                        ? `${tx.account.nome} -> ${tx.toAccount?.nome ?? '?'}`
-                        : `${tx.category?.nome ?? 'Sem categoria'} · ${tx.account.nome}`} · {formatDateTime(tx.data)}
-                    </div>
-                  </div>
-                  <div className="text-sm font-bold whitespace-nowrap">
-                    {tx.tipo === 'TRANSFERENCIA' ? (
-                      <span className="text-zinc-400">{formatEUR(Number(tx.valor))}</span>
-                    ) : tx.tipo === 'ENTRADA' ? (
-                      <span className="text-emerald-600">+ {formatEUR(Number(tx.valor))}</span>
-                    ) : (
-                      <span className="text-red-500">- {formatEUR(Number(tx.valor))}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <RecentTransactionsBlock
+          transactions={recentTxs.map<RecentTransactionItem>((tx) => ({
+            id: tx.id,
+            tipo: tx.tipo as 'ENTRADA' | 'SAIDA' | 'TRANSFERENCIA',
+            valor: Number(tx.valor),
+            descricao: tx.descricao,
+            data: tx.data.toISOString(),
+            account: tx.account,
+            category: tx.category,
+            toAccount: tx.toAccount,
+            attachmentsCount: tx._count.attachments,
+          }))}
+        />
       </div>
     </>
   )

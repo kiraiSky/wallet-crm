@@ -1,24 +1,26 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Search, FileText, Pencil, Copy, Paperclip, Trash2,
-  MoreVertical, CalendarClock, ArrowRightLeft,
+  MoreVertical, CalendarClock, ArrowRightLeft, X,
+  ArrowUp, ArrowDown, ChevronsUpDown,
 } from 'lucide-react'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { colorIconBg } from '@/lib/colors'
 import { formatEUR, formatDateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { TransactionModal, type TransactionForModal } from './TransactionModal'
-import { deleteTransaction, duplicateTransaction } from './actions'
+import { deleteTransaction, deleteTransactions, duplicateTransaction } from './actions'
 import type { TransactionRow, WorkOrderOption } from './page'
 import { dispatchNewTx } from '@/lib/newTxBus'
 import { AttachmentViewer, AttachmentThumb, type ViewerTransaction } from '@/components/AttachmentViewer'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string; tipo: string }
 type CategoryOption = { id: string; nome: string; cor: string; icone: string; tipo: 'ENTRADA' | 'SAIDA' }
+type SortField = 'data' | 'descricao' | 'categoria' | 'conta' | 'valor'
 
 interface Props {
   transactions: TransactionRow[]
@@ -45,13 +47,15 @@ export function TransactionsClient({
   openNew,
 }: Props) {
   const router = useRouter()
-  const [, startTransition] = useTransition()
+  const [isPending, startTransition] = useTransition()
   const [modalOpen, setModalOpen] = useState(false)
   const [modalTipo, setModalTipo] = useState<'ENTRADA' | 'SAIDA'>('SAIDA')
   const [editing, setEditing] = useState<TransactionRow | null>(null)
   const [menuOpen, setMenuOpen] = useState<{ id: string; x: number; y: number } | null>(null)
   const [viewerTx, setViewerTx] = useState<TransactionRow | null>(null)
   const [viewerAttachmentId, setViewerAttachmentId] = useState<string | undefined>()
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [sort, setSort] = useState<{ field: SortField; dir: 'asc' | 'desc' } | null>(null)
 
   useEffect(() => {
     if (openNew !== null) {
@@ -63,6 +67,14 @@ export function TransactionsClient({
       }
     }
   }, [openNew, router])
+
+  useEffect(() => {
+    const visibleIds = new Set(transactions.map((tx) => tx.id))
+    setSelectedIds((current) => {
+      const next = new Set(Array.from(current).filter((id) => visibleIds.has(id)))
+      return next.size === current.size ? current : next
+    })
+  }, [transactions])
 
   function closeModal() {
     setModalOpen(false)
@@ -139,6 +151,41 @@ export function TransactionsClient({
     startTransition(async () => {
       await deleteTransaction(tx.id)
       setMenuOpen(null)
+      setSelectedIds((current) => {
+        const next = new Set(current)
+        next.delete(tx.id)
+        return next
+      })
+      router.refresh()
+    })
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function setAllSelected(checked: boolean) {
+    setSelectedIds(checked ? new Set(transactions.map((tx) => tx.id)) : new Set())
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set())
+  }
+
+  function handleBulkDelete() {
+    const count = selectedIds.size
+    if (count === 0) return
+    if (!confirm(`Eliminar ${count} movimento${count === 1 ? '' : 's'} selecionado${count === 1 ? '' : 's'}?`)) return
+
+    startTransition(async () => {
+      await deleteTransactions(Array.from(selectedIds))
+      setSelectedIds(new Set())
+      setMenuOpen(null)
       router.refresh()
     })
   }
@@ -151,7 +198,41 @@ export function TransactionsClient({
     })
   }
 
+  const sortedTransactions = useMemo(() => {
+    if (!sort) return transactions
+    const collator = new Intl.Collator('pt', { sensitivity: 'base', numeric: true })
+    const mult = sort.dir === 'asc' ? 1 : -1
+    const signedValue = (tx: TransactionRow) =>
+      tx.tipo === 'ENTRADA' ? tx.valor : tx.tipo === 'SAIDA' ? -tx.valor : 0
+    const effectiveDate = (tx: TransactionRow) =>
+      tx.agendado && tx.dataAgendada ? new Date(tx.dataAgendada).getTime() : new Date(tx.data).getTime()
+    const accountLabel = (tx: TransactionRow) =>
+      tx.tipo === 'TRANSFERENCIA' ? `${tx.account.nome} → ${tx.toAccount?.nome ?? ''}` : tx.account.nome
+    const categoryLabel = (tx: TransactionRow) =>
+      tx.tipo === 'TRANSFERENCIA' ? 'Transferência' : tx.category?.nome ?? ''
+
+    return [...transactions].sort((a, b) => {
+      switch (sort.field) {
+        case 'data':      return (effectiveDate(a) - effectiveDate(b)) * mult
+        case 'valor':     return (signedValue(a) - signedValue(b)) * mult
+        case 'descricao': return collator.compare(a.descricao, b.descricao) * mult
+        case 'categoria': return collator.compare(categoryLabel(a), categoryLabel(b)) * mult
+        case 'conta':     return collator.compare(accountLabel(a), accountLabel(b)) * mult
+      }
+    })
+  }, [transactions, sort])
+
+  function handleSort(field: SortField) {
+    setSort((current) => {
+      if (!current || current.field !== field) return { field, dir: 'asc' }
+      if (current.dir === 'asc') return { field, dir: 'desc' }
+      return null
+    })
+  }
+
   const resultado = kpis.totalEntradas - kpis.totalSaidas
+  const selectedCount = selectedIds.size
+  const allSelected = transactions.length > 0 && selectedCount === transactions.length
 
   return (
     <>
@@ -225,6 +306,31 @@ export function TransactionsClient({
         </select>
       </div>
 
+      {selectedCount > 0 && (
+        <div className="card p-3 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-emerald-200 bg-emerald-50/70">
+          <div className="flex items-center gap-2 text-sm font-medium text-emerald-900">
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="w-8 h-8 inline-flex items-center justify-center rounded-lg hover:bg-white/70"
+              aria-label="Limpar seleção"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            {selectedCount} movimento{selectedCount === 1 ? '' : 's'} selecionado{selectedCount === 1 ? '' : 's'}
+          </div>
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            disabled={isPending}
+            className="btn-secondary text-red-600 hover:bg-red-50 justify-center"
+          >
+            <Trash2 className="w-4 h-4" />
+            {isPending ? 'A eliminar...' : 'Eliminar selecionados'}
+          </button>
+        </div>
+      )}
+
       {/* Tabela */}
       <div className="card overflow-hidden">
         {transactions.length === 0 ? (
@@ -241,16 +347,25 @@ export function TransactionsClient({
             <table className="hidden md:table w-full text-sm">
               <thead className="bg-zinc-50 border-b border-zinc-200">
                 <tr className="text-left text-xs uppercase tracking-wide text-zinc-500">
-                  <th className="px-4 py-3 font-semibold">Data</th>
-                  <th className="px-4 py-3 font-semibold">Descrição</th>
-                  <th className="px-4 py-3 font-semibold">Categoria</th>
-                  <th className="px-4 py-3 font-semibold">Conta</th>
-                  <th className="px-4 py-3 font-semibold text-right">Valor</th>
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={(e) => setAllSelected(e.target.checked)}
+                      aria-label="Selecionar todos os movimentos"
+                      className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                  </th>
+                  <SortHeader label="Data" field="data" sort={sort} onSort={handleSort} />
+                  <SortHeader label="Descrição" field="descricao" sort={sort} onSort={handleSort} />
+                  <SortHeader label="Categoria" field="categoria" sort={sort} onSort={handleSort} />
+                  <SortHeader label="Conta" field="conta" sort={sort} onSort={handleSort} />
+                  <SortHeader label="Valor" field="valor" sort={sort} onSort={handleSort} align="right" />
                   <th className="px-4 py-3 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
-                {transactions.map((tx) => (
+                {sortedTransactions.map((tx) => (
                   <tr
                     key={tx.id}
                     className={cn(
@@ -260,6 +375,15 @@ export function TransactionsClient({
                         : 'hover:bg-zinc-50'
                     )}
                   >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(tx.id)}
+                        onChange={() => toggleSelected(tx.id)}
+                        aria-label={`Selecionar ${tx.descricao}`}
+                        className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                    </td>
                     <td className="px-4 py-3 text-zinc-600 whitespace-nowrap text-xs">
                       {tx.agendado && tx.dataAgendada ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 font-semibold">
@@ -356,7 +480,7 @@ export function TransactionsClient({
 
             {/* Mobile list */}
             <div className="md:hidden divide-y divide-zinc-100">
-              {transactions.map((tx) => (
+              {sortedTransactions.map((tx) => (
                 <div
                   key={tx.id}
                   className={cn(
@@ -364,6 +488,13 @@ export function TransactionsClient({
                     tx.agendado && 'bg-amber-50/60'
                   )}
                 >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(tx.id)}
+                    onChange={() => toggleSelected(tx.id)}
+                    aria-label={`Selecionar ${tx.descricao}`}
+                    className="h-4 w-4 shrink-0 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                  />
                   {tx.attachments.length > 0 ? (
                     <AttachmentThumb
                       attachment={tx.attachments[0]}
@@ -490,6 +621,39 @@ function KPI({
         {prefix}{formatEUR(value)}
       </div>
     </div>
+  )
+}
+
+function SortHeader({
+  label,
+  field,
+  sort,
+  onSort,
+  align = 'left',
+}: {
+  label: string
+  field: SortField
+  sort: { field: SortField; dir: 'asc' | 'desc' } | null
+  onSort: (field: SortField) => void
+  align?: 'left' | 'right'
+}) {
+  const active = sort?.field === field
+  const Icon = active ? (sort!.dir === 'asc' ? ArrowUp : ArrowDown) : ChevronsUpDown
+  return (
+    <th className={cn('px-4 py-3 font-semibold', align === 'right' && 'text-right')}>
+      <button
+        type="button"
+        onClick={() => onSort(field)}
+        className={cn(
+          'inline-flex items-center gap-1 select-none hover:text-zinc-900 transition-colors',
+          align === 'right' && 'flex-row-reverse',
+          active ? 'text-zinc-900' : 'text-zinc-500'
+        )}
+      >
+        {label}
+        <Icon className={cn('w-3 h-3', !active && 'opacity-40')} />
+      </button>
+    </th>
   )
 }
 

@@ -18,7 +18,13 @@ export type WorkOrderRow = {
   lastMessage: { templateNome: string; webhookOk: boolean; createdAt: string } | null
 }
 
-export type CustomerOption = { id: string; nome: string }
+export type CustomerOption = {
+  id: string
+  nome: string
+  telefone: string | null
+  nif: string | null
+  createdAt: string
+}
 
 type SearchParams = Record<string, string | undefined>
 
@@ -64,8 +70,8 @@ export default async function FolhasPage({
     prisma.workOrder.groupBy({ by: ['estado'], _count: true, _sum: { total: true } }),
     prisma.customer.findMany({
       where: { archived: false },
-      orderBy: { nome: 'asc' },
-      select: { id: true, nome: true },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, nome: true, telefone: true, nif: true, createdAt: true },
     }),
   ])
 
@@ -106,7 +112,10 @@ export default async function FolhasPage({
   return (
     <WorkOrdersClient
       workOrders={rows}
-      customers={customers as CustomerOption[]}
+      customers={customers.map((customer) => ({
+        ...customer,
+        createdAt: customer.createdAt.toISOString(),
+      }))}
       counts={counts}
       valorEmAberto={valorEmAberto}
       filters={{ search, estado: estadoFilter, customerId: customerFilter }}

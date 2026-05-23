@@ -191,6 +191,49 @@ export async function deleteTransaction(id: string): Promise<TransactionFormStat
   return { ok: true }
 }
 
+export async function deleteTransactions(ids: string[]): Promise<TransactionFormState> {
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)))
+  if (uniqueIds.length === 0) return { ok: false, message: 'Seleciona pelo menos um movimento' }
+  if (uniqueIds.length > 100) return { ok: false, message: 'Elimina no máximo 100 movimentos de cada vez' }
+
+  const transactions = await prisma.transaction.findMany({
+    where: { id: { in: uniqueIds } },
+    include: { attachments: true },
+  })
+  if (transactions.length === 0) return { ok: false, message: 'Movimentos não encontrados' }
+
+  for (const tx of transactions) {
+    for (const att of tx.attachments) {
+      await deleteUpload(att.storagePath).catch(() => {})
+    }
+  }
+
+  await prisma.transaction.deleteMany({
+    where: { id: { in: transactions.map((tx) => tx.id) } },
+  })
+
+  for (const tx of transactions) {
+    await logAudit({
+      entityType: 'TRANSACTION',
+      entityId: tx.id,
+      action: 'DELETE',
+      summary: `${tx.tipo === 'ENTRADA' ? 'Entrada' : tx.tipo === 'SAIDA' ? 'Saída' : 'Transferência'} • ${tx.descricao}`,
+      before: tx,
+    })
+  }
+
+  revalidatePath('/lancamentos')
+  revalidatePath('/dashboard')
+  revalidatePath('/caixas')
+  for (const workOrderId of new Set(transactions.map((tx) => tx.workOrderId).filter(Boolean))) {
+    revalidatePath(`/folhas/${workOrderId}`)
+  }
+  for (const customerId of new Set(transactions.map((tx) => tx.customerId).filter(Boolean))) {
+    revalidatePath(`/clientes/${customerId}`)
+  }
+  return { ok: true }
+}
+
 export async function duplicateTransaction(id: string): Promise<TransactionFormState> {
   const tx = await prisma.transaction.findUnique({ where: { id } })
   if (!tx) return { ok: false, message: 'Movimento não encontrado' }

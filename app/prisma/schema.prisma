@@ -287,6 +287,76 @@ enum AuditAction {
   STATUS_CHANGE
 }
 
+model MoloniConnection {
+  id             String             @id @default(cuid())
+  clientId       String             @map("client_id")
+  redirectUri    String             @map("redirect_uri")
+  accessToken    String             @map("access_token") @db.Text
+  refreshToken   String             @map("refresh_token") @db.Text
+  tokenExpiresAt DateTime           @map("token_expires_at")
+  companyId      Int?               @map("company_id")
+  companyName    String?            @map("company_name")
+  companyVat     String?            @map("company_vat")
+  connectedAt    DateTime           @default(now()) @map("connected_at")
+  lastSyncAt     DateTime?          @map("last_sync_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  documents      MoloniDocument[]
+  syncLogs       MoloniSyncLog[]
+
+  @@map("moloni_connections")
+}
+
+model MoloniDocument {
+  id             String           @id @default(cuid())
+  connectionId   String           @map("connection_id")
+  documentId     Int              @map("document_id")
+  documentTypeId Int              @map("document_type_id")
+  documentSetId  Int?             @map("document_set_id")
+  number         Int?
+  date           DateTime?
+  expirationDate DateTime?        @map("expiration_date")
+  entityName     String?          @map("entity_name")
+  entityVat      String?          @map("entity_vat")
+  grossValue     Decimal          @default(0) @map("gross_value") @db.Decimal(12, 2)
+  netValue       Decimal          @default(0) @map("net_value") @db.Decimal(12, 2)
+  taxesValue     Decimal          @default(0) @map("taxes_value") @db.Decimal(12, 2)
+  status         Int?
+  saftCode       String?          @map("saft_code")
+  raw            Json
+  modifiedAt     DateTime?        @map("modified_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  connection     MoloniConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, documentId])
+  @@index([entityVat])
+  @@index([date])
+  @@index([modifiedAt])
+  @@map("moloni_documents")
+}
+
+model MoloniSyncLog {
+  id             String           @id @default(cuid())
+  connectionId   String           @map("connection_id")
+  status         MoloniSyncStatus
+  message        String?
+  documentsSeen  Int              @default(0) @map("documents_seen")
+  documentsSaved Int              @default(0) @map("documents_saved")
+  startedAt      DateTime         @default(now()) @map("started_at")
+  finishedAt     DateTime?        @map("finished_at")
+  connection     MoloniConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@index([startedAt])
+  @@map("moloni_sync_logs")
+}
+
+enum MoloniSyncStatus {
+  SUCCESS
+  ERROR
+}
+
 // Automações de mensagens CRM
 model AutomationTemplate {
   id             String            @id @default(cuid())
