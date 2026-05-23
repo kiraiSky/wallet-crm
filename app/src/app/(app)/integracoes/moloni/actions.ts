@@ -3,7 +3,12 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { requireOwner } from '@/lib/current-user'
-import { fetchMoloniCompanies, fetchMoloniDocuments, mapMoloniDocument } from '@/lib/moloni'
+import {
+  fetchMoloniCompanies,
+  fetchAllMoloniDocuments,
+  mapMoloniDocument,
+  matchMoloniDocumentsToCustomers,
+} from '@/lib/moloni'
 import { logAudit } from '@/lib/audit'
 
 export async function selectMoloniCompany(connectionId: string, companyId: number) {
@@ -25,6 +30,20 @@ export async function selectMoloniCompany(connectionId: string, companyId: numbe
   return { ok: true }
 }
 
+export async function updateAutoSync(
+  connectionId: string,
+  autoSyncEnabled: boolean,
+  autoSyncInterval: number,
+) {
+  await requireOwner()
+  await prisma.moloniConnection.update({
+    where: { id: connectionId },
+    data: { autoSyncEnabled, autoSyncInterval },
+  })
+  revalidatePath('/integracoes/moloni')
+  return { ok: true }
+}
+
 export async function syncMoloniDocuments(connectionId: string) {
   await requireOwner()
   const connection = await prisma.moloniConnection.findUnique({ where: { id: connectionId } })
@@ -35,7 +54,12 @@ export async function syncMoloniDocuments(connectionId: string) {
   })
 
   try {
-    const documents = await fetchMoloniDocuments(connectionId, connection.companyId, connection.lastSyncAt)
+    const documents = await fetchAllMoloniDocuments(
+      connectionId,
+      connection.companyId,
+      connection.lastSyncAt,
+    )
+
     let saved = 0
     for (const document of documents) {
       const mapped = mapMoloniDocument(document)
@@ -47,13 +71,13 @@ export async function syncMoloniDocuments(connectionId: string) {
           },
         },
         update: mapped,
-        create: {
-          connectionId,
-          ...mapped,
-        },
+        create: { connectionId, ...mapped },
       })
       saved++
     }
+
+    // Match automático por NIF
+    const matched = await matchMoloniDocumentsToCustomers(connectionId)
 
     await prisma.moloniConnection.update({
       where: { id: connectionId },
@@ -72,11 +96,11 @@ export async function syncMoloniDocuments(connectionId: string) {
       entityType: 'MOLONI_CONNECTION',
       entityId: connectionId,
       action: 'UPDATE',
-      summary: `Moloni sincronizado • ${saved} documentos`,
-      after: { documentsSeen: documents.length, documentsSaved: saved },
+      summary: `Moloni sincronizado • ${saved} documentos • ${matched} clientes ligados`,
+      after: { documentsSeen: documents.length, documentsSaved: saved, customersMatched: matched },
     })
     revalidatePath('/integracoes/moloni')
-    return { ok: true, documentsSeen: documents.length, documentsSaved: saved }
+    return { ok: true, documentsSeen: documents.length, documentsSaved: saved, customersMatched: matched }
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Erro ao sincronizar Moloni'
     await prisma.moloniSyncLog.update({
@@ -86,4 +110,18 @@ export async function syncMoloniDocuments(connectionId: string) {
     revalidatePath('/integracoes/moloni')
     return { ok: false, message }
   }
+}
+
+export async function linkMoloniDocumentToTransaction(
+  documentId: string,
+  transactionId: string | null,
+) {
+  await requireOwner()
+  await prisma.moloniDocument.update({
+    where: { id: documentId },
+    data: { transactionId },
+  })
+  revalidatePath('/integracoes/moloni')
+  revalidatePath('/movimentos')
+  return { ok: true }
 }

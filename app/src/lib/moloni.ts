@@ -19,7 +19,7 @@ export type MoloniCompany = {
   email?: string
 }
 
-type MoloniDocumentPayload = {
+export type MoloniDocumentPayload = {
   document_id: number
   document_type_id: number
   document_set_id?: number
@@ -32,10 +32,24 @@ type MoloniDocumentPayload = {
   net_value?: number
   taxes_value?: number
   status?: number
-  document_type?: { saft_code?: string }
+  document_type?: { saft_code?: string; title?: string }
   updated_at?: string
   modified_at?: string
 }
+
+// Endpoints Moloni por tipo de documento (SAF-T codes)
+// FT = Fatura, FR = Fatura-Recibo, ND = Nota de Débito, NC = Nota de Crédito
+// RC = Recibo, VD = Venda a Dinheiro, OR = Orçamento, EC = Encomenda
+const DOCUMENT_ENDPOINTS: Array<{ path: string; modifiedPath: string; type: string }> = [
+  { path: '/invoices/getAll/',          modifiedPath: '/invoices/getModifiedSince/',          type: 'FT' },
+  { path: '/receipts/getAll/',          modifiedPath: '/receipts/getModifiedSince/',          type: 'FR' },
+  { path: '/simplifiedInvoices/getAll/', modifiedPath: '/simplifiedInvoices/getModifiedSince/', type: 'FS' },
+  { path: '/creditNotes/getAll/',       modifiedPath: '/creditNotes/getModifiedSince/',       type: 'NC' },
+  { path: '/debitNotes/getAll/',        modifiedPath: '/debitNotes/getModifiedSince/',        type: 'ND' },
+  { path: '/cashSaleInvoices/getAll/',  modifiedPath: '/cashSaleInvoices/getModifiedSince/',  type: 'VD' },
+  { path: '/proFormaInvoices/getAll/',  modifiedPath: '/proFormaInvoices/getModifiedSince/',  type: 'PF' },
+  { path: '/quotes/getAll/',            modifiedPath: '/quotes/getModifiedSince/',            type: 'OR' },
+]
 
 export function getMoloniConfig() {
   const clientId = process.env.MOLONI_CLIENT_ID
@@ -139,25 +153,63 @@ export async function fetchMoloniCompanies(connectionId: string) {
   return moloniPost<MoloniCompany[]>(connectionId, '/companies/getAll/', {})
 }
 
-export async function fetchMoloniDocuments(connectionId: string, companyId: number, lastModified: Date | null) {
-  const path = lastModified ? '/documents/getModifiedSince/' : '/documents/getAll/'
-  return moloniPost<MoloniDocumentPayload[]>(connectionId, path, {
-    company_id: companyId,
-    qty: 50,
-    offset: 0,
-    ...(lastModified && { lastmodified: lastModified.toISOString().slice(0, 19).replace('T', ' ') }),
-  })
+/**
+ * Busca todos os tipos de documentos suportados.
+ * Cada doc vem acompanhado do campo `_documentType` com o código SAF-T.
+ */
+export async function fetchAllMoloniDocuments(
+  connectionId: string,
+  companyId: number,
+  lastModified: Date | null,
+): Promise<Array<MoloniDocumentPayload & { _documentType: string }>> {
+  const results: Array<MoloniDocumentPayload & { _documentType: string }> = []
+
+  for (const endpoint of DOCUMENT_ENDPOINTS) {
+    try {
+      const path = lastModified ? endpoint.modifiedPath : endpoint.path
+      const body: Record<string, unknown> = {
+        company_id: companyId,
+        qty: 100,
+        offset: 0,
+      }
+      if (lastModified) {
+        body.lastmodified = lastModified.toISOString().slice(0, 19).replace('T', ' ')
+      }
+      const docs = await moloniPost<MoloniDocumentPayload[]>(connectionId, path, body)
+      if (Array.isArray(docs)) {
+        for (const doc of docs) {
+          results.push({ ...doc, _documentType: endpoint.type })
+        }
+      }
+    } catch {
+      // endpoint pode não existir ou não ter documentos — ignorar silenciosamente
+    }
+  }
+
+  return results
+}
+
+/** Mantido para compatibilidade — usa o endpoint genérico de documentos */
+export async function fetchMoloniDocuments(
+  connectionId: string,
+  companyId: number,
+  lastModified: Date | null,
+) {
+  return fetchAllMoloniDocuments(connectionId, companyId, lastModified)
 }
 
 export function tokenExpiryDate(expiresIn: number) {
   return new Date(Date.now() + Math.max(0, expiresIn - 60) * 1000)
 }
 
-export function mapMoloniDocument(raw: MoloniDocumentPayload) {
+export function mapMoloniDocument(
+  raw: MoloniDocumentPayload & { _documentType?: string },
+) {
   return {
     documentId: raw.document_id,
     documentTypeId: raw.document_type_id,
     documentSetId: raw.document_set_id ?? null,
+    documentType: raw._documentType ?? raw.document_type?.saft_code ?? null,
     number: raw.number ?? null,
     date: raw.date ? new Date(raw.date) : null,
     expirationDate: raw.expiration_date ? new Date(raw.expiration_date) : null,
@@ -167,8 +219,47 @@ export function mapMoloniDocument(raw: MoloniDocumentPayload) {
     netValue: raw.net_value ?? 0,
     taxesValue: raw.taxes_value ?? 0,
     status: raw.status ?? null,
-    saftCode: raw.document_type?.saft_code ?? null,
-    modifiedAt: raw.modified_at || raw.updated_at ? new Date(raw.modified_at ?? raw.updated_at!) : null,
+    saftCode: raw.document_type?.saft_code ?? raw._documentType ?? null,
+    modifiedAt: raw.modified_at || raw.updated_at
+      ? new Date((raw.modified_at ?? raw.updated_at)!)
+      : null,
     raw: raw as object,
   }
+}
+
+/**
+ * Após sync, faz match automático entre MoloniDocument.entityVat e Customer.nif
+ * e preenche customerId nos documentos ainda sem customer.
+ */
+export async function matchMoloniDocumentsToCustomers(connectionId: string) {
+  // Buscar docs sem customer que tenham NIF
+  const unmatched = await prisma.moloniDocument.findMany({
+    where: { connectionId, customerId: null, entityVat: { not: null } },
+    select: { id: true, entityVat: true },
+  })
+
+  if (unmatched.length === 0) return 0
+
+  // Buscar todos os customers com NIF
+  const customers = await prisma.customer.findMany({
+    where: { nif: { not: null } },
+    select: { id: true, nif: true },
+  })
+
+  const nifMap = new Map(customers.map((c) => [c.nif!.replace(/\s/g, ''), c.id]))
+
+  let matched = 0
+  for (const doc of unmatched) {
+    const vat = doc.entityVat!.replace(/\s/g, '')
+    const customerId = nifMap.get(vat)
+    if (customerId) {
+      await prisma.moloniDocument.update({
+        where: { id: doc.id },
+        data: { customerId },
+      })
+      matched++
+    }
+  }
+
+  return matched
 }

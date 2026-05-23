@@ -103,9 +103,10 @@ model Transaction {
   user        User                      @relation(fields: [userId], references: [id], onDelete: Restrict)
   workOrder   WorkOrder?                @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
   customer    Customer?                 @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  attachments TransactionAttachment[]
-  createdAt   DateTime                  @default(now()) @map("created_at")
-  updatedAt   DateTime                  @updatedAt @map("updated_at")
+  attachments     TransactionAttachment[]
+  moloniDocuments MoloniDocument[]
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
 
   @@index([data])
   @@index([tipo, data])
@@ -133,10 +134,11 @@ model Customer {
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
-  vehicles       Vehicle[]
-  workOrders     WorkOrder[]
-  transactions   Transaction[]
-  automationLogs AutomationLog[]
+  vehicles        Vehicle[]
+  workOrders      WorkOrder[]
+  transactions    Transaction[]
+  automationLogs  AutomationLog[]
+  moloniDocuments MoloniDocument[]
 
   @@index([nome])
   @@index([telefone])
@@ -291,21 +293,24 @@ enum AuditAction {
 }
 
 model MoloniConnection {
-  id             String             @id @default(cuid())
-  clientId       String             @map("client_id")
-  redirectUri    String             @map("redirect_uri")
-  accessToken    String             @map("access_token") @db.Text
-  refreshToken   String             @map("refresh_token") @db.Text
-  tokenExpiresAt DateTime           @map("token_expires_at")
-  companyId      Int?               @map("company_id")
-  companyName    String?            @map("company_name")
-  companyVat     String?            @map("company_vat")
-  connectedAt    DateTime           @default(now()) @map("connected_at")
-  lastSyncAt     DateTime?          @map("last_sync_at")
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
-  documents      MoloniDocument[]
-  syncLogs       MoloniSyncLog[]
+  id               String             @id @default(cuid())
+  clientId         String             @map("client_id")
+  redirectUri      String             @map("redirect_uri")
+  accessToken      String             @map("access_token") @db.Text
+  refreshToken     String             @map("refresh_token") @db.Text
+  tokenExpiresAt   DateTime           @map("token_expires_at")
+  companyId        Int?               @map("company_id")
+  companyName      String?            @map("company_name")
+  companyVat       String?            @map("company_vat")
+  connectedAt      DateTime           @default(now()) @map("connected_at")
+  lastSyncAt       DateTime?          @map("last_sync_at")
+  // Sync automático
+  autoSyncEnabled  Boolean            @default(false) @map("auto_sync_enabled")
+  autoSyncInterval Int                @default(60) @map("auto_sync_interval") // minutos
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  documents        MoloniDocument[]
+  syncLogs         MoloniSyncLog[]
 
   @@map("moloni_connections")
 }
@@ -316,6 +321,7 @@ model MoloniDocument {
   documentId     Int              @map("document_id")
   documentTypeId Int              @map("document_type_id")
   documentSetId  Int?             @map("document_set_id")
+  documentType   String?          @map("document_type") // ex: "FT", "FR", "ND", "NC"
   number         Int?
   date           DateTime?
   expirationDate DateTime?        @map("expiration_date")
@@ -328,14 +334,21 @@ model MoloniDocument {
   saftCode       String?          @map("saft_code")
   raw            Json
   modifiedAt     DateTime?        @map("modified_at")
+  // Cruzamentos
+  customerId     String?          @map("customer_id")
+  transactionId  String?          @map("transaction_id")
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
   connection     MoloniConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  customer       Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  transaction    Transaction?     @relation(fields: [transactionId], references: [id], onDelete: SetNull)
 
   @@unique([connectionId, documentId])
   @@index([entityVat])
   @@index([date])
   @@index([modifiedAt])
+  @@index([customerId])
+  @@index([transactionId])
   @@map("moloni_documents")
 }
 

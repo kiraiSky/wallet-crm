@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AlertTriangle, CheckCircle2, ExternalLink, FileText } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ExternalLink, FileText, User } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { requireOwner } from '@/lib/current-user'
 import { fetchMoloniCompanies, getMoloniConfig } from '@/lib/moloni'
@@ -7,6 +7,17 @@ import { formatEUR, formatDateTime } from '@/lib/format'
 import { MoloniClient } from './MoloniClient'
 
 export const dynamic = 'force-dynamic'
+
+const DOC_TYPE_LABEL: Record<string, string> = {
+  FT: 'Fatura',
+  FR: 'Fatura-Recibo',
+  FS: 'Fatura Simplificada',
+  NC: 'Nota de Crédito',
+  ND: 'Nota de Débito',
+  VD: 'Venda a Dinheiro',
+  PF: 'Pró-Forma',
+  OR: 'Orçamento',
+}
 
 export default async function MoloniPage({
   searchParams,
@@ -28,17 +39,28 @@ export default async function MoloniPage({
     ? await prisma.moloniDocument.findMany({
         where: { connectionId: connection.id },
         orderBy: { date: 'desc' },
-        take: 8,
+        take: 10,
+        include: { customer: { select: { id: true, nome: true } } },
       })
     : []
   const companies = connection ? await fetchMoloniCompanies(connection.id).catch(() => []) : []
+
+  // Estatísticas rápidas
+  const stats = connection
+    ? await prisma.moloniDocument.groupBy({
+        by: ['documentType'],
+        where: { connectionId: connection.id },
+        _count: true,
+        _sum: { grossValue: true },
+      })
+    : []
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">Integração Moloni</h1>
         <p className="text-sm text-zinc-500">
-          Sincronização read-only para cruzar faturação Moloni com caixa e clientes.
+          Sincronização de faturação Moloni com cruzamento automático de clientes e caixa.
         </p>
       </div>
 
@@ -53,11 +75,11 @@ export default async function MoloniPage({
         <div className="card p-5 border-amber-200 bg-amber-50/60">
           <h2 className="font-semibold text-zinc-900 mb-2">Configuração em falta</h2>
           <p className="text-sm text-zinc-600 mb-3">
-            Define `MOLONI_CLIENT_ID`, `MOLONI_CLIENT_SECRET`, `MOLONI_REDIRECT_URI` e
-            `MOLONI_TOKEN_ENCRYPTION_KEY` no ambiente do servidor.
+            Define <code>MOLONI_CLIENT_ID</code>, <code>MOLONI_CLIENT_SECRET</code>, <code>MOLONI_REDIRECT_URI</code> e{' '}
+            <code>MOLONI_TOKEN_ENCRYPTION_KEY</code> no ambiente do servidor.
           </p>
           <p className="text-xs text-zinc-500">
-            Callback recomendado: `/api/integrations/moloni/callback`.
+            Callback recomendado: <code>/api/integrations/moloni/callback</code>
           </p>
         </div>
       )}
@@ -105,7 +127,23 @@ export default async function MoloniPage({
             connectionId={connection.id}
             companies={companies}
             selectedCompanyId={connection.companyId}
+            autoSyncEnabled={connection.autoSyncEnabled}
+            autoSyncInterval={connection.autoSyncInterval}
           />
+        </div>
+      )}
+
+      {connection && stats.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {stats.map((s) => (
+            <div key={s.documentType ?? 'outro'} className="card p-4">
+              <div className="text-xs text-zinc-500 mb-1">
+                {DOC_TYPE_LABEL[s.documentType ?? ''] ?? s.documentType ?? 'Outro'}
+              </div>
+              <div className="text-lg font-bold text-zinc-900">{s._count}</div>
+              <div className="text-xs text-zinc-500">{formatEUR(Number(s._sum.grossValue ?? 0))}</div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -119,19 +157,36 @@ export default async function MoloniPage({
               <div className="divide-y divide-zinc-100">
                 {documents.map((doc) => (
                   <div key={doc.id} className="py-2.5 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
                       <FileText className="w-4 h-4 text-zinc-500" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-zinc-900 truncate">
-                        {doc.entityName ?? 'Sem cliente'} {doc.number ? `#${doc.number}` : ''}
+                        {doc.entityName ?? 'Sem cliente'}
+                        {doc.number ? ` #${doc.number}` : ''}
+                        {doc.documentType && (
+                          <span className="ml-1.5 text-xs bg-zinc-100 text-zinc-500 px-1.5 py-0.5 rounded">
+                            {DOC_TYPE_LABEL[doc.documentType] ?? doc.documentType}
+                          </span>
+                        )}
                       </div>
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-xs text-zinc-500 flex items-center gap-1">
                         {doc.entityVat ? `NIF ${doc.entityVat} • ` : ''}
                         {doc.date ? formatDateTime(doc.date) : 'Sem data'}
+                        {doc.customer && (
+                          <Link
+                            href={`/clientes/${doc.customer.id}`}
+                            className="ml-1 inline-flex items-center gap-0.5 text-emerald-600 hover:underline"
+                          >
+                            <User className="w-3 h-3" />
+                            {doc.customer.nome}
+                          </Link>
+                        )}
                       </div>
                     </div>
-                    <div className="text-sm font-bold text-zinc-900">{formatEUR(Number(doc.grossValue))}</div>
+                    <div className="text-sm font-bold text-zinc-900 shrink-0">
+                      {formatEUR(Number(doc.grossValue))}
+                    </div>
                   </div>
                 ))}
               </div>
