@@ -244,6 +244,8 @@ export type MoloniCustomer = {
 export type MoloniDocumentSet = {
   document_set_id: number
   name: string
+  document_type_id?: number
+  document_types_numbers?: Array<{ document_type_id: number }>
 }
 
 export type MoloniTax = {
@@ -251,6 +253,12 @@ export type MoloniTax = {
   name: string
   value: number
   type: number // 1 = percentagem
+}
+
+type MoloniUnit = {
+  unit_id: number
+  name: string
+  short_name: string
 }
 
 type MoloniCreateDocumentProduct = {
@@ -261,6 +269,7 @@ type MoloniCreateDocumentProduct = {
   price: number
   discount?: number
   order?: number
+  unit_id?: number
   taxes?: Array<{ tax_id: number; value: number; order: number; cumulative: number }>
   exemption_reason?: string
 }
@@ -288,11 +297,15 @@ type MoloniCreateDocumentResponse = {
 export async function searchMoloniCustomerByVat(connectionId: string, companyId: number, vat: string) {
   const results = await moloniPost<MoloniCustomer[]>(connectionId, '/customers/getAll/', {
     company_id: companyId,
-    qty: 5,
+    qty: 50,
     offset: 0,
     vat,
   })
-  return Array.isArray(results) ? results[0] ?? null : null
+  if (!Array.isArray(results)) return null
+  // Filtrar manualmente — a API pode ignorar o parâmetro vat e devolver todos
+  const normalise = (v: string) => v.replace(/\s/g, '').toUpperCase()
+  const needle = normalise(vat)
+  return results.find((c) => c.vat && normalise(c.vat) === needle) ?? null
 }
 
 export async function createMoloniCustomer(
@@ -306,25 +319,59 @@ export async function createMoloniCustomer(
     address?: string
   },
 ) {
-  const result = await moloniPost<{ customer_id: number }>(connectionId, '/customers/insert/', {
-    company_id: companyId,
-    name: data.name,
-    vat: data.vat ?? '999999990', // consumidor final PT
-    email: data.email ?? '',
-    phone: data.phone ?? '',
-    address: data.address ?? '',
-    zip_code: '',
-    city: '',
-    country_id: 1, // Portugal
-    language_id: 1,
-    payment_method_id: 0,
-    maturity_date_id: 0,
-    salesman_id: 0,
-  })
+  // Buscar método de pagamento e prazo de pagamento padrão
+  const [payments, maturities] = await Promise.all([
+    moloniPost<Array<{ payment_method_id: number }>>(connectionId, '/paymentMethods/getAll/', { company_id: companyId }).catch(() => []),
+    moloniPost<Array<{ maturity_date_id: number }>>(connectionId, '/maturityDates/getAll/', { company_id: companyId }).catch(() => []),
+  ])
+  const paymentMethodId = Array.isArray(payments) && payments[0] ? payments[0].payment_method_id : 0
+  const maturityDateId = Array.isArray(maturities) && maturities[0] ? maturities[0].maturity_date_id : 0
+
+  // Gerar número de cliente único baseado no timestamp
+  const customerNumber = `C${Date.now().toString().slice(-8)}`
+
+  const result = await moloniPost<{ customer_id: number; valid?: number; errors?: unknown[] }>(
+    connectionId,
+    '/customers/insert/',
+    {
+      company_id: companyId,
+      number: customerNumber,
+      name: data.name,
+      vat: data.vat ?? '999999990', // consumidor final PT
+      email: data.email ?? '',
+      phone: data.phone ?? '',
+      address: data.address ?? 'N/D',
+      zip_code: '',
+      city: 'N/D',
+      country_id: 1, // Portugal
+      language_id: 1, // Português
+      payment_method_id: paymentMethodId,
+      maturity_date_id: maturityDateId,
+      salesman_id: 0,
+      payment_day: 0,
+      discount: 0,
+      credit_limit: 0,
+      delivery_method_id: 0,
+    },
+  )
+  if (!result.customer_id || result.valid === 0) {
+    throw new Error(`Erro ao criar cliente Moloni: ${JSON.stringify(result.errors ?? result)}`)
+  }
   return result.customer_id
 }
 
 // ─── Document sets ────────────────────────────────────────────────────────────
+
+type MoloniDocumentType = {
+  document_type_id: number
+  saft_code: string
+  name: string
+}
+
+export async function fetchMoloniDocumentTypes(connectionId: string) {
+  const results = await moloniPost<MoloniDocumentType[]>(connectionId, '/documents/getAllDocumentTypes/', {})
+  return Array.isArray(results) ? results : []
+}
 
 export async function fetchMoloniDocumentSets(connectionId: string, companyId: number) {
   const results = await moloniPost<MoloniDocumentSet[]>(connectionId, '/documentSets/getAll/', {
@@ -340,6 +387,108 @@ export async function fetchMoloniTaxes(connectionId: string, companyId: number) 
     company_id: companyId,
   })
   return Array.isArray(results) ? results : []
+}
+
+// ─── Units ───────────────────────────────────────────────────────────────────
+
+export async function fetchMoloniUnits(connectionId: string, companyId: number) {
+  const results = await moloniPost<MoloniUnit[]>(connectionId, '/measurementUnits/getAll/', {
+    company_id: companyId,
+  })
+  return Array.isArray(results) ? results : []
+}
+
+// ─── Produto genérico (para linhas livres em faturas) ─────────────────────────
+
+/**
+ * Procura ou cria um produto genérico "Serviço" no catálogo Moloni.
+ * Usado como product_id base para linhas de fatura sem produto do catálogo.
+ */
+async function findMarcolarSrvProduct(
+  connectionId: string,
+  companyId: number,
+): Promise<number | null> {
+  try {
+    // Tentar em páginas até encontrar (a API ignora o filtro reference, filtrar manualmente)
+    for (let offset = 0; offset < 500; offset += 100) {
+      const page = await moloniPost<Array<{ product_id: number; reference?: string }>>(
+        connectionId,
+        '/products/getAll/',
+        { company_id: companyId, qty: 100, offset },
+      )
+      if (!Array.isArray(page) || page.length === 0) break
+      // Comparação case-insensitive e sem espaços
+      const match = page.find(
+        (p) => p.reference?.trim().toUpperCase() === 'MARCOLA-SRV',
+      )
+      if (match?.product_id) return match.product_id
+      if (page.length < 100) break // última página
+    }
+  } catch {
+    // Ignorar erros de pesquisa — retorna null e deixa o caller decidir
+  }
+  return null
+}
+
+export async function getOrCreateGenericProduct(connectionId: string, companyId: number): Promise<number> {
+  // Procurar produto com referência exacta MARCOLA-SRV (paginar pois a API ignora o filtro)
+  const existing = await findMarcolarSrvProduct(connectionId, companyId)
+  if (existing) return existing
+
+  // Buscar category_id e unit_id
+  const [categories, units] = await Promise.all([
+    moloniPost<Array<{ category_id: number }>>(connectionId, '/productCategories/getAll/', { company_id: companyId }).catch(() => []),
+    fetchMoloniUnits(connectionId, companyId),
+  ])
+
+  // Criar categoria "Serviços" se não existir
+  let categoryId = Array.isArray(categories) && categories[0] ? categories[0].category_id : null
+  if (!categoryId) {
+    const catResult = await moloniPost<{ category_id: number; valid?: number }>(
+      connectionId,
+      '/productCategories/insert/',
+      { company_id: companyId, name: 'Serviços', parent_id: 0 },
+    )
+    categoryId = catResult.category_id ?? 0
+  }
+
+  const unitId = Array.isArray(units) && units[0] ? units[0].unit_id : 0
+
+  const rawProduct = await moloniPost<
+    { product_id: number; valid?: number; errors?: unknown[] } | Array<{ code: string; description: string }>
+  >(connectionId, '/products/insert/', {
+    company_id: companyId,
+    category_id: categoryId,
+    type: 2, // serviço
+    name: 'Serviço / Peça',
+    reference: 'MARCOLA-SRV',
+    price: 0,
+    unit_id: unitId,
+    has_stock: 0,
+    at_product_category: 'S', // Categoria AT: Serviços
+    exemption_reason: 'M99',
+    taxes: [],
+  })
+
+  // Moloni pode devolver array de erros
+  if (Array.isArray(rawProduct)) {
+    const msg = rawProduct.map((e) => e.description || e.code).join('; ')
+    // Se a referência já existe, o produto foi criado numa tentativa anterior — tentar encontrá-lo
+    if (msg.toLowerCase().includes('unique') || msg.toLowerCase().includes('reference')) {
+      const retry = await findMarcolarSrvProduct(connectionId, companyId)
+      if (retry) return retry
+      // Último recurso: usar qualquer produto do catálogo
+      const fallback = await moloniPost<Array<{ product_id: number }>>(
+        connectionId, '/products/getAll/', { company_id: companyId, qty: 1, offset: 0 },
+      ).catch(() => null)
+      if (Array.isArray(fallback) && fallback[0]?.product_id) return fallback[0].product_id
+    }
+    throw new Error(`Erro ao criar produto genérico no Moloni: ${msg}`)
+  }
+  if (!rawProduct.product_id || rawProduct.valid === 0) {
+    throw new Error(`Erro ao criar produto genérico: ${JSON.stringify(rawProduct.errors ?? rawProduct)}`)
+  }
+  return rawProduct.product_id
 }
 
 // ─── Criar fatura ─────────────────────────────────────────────────────────────
@@ -359,28 +508,49 @@ export async function createMoloniInvoiceFromWorkOrder(
     quantidade: number
     precoUnit: number
     iva: number | null
+    isLabor?: boolean
   }>,
-  docType: 'invoices' | 'receipts' = 'invoices',
+  docType: 'invoices' | 'quotes' = 'invoices',
+  extraNotes?: string,
 ) {
-  // Buscar taxa de IVA padrão (23%)
-  const taxes = await fetchMoloniTaxes(connectionId, companyId)
+  // Buscar taxas, produto genérico e unidades em paralelo
+  const [taxes, genericProductId, units] = await Promise.all([
+    fetchMoloniTaxes(connectionId, companyId),
+    getOrCreateGenericProduct(connectionId, companyId),
+    fetchMoloniUnits(connectionId, companyId),
+  ])
   const tax23 = taxes.find((t) => Math.round(t.value) === 23 && t.type === 1)
+
+  // Encontrar unidades: "Un." para peças, "Hrs" para mão de obra
+  const normalName = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '')
+  const unitUn = units.find((u) =>
+    normalName(u.short_name ?? '').startsWith('un') || normalName(u.name ?? '').startsWith('unid'),
+  )
+  const unitHrs = units.find((u) =>
+    normalName(u.short_name ?? '').startsWith('h') || normalName(u.name ?? '').includes('hora'),
+  )
+  const fallbackUnit = units[0]
 
   const products: MoloniCreateDocumentProduct[] = items.map((item, i) => {
     const ivaRate = item.iva ?? 23
     const matchedTax = taxes.find((t) => Math.round(t.value) === ivaRate && t.type === 1) ?? tax23
 
+    const unitId = item.isLabor
+      ? (unitHrs?.unit_id ?? fallbackUnit?.unit_id)
+      : (unitUn?.unit_id ?? fallbackUnit?.unit_id)
+
     const productItem: MoloniCreateDocumentProduct = {
+      product_id: genericProductId, // produto genérico do catálogo (API exige product_id real)
       name: item.descricao,
       qty: item.quantidade,
       price: Number(item.precoUnit.toFixed(4)),
       order: i + 1,
+      unit_id: unitId,
     }
 
     if (matchedTax) {
       productItem.taxes = [{ tax_id: matchedTax.tax_id, value: matchedTax.value, order: 1, cumulative: 0 }]
     } else {
-      // Sem taxa — adicionar motivo de isenção genérico
       productItem.exemption_reason = 'M99'
     }
 
@@ -388,30 +558,146 @@ export async function createMoloniInvoiceFromWorkOrder(
   })
 
   const today = new Date().toISOString().slice(0, 10)
+  const expDate = new Date()
+  expDate.setDate(expDate.getDate() + 30)
+  const expirationDate = expDate.toISOString().slice(0, 10)
 
   const body: MoloniCreateDocumentBody = {
     company_id: companyId,
     date: today,
+    expiration_date: expirationDate,
     document_set_id: documentSetId,
     customer_id: moloniCustomerId,
     our_reference: `FO-${workOrderNumber}`,
-    notes: `Folha de Obra nº ${workOrderNumber}`,
-    status: 1, // fechado/emitido
+    notes: [`Folha de Obra nº ${workOrderNumber}`, extraNotes].filter(Boolean).join(' | '),
+    status: 1,
     products,
   }
 
-  const result = await moloniPost<MoloniCreateDocumentResponse>(
+  const raw = await moloniPost<MoloniCreateDocumentResponse | Array<{ code: string; description: string }>>(
     connectionId,
     `/${docType}/insert/`,
     body,
   )
 
+  // Moloni retorna array de erros direto quando falha
+  if (Array.isArray(raw)) {
+    const errMsg = raw.map((e) => e.description || e.code).join('; ') || 'Erro ao criar documento Moloni'
+    throw new Error(errMsg)
+  }
+
+  const result = raw as MoloniCreateDocumentResponse
   if (!result.document_id || result.valid === 0) {
     const errMsg = result.errors?.map((e) => e.message).join('; ') ?? 'Erro ao criar documento Moloni'
     throw new Error(errMsg)
   }
 
   return result.document_id
+}
+
+// ─── Fatura-Recibo para Caução (adiantamento) ─────────────────────────────────
+
+/**
+ * Emite uma Fatura-Recibo (FR) no Moloni para um adiantamento/caução.
+ * - O documento sai logo fechado e pago (payment_method default).
+ * - O valor passado é o BRUTO (com IVA); o preço unitário é convertido para base.
+ * - Cumpre o Dec.-Lei 197/2012 (uma fatura por cada adiantamento recebido).
+ */
+export async function createMoloniInvoiceReceiptForCaucao(
+  connectionId: string,
+  companyId: number,
+  documentSetId: number,
+  moloniCustomerId: number,
+  workOrderNumber: number,
+  valorComIva: number,
+  ivaRate: number = 23,
+  extraNotes?: string,
+): Promise<number> {
+  const [taxes, genericProductId, payments] = await Promise.all([
+    fetchMoloniTaxes(connectionId, companyId),
+    getOrCreateGenericProduct(connectionId, companyId),
+    moloniPost<Array<{ payment_method_id: number }>>(
+      connectionId, '/paymentMethods/getAll/', { company_id: companyId },
+    ).catch(() => []),
+  ])
+  const paymentMethodId = Array.isArray(payments) && payments[0] ? payments[0].payment_method_id : null
+  if (!paymentMethodId) {
+    throw new Error('Sem método de pagamento configurado no Moloni — necessário para Fatura-Recibo.')
+  }
+
+  // FR: o utilizador introduz o valor com IVA; o preço unitário no Moloni é sem IVA.
+  const base = Number((valorComIva / (1 + ivaRate / 100)).toFixed(4))
+  const matchedTax = taxes.find((t) => Math.round(t.value) === ivaRate && t.type === 1)
+
+  const productLine: MoloniCreateDocumentProduct = {
+    product_id: genericProductId,
+    name: `Adiantamento — FO nº ${workOrderNumber}`,
+    qty: 1,
+    price: base,
+    order: 1,
+  }
+  if (matchedTax) {
+    productLine.taxes = [{ tax_id: matchedTax.tax_id, value: matchedTax.value, order: 1, cumulative: 0 }]
+  } else {
+    productLine.exemption_reason = 'M99'
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  const body = {
+    company_id: companyId,
+    date: today,
+    expiration_date: today,
+    document_set_id: documentSetId,
+    customer_id: moloniCustomerId,
+    our_reference: `FO-${workOrderNumber}-CAUCAO`,
+    notes: [`Adiantamento — Folha de Obra nº ${workOrderNumber}`, extraNotes].filter(Boolean).join(' | '),
+    status: 1,
+    products: [productLine],
+    payments: [{ payment_method_id: paymentMethodId, date: today, value: Number(valorComIva.toFixed(2)) }],
+  }
+
+  const raw = await moloniPost<MoloniCreateDocumentResponse | Array<{ code: string; description: string }>>(
+    connectionId, '/invoiceReceipts/insert/', body,
+  )
+  if (Array.isArray(raw)) {
+    const errMsg = raw.map((e) => e.description || e.code).join('; ') || 'Erro ao criar FR Moloni'
+    throw new Error(errMsg)
+  }
+  const result = raw as MoloniCreateDocumentResponse
+  if (!result.document_id || result.valid === 0) {
+    throw new Error(result.errors?.map((e) => e.message).join('; ') ?? 'Erro ao criar FR Moloni')
+  }
+  return result.document_id
+}
+
+// ─── PDF de documento ────────────────────────────────────────────────────────
+
+const DOC_TYPE_TO_ENDPOINT: Record<string, string> = {
+  FT: '/invoices/getPDFLink/',
+  FS: '/simplifiedInvoices/getPDFLink/',
+  FR: '/receipts/getPDFLink/',
+  NC: '/creditNotes/getPDFLink/',
+  ND: '/debitNotes/getPDFLink/',
+  VD: '/cashSaleInvoices/getPDFLink/',
+  OR: '/quotes/getPDFLink/',
+}
+
+export async function getMoloniDocumentPdfUrl(
+  connectionId: string,
+  companyId: number,
+  documentId: number,
+  docType: string,
+): Promise<string> {
+  const endpoint = DOC_TYPE_TO_ENDPOINT[docType] ?? '/invoices/getPDFLink/'
+  const result = await moloniPost<{ url?: string; pdfPublicLink?: string }>(
+    connectionId,
+    endpoint,
+    { company_id: companyId, document_id: documentId },
+  )
+  const url = result.url ?? result.pdfPublicLink
+  if (!url) throw new Error('A API Moloni não devolveu URL do PDF')
+  return url
 }
 
 // ─── Customer matching ────────────────────────────────────────────────────────

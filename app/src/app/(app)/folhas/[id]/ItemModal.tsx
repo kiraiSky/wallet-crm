@@ -206,17 +206,16 @@ export function ItemModal({ open, onClose, workOrderId, item, defaultTipo = 'PEC
           </div>
           <div>
             <label className="label">IVA (%)</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={iva}
-                onChange={(e) => setIva(e.target.value)}
-                inputMode="decimal"
-                placeholder="23"
-                className="input-base pr-8"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 font-semibold">%</span>
-            </div>
+            <select
+              value={iva}
+              onChange={(e) => setIva(e.target.value)}
+              className="input-base"
+            >
+              <option value="">Isento</option>
+              <option value="6">6%</option>
+              <option value="13">13%</option>
+              <option value="23">23%</option>
+            </select>
             {errors.iva && <p className="text-xs text-red-500 mt-1">{errors.iva}</p>}
           </div>
         </div>

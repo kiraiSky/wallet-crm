@@ -17,6 +17,17 @@ export type WorkOrderItemRow = {
   total: number
 }
 
+export type WorkOrderCaucaoRow = {
+  id: string
+  valor: number
+  data: string
+  notas: string | null
+  transactionId: string | null
+  moloniDocumentId: number | null
+  moloniDocumentType: string | null
+  createdAt: string
+}
+
 export type WorkOrderTransactionRow = {
   id: string
   tipo: 'ENTRADA' | 'SAIDA'
@@ -40,6 +51,7 @@ export type WorkOrderDetail = {
   id: string
   numero: number
   estado: WorkOrderStatus
+  shareToken: string | null
   problema: string
   diagnostico: string | null
   trabalho: string | null
@@ -64,6 +76,9 @@ export type WorkOrderDetail = {
     km: number | null
   } | null
   items: WorkOrderItemRow[]
+  caucoes: WorkOrderCaucaoRow[]
+  totalCaucoes: number
+  totalRestante: number
 }
 
 export default async function WorkOrderDetailPage({
@@ -79,6 +94,7 @@ export default async function WorkOrderDetailPage({
         customer: { select: { id: true, nome: true, telefone: true, nif: true, createdAt: true } },
         vehicle: true,
         items: { orderBy: { createdAt: 'asc' } },
+        caucoes: { orderBy: { data: 'asc' } },
       },
     }),
     prisma.transaction.findMany({
@@ -132,6 +148,7 @@ export default async function WorkOrderDetailPage({
     total: Number(wo.total),
     moloniDocumentId: wo.moloniDocumentId,
     moloniDocumentType: wo.moloniDocumentType,
+    shareToken: wo.shareToken,
     customer: { ...wo.customer, createdAt: wo.customer.createdAt.toISOString() },
     vehicle: wo.vehicle
       ? {
@@ -155,6 +172,18 @@ export default async function WorkOrderDetailPage({
       iva: it.iva !== null ? Number(it.iva) : null,
       total: Number(it.total),
     })),
+    caucoes: wo.caucoes.map((c) => ({
+      id: c.id,
+      valor: Number(c.valor),
+      data: c.data.toISOString(),
+      notas: c.notas,
+      transactionId: c.transactionId,
+      moloniDocumentId: c.moloniDocumentId,
+      moloniDocumentType: c.moloniDocumentType,
+      createdAt: c.createdAt.toISOString(),
+    })),
+    totalCaucoes: wo.caucoes.reduce((acc, c) => acc + Number(c.valor), 0),
+    totalRestante: Number(wo.total) - wo.caucoes.reduce((acc, c) => acc + Number(c.valor), 0),
   }
 
   const transactions: WorkOrderTransactionRow[] = txList.map((t) => ({

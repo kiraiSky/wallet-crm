@@ -43,6 +43,7 @@ export type CustomerDetail = {
   observacoes: string | null
   aniversario: string | null // ISO
   tag: CustomerTag
+  linguagem: 'pt' | 'en'
   createdAt: string
 }
 
@@ -100,6 +101,7 @@ export default async function CustomerDetailPage({
     observacoes: customer.observacoes,
     aniversario: customer.aniversario ? customer.aniversario.toISOString() : null,
     tag: customer.tag as CustomerTag,
+    linguagem: (customer.linguagem === 'en' ? 'en' : 'pt') as 'pt' | 'en',
     createdAt: customer.createdAt.toISOString(),
   }
 

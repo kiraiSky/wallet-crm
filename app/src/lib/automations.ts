@@ -70,6 +70,7 @@ export async function fireAutomation(
 
   let webhookOk = false
   let webhookResponse = ''
+  let errorMessage = 'Webhook falhou'
   try {
     const res = await fetch(WEBHOOK_URL, {
       method: 'POST',
@@ -77,10 +78,33 @@ export async function fireAutomation(
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(10000),
     })
-    webhookOk = res.ok
     webhookResponse = await res.text().catch(() => '')
+
+    if (!res.ok) {
+      // HTTP 4xx/5xx
+      errorMessage = `Erro HTTP ${res.status}`
+    } else {
+      // HTTP 200 — verificar se a resposta indica erro aplicacional
+      try {
+        // A resposta pode ser um array ou objeto
+        const parsed: unknown = JSON.parse(webhookResponse)
+        const item = Array.isArray(parsed) ? parsed[0] : parsed
+        if (item && typeof item === 'object' && 'success' in item && (item as Record<string, unknown>).success === false) {
+          // { success: false, message: "...", ... }
+          const msg = (item as Record<string, unknown>).message
+          errorMessage = typeof msg === 'string' && msg ? msg : 'Envio falhou'
+          webhookOk = false
+        } else {
+          webhookOk = true
+        }
+      } catch {
+        // Resposta não é JSON válido — tratar como sucesso se HTTP ok
+        webhookOk = res.ok
+      }
+    }
   } catch (e) {
     webhookResponse = String(e)
+    errorMessage = webhookResponse.slice(0, 200)
   }
 
   await prisma.automationLog.create({
@@ -97,7 +121,7 @@ export async function fireAutomation(
 
   return webhookOk
     ? { ok: true as const }
-    : { ok: false as const, error: 'Webhook n8n falhou', detail: webhookResponse.slice(0, 1000) }
+    : { ok: false as const, error: errorMessage, detail: webhookResponse.slice(0, 1000) }
 }
 
 export async function fireAutomationsByStatus(

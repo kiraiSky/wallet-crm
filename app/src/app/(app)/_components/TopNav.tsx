@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Wallet, Plus, LogOut, Users, ChevronDown, ShieldCheck, Plug } from 'lucide-react'
+import { Wallet, Plus, LogOut, Users, ChevronDown, ShieldCheck, Plug, Building2 } from 'lucide-react'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { logoutAction } from '@/app/login/actions'
@@ -129,6 +129,14 @@ export function TopNav({
                         >
                           <ShieldCheck className="w-4 h-4" />
                           Auditoria
+                        </Link>
+                        <Link
+                          href="/definicoes/empresa"
+                          onClick={() => setOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+                        >
+                          <Building2 className="w-4 h-4" />
+                          Empresa
                         </Link>
                         <Link
                           href="/integracoes/moloni"

@@ -50,6 +50,7 @@ export function CustomerDetailClient({ customer, vehicles, workOrders, transacti
     observacoes: customer.observacoes,
     aniversario: customer.aniversario,
     tag: customer.tag,
+    linguagem: customer.linguagem,
   }
 
   function openNewVehicle() {

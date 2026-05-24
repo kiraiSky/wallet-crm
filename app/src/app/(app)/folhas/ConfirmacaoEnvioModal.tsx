@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { CheckCircle, XCircle, Loader2, Send, AlertTriangle, RotateCcw } from 'lucide-react'
+import { useState, useTransition, useEffect } from 'react'
+import { Loader2, Send, AlertTriangle, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dispararAutomacao } from '@/app/(app)/crm/automacoes/actions'
 
@@ -36,6 +36,16 @@ export function ConfirmacaoEnvioModal({ template, customerId, workOrderId, onClo
   const [showDetail, setShowDetail] = useState(false)
   const [, startTransition] = useTransition()
 
+  // Auto-close after success animation completes
+  useEffect(() => {
+    if (state !== 'success') return
+    const t = setTimeout(() => {
+      onSent?.()
+      onClose()
+    }, 1800)
+    return () => clearTimeout(t)
+  }, [state, onClose, onSent])
+
   if (!template) return null
 
   const activeTemplate = template
@@ -47,7 +57,7 @@ export function ConfirmacaoEnvioModal({ template, customerId, workOrderId, onClo
       const res = await dispararAutomacao(activeTemplate.id, customerId, workOrderId)
       if (res.ok) {
         setState('success')
-        onSent?.()
+        // onSent and onClose are called by the useEffect after the animation (1800ms)
       } else {
         setState('error')
         setErrorMsg(res.error)
@@ -124,23 +134,97 @@ export function ConfirmacaoEnvioModal({ template, customerId, workOrderId, onClo
           )}
 
           {state === 'success' && (
-            <div className="text-center py-4">
-              <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-              <p className="font-semibold text-zinc-900">Mensagem enviada!</p>
-              <p className="text-sm text-zinc-500 mt-1">Webhook n8n disparado com sucesso.</p>
-              <button
-                onClick={onClose}
-                className="mt-5 w-full bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl py-2.5 text-sm font-medium transition"
+            <div className="flex flex-col items-center py-6">
+              <style>{`
+                @keyframes circle-pop {
+                  0%   { transform: scale(0); opacity: 0; }
+                  60%  { transform: scale(1.15); opacity: 1; }
+                  80%  { transform: scale(0.95); }
+                  100% { transform: scale(1); }
+                }
+                @keyframes check-draw {
+                  to { stroke-dashoffset: 0; }
+                }
+                .sucesso-circulo {
+                  transform-box: fill-box;
+                  transform-origin: center;
+                  animation: circle-pop 0.45s cubic-bezier(0.22,1,0.36,1) both;
+                }
+                .sucesso-check {
+                  stroke-dasharray: 48;
+                  stroke-dashoffset: 48;
+                  animation: check-draw 0.35s ease-out 0.4s forwards;
+                }
+              `}</style>
+              <svg
+                viewBox="0 0 56 56"
+                className="w-20 h-20"
+                style={{ overflow: 'visible' }}
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                Fechar
-              </button>
+                <circle
+                  className="sucesso-circulo"
+                  cx="28" cy="28" r="26"
+                  fill="#dcfce7"
+                  stroke="#22c55e"
+                  strokeWidth="2"
+                />
+                <path
+                  className="sucesso-check"
+                  d="M16 28.5l8.5 8.5 16-17"
+                  stroke="#16a34a"
+                  strokeWidth="3.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <p className="font-semibold text-zinc-900 mt-4">Mensagem enviada!</p>
+              <p className="text-sm text-zinc-400 mt-1">A fechar…</p>
             </div>
           )}
 
           {state === 'error' && (
             <div className="py-2">
               <div className="flex flex-col items-center mb-4">
-                <XCircle className="w-10 h-10 text-red-400 mb-2" />
+                <style>{`
+                  @keyframes erro-circle-pop {
+                    0%   { transform: scale(0); opacity: 0; }
+                    60%  { transform: scale(1.15); opacity: 1; }
+                    80%  { transform: scale(0.95); }
+                    100% { transform: scale(1); }
+                  }
+                  @keyframes x-draw {
+                    to { stroke-dashoffset: 0; }
+                  }
+                  .erro-circulo {
+                    transform-box: fill-box;
+                    transform-origin: center;
+                    animation: erro-circle-pop 0.45s cubic-bezier(0.22,1,0.36,1) both;
+                  }
+                  .erro-x-line {
+                    stroke-dasharray: 30;
+                    stroke-dashoffset: 30;
+                    animation: x-draw 0.25s ease-out 0.4s forwards;
+                  }
+                `}</style>
+                <svg
+                  viewBox="0 0 56 56"
+                  className="w-20 h-20 mb-2"
+                  style={{ overflow: 'visible' }}
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    className="erro-circulo"
+                    cx="28" cy="28" r="26"
+                    fill="#fee2e2"
+                    stroke="#f87171"
+                    strokeWidth="2"
+                  />
+                  <line className="erro-x-line" x1="19" y1="19" x2="37" y2="37" stroke="#dc2626" strokeWidth="3.2" strokeLinecap="round" />
+                  <line className="erro-x-line" x1="37" y1="19" x2="19" y2="37" stroke="#dc2626" strokeWidth="3.2" strokeLinecap="round" />
+                </svg>
                 <p className="font-semibold text-zinc-900">Falha no envio</p>
                 <p className="text-sm text-zinc-600 mt-1 text-center">{errorMsg}</p>
               </div>

@@ -14,7 +14,7 @@ model User {
   id           String        @id @default(cuid())
   nome         String
   email        String        @unique
-  senha        String        // hash bcrypt
+  senha        String // hash bcrypt
   role         UserRole      @default(EMPLOYEE)
   active       Boolean       @default(true)
   lastLoginAt  DateTime?     @map("last_login_at")
@@ -33,14 +33,14 @@ enum UserRole {
 
 // Contas onde o dinheiro entra e sai
 model Account {
-  id           String        @id @default(cuid())
-  nome         String
-  tipo         AccountType
-  saldoInicial Decimal       @default(0) @map("saldo_inicial") @db.Decimal(12, 2)
-  cor          String        @default("emerald") // emerald | violet | orange | sky | rose | amber | teal | zinc
-  icone        String        @default("banknote") // nome do ícone lucide
-  archived     Boolean       @default(false)
-  createdAt    DateTime      @default(now()) @map("created_at")
+  id                String        @id @default(cuid())
+  nome              String
+  tipo              AccountType
+  saldoInicial      Decimal       @default(0) @map("saldo_inicial") @db.Decimal(12, 2)
+  cor               String        @default("emerald") // emerald | violet | orange | sky | rose | amber | teal | zinc
+  icone             String        @default("banknote") // nome do ícone lucide
+  archived          Boolean       @default(false)
+  createdAt         DateTime      @default(now()) @map("created_at")
   transactions      Transaction[] @relation("AccountTransactions")
   receivedTransfers Transaction[] @relation("TransferDestination")
 
@@ -73,40 +73,41 @@ model Category {
 }
 
 enum TransactionType {
-  ENTRADA       // receita
-  SAIDA         // despesa
+  ENTRADA // receita
+  SAIDA // despesa
   TRANSFERENCIA // transferência entre contas (sem impacto nas métricas)
 }
 
 // Movimentos (entrada/saída de dinheiro)
 model Transaction {
-  id          String                    @id @default(cuid())
-  tipo        TransactionType
-  valor       Decimal                   @db.Decimal(12, 2)
-  descricao   String
-  data        DateTime
-  observacao  String?
-  accountId   String                    @map("account_id")
-  categoryId  String?                   @map("category_id")
-  userId      String                    @map("user_id")
-  workOrderId String?                   @map("work_order_id")
-  customerId  String?                   @map("customer_id")
+  id              String                  @id @default(cuid())
+  tipo            TransactionType
+  valor           Decimal                 @db.Decimal(12, 2)
+  descricao       String
+  data            DateTime
+  observacao      String?
+  accountId       String                  @map("account_id")
+  categoryId      String?                 @map("category_id")
+  userId          String                  @map("user_id")
+  workOrderId     String?                 @map("work_order_id")
+  customerId      String?                 @map("customer_id")
   // Pagamento agendado — quando agendado=true, o movimento ainda não foi confirmado
   // e não conta no saldo das contas nem nos KPIs até confirmadoEm ser preenchido.
-  toAccountId  String?                  @map("to_account_id")
-  agendado     Boolean                  @default(false)
-  dataAgendada DateTime?                @map("data_agendada")
-  confirmadoEm DateTime?                @map("confirmado_em")
-  account     Account                   @relation("AccountTransactions", fields: [accountId], references: [id], onDelete: Restrict)
-  toAccount   Account?                  @relation("TransferDestination", fields: [toAccountId], references: [id], onDelete: SetNull)
-  category    Category?                 @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  user        User                      @relation(fields: [userId], references: [id], onDelete: Restrict)
-  workOrder   WorkOrder?                @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
-  customer    Customer?                 @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  toAccountId     String?                 @map("to_account_id")
+  agendado        Boolean                 @default(false)
+  dataAgendada    DateTime?               @map("data_agendada")
+  confirmadoEm    DateTime?               @map("confirmado_em")
+  account         Account                 @relation("AccountTransactions", fields: [accountId], references: [id], onDelete: Restrict)
+  toAccount       Account?                @relation("TransferDestination", fields: [toAccountId], references: [id], onDelete: SetNull)
+  category        Category?               @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  workOrder       WorkOrder?              @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  customer        Customer?               @relation(fields: [customerId], references: [id], onDelete: SetNull)
   attachments     TransactionAttachment[]
   moloniDocuments MoloniDocument[]
-  createdAt       DateTime               @default(now()) @map("created_at")
-  updatedAt       DateTime               @updatedAt @map("updated_at")
+  workOrderCaucao WorkOrderCaucao?
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
 
   @@index([data])
   @@index([tipo, data])
@@ -121,18 +122,19 @@ model Transaction {
 
 // Cliente da oficina
 model Customer {
-  id          String        @id @default(cuid())
+  id          String      @id @default(cuid())
   nome        String
   telefone    String?
   email       String?
-  nif         String?       // contribuinte (9 dígitos em PT)
+  nif         String? // contribuinte (9 dígitos em PT)
   morada      String?
   observacoes String?
   aniversario DateTime?
-  tag         CustomerTag   @default(NOVO)
-  archived    Boolean       @default(false)
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
+  tag         CustomerTag @default(NOVO)
+  linguagem   String      @default("pt") @map("linguagem")
+  archived    Boolean     @default(false)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
 
   vehicles        Vehicle[]
   workOrders      WorkOrder[]
@@ -155,18 +157,18 @@ enum CustomerTag {
 
 // Viaturas vinculadas a um cliente
 model Vehicle {
-  id         String   @id @default(cuid())
-  customerId String   @map("customer_id")
-  matricula  String   // formato PT: NN-NN-XX / XX-NN-NN / AA-NN-AA
-  marca      String
-  modelo     String
-  ano        Int?
-  cor        String?
-  km         Int?
+  id          String   @id @default(cuid())
+  customerId  String   @map("customer_id")
+  matricula   String // formato PT: NN-NN-XX / XX-NN-NN / AA-NN-AA
+  marca       String
+  modelo      String
+  ano         Int?
+  cor         String?
+  km          Int?
   observacoes String?
-  archived   Boolean  @default(false)
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
   workOrders WorkOrder[]
@@ -178,45 +180,80 @@ model Vehicle {
 
 // Folha de obra (work order)
 model WorkOrder {
-  id            String          @id @default(cuid())
-  numero        Int             @unique @default(autoincrement())
-  customerId    String          @map("customer_id")
-  vehicleId     String?         @map("vehicle_id")
+  id         String  @id @default(cuid())
+  numero     Int     @unique @default(autoincrement())
+  customerId String  @map("customer_id")
+  vehicleId  String? @map("vehicle_id")
 
-  estado        WorkOrderStatus @default(ABERTA)
-  problema      String
-  diagnostico   String?
-  trabalho      String?
-  observacoes   String?
+  estado      WorkOrderStatus @default(ABERTA)
+  problema    String
+  diagnostico String?
+  trabalho    String?
+  observacoes String?
 
-  kmEntrada     Int?            @map("km_entrada")
+  kmEntrada Int? @map("km_entrada")
 
-  dataAbertura  DateTime        @default(now()) @map("data_abertura")
-  dataPrevista  DateTime?       @map("data_prevista")
-  dataConclusao DateTime?       @map("data_conclusao")
+  dataAbertura  DateTime  @default(now()) @map("data_abertura")
+  dataPrevista  DateTime? @map("data_prevista")
+  dataConclusao DateTime? @map("data_conclusao")
 
-  totalPecas    Decimal         @default(0) @map("total_pecas") @db.Decimal(12, 2)
-  totalMaoObra  Decimal         @default(0) @map("total_mao_obra") @db.Decimal(12, 2)
-  total         Decimal         @default(0) @db.Decimal(12, 2)
+  totalPecas   Decimal @default(0) @map("total_pecas") @db.Decimal(12, 2)
+  totalMaoObra Decimal @default(0) @map("total_mao_obra") @db.Decimal(12, 2)
+  total        Decimal @default(0) @db.Decimal(12, 2)
 
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Moloni — fatura criada a partir desta folha
   moloniDocumentId   Int?    @map("moloni_document_id")
   moloniDocumentType String? @map("moloni_document_type") // ex: "FT", "FR"
 
-  customer       Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  vehicle        Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  // Partilha pública com cliente (sem login)
+  shareToken String? @unique @map("share_token")
+
+  customer       Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle        Vehicle?          @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   items          WorkOrderItem[]
   transactions   Transaction[]
   automationLogs AutomationLog[]
+  caucoes        WorkOrderCaucao[]
 
   @@index([estado])
   @@index([customerId])
   @@index([vehicleId])
   @@index([dataAbertura])
   @@map("work_orders")
+}
+
+// Caução / adiantamento — cliente paga parte do serviço antes da conclusão.
+// Pode haver várias por folha (ex: 30% na abertura, 30% a meio, etc.).
+// Cada caução pode opcionalmente ter:
+//   - uma Transaction de ENTRADA associada (entra logo no saldo da conta), e
+//   - uma Fatura-Recibo (FR) emitida no Moloni para cumprir o Dec.-Lei 197/2012
+//     (IVA exigível no momento do adiantamento).
+// Na faturação final, o total a faturar é (WorkOrder.total − Σ cauções.valor).
+model WorkOrderCaucao {
+  id          String   @id @default(cuid())
+  workOrderId String   @map("work_order_id")
+  valor       Decimal  @db.Decimal(12, 2)
+  data        DateTime
+  notas       String?
+
+  // Transação criada quando o utilizador escolhe "criar entrada na conta"
+  transactionId String? @unique @map("transaction_id")
+
+  // Fatura-Recibo emitida no Moloni para esta caução
+  moloniDocumentId   Int?    @map("moloni_document_id")
+  moloniDocumentType String? @map("moloni_document_type") // ex: "FR"
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  workOrder   WorkOrder    @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([workOrderId])
+  @@map("work_order_caucoes")
 }
 
 enum WorkOrderStatus {
@@ -235,14 +272,14 @@ model WorkOrderItem {
   tipo        WorkOrderItemType
   descricao   String
   referencia  String?
-  quantidade  Decimal            @default(1) @db.Decimal(8, 2)
-  precoUnit   Decimal            @default(0) @map("preco_unit") @db.Decimal(12, 4)
-  margem      Decimal?           @db.Decimal(5, 2)
-  iva         Decimal?           @db.Decimal(5, 2)
-  total       Decimal            @db.Decimal(12, 2)
-  createdAt   DateTime           @default(now()) @map("created_at")
+  quantidade  Decimal           @default(1) @db.Decimal(8, 2)
+  precoUnit   Decimal           @default(0) @map("preco_unit") @db.Decimal(12, 4)
+  margem      Decimal?          @db.Decimal(5, 2)
+  iva         Decimal?          @db.Decimal(5, 2)
+  total       Decimal           @db.Decimal(12, 2)
+  createdAt   DateTime          @default(now()) @map("created_at")
 
-  workOrder   WorkOrder          @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
 
   @@index([workOrderId])
   @@map("work_order_items")
@@ -257,7 +294,7 @@ enum WorkOrderItemType {
 model TransactionAttachment {
   id            String      @id @default(cuid())
   transactionId String      @map("transaction_id")
-  filename      String      // nome original
+  filename      String // nome original
   storagePath   String      @map("storage_path") // caminho no disco (relativo a UPLOAD_DIR)
   mimeType      String      @map("mime_type")
   size          Int
@@ -275,12 +312,12 @@ model AuditLog {
   entityType String      @map("entity_type")
   entityId   String      @map("entity_id")
   action     AuditAction
-  summary    String?     // descrição curta legível (ex: "Folha #12 → CONCLUIDA")
+  summary    String? // descrição curta legível (ex: "Folha #12 → CONCLUIDA")
   before     Json?
   after      Json?
   createdAt  DateTime    @default(now()) @map("created_at")
 
-  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([entityType, entityId])
   @@index([userId])
@@ -297,22 +334,22 @@ enum AuditAction {
 }
 
 model MoloniConnection {
-  id               String             @id @default(cuid())
-  clientId         String             @map("client_id")
-  redirectUri      String             @map("redirect_uri")
-  accessToken      String             @map("access_token") @db.Text
-  refreshToken     String             @map("refresh_token") @db.Text
-  tokenExpiresAt   DateTime           @map("token_expires_at")
-  companyId        Int?               @map("company_id")
-  companyName      String?            @map("company_name")
-  companyVat       String?            @map("company_vat")
-  connectedAt      DateTime           @default(now()) @map("connected_at")
-  lastSyncAt       DateTime?          @map("last_sync_at")
+  id               String           @id @default(cuid())
+  clientId         String           @map("client_id")
+  redirectUri      String           @map("redirect_uri")
+  accessToken      String           @map("access_token") @db.Text
+  refreshToken     String           @map("refresh_token") @db.Text
+  tokenExpiresAt   DateTime         @map("token_expires_at")
+  companyId        Int?             @map("company_id")
+  companyName      String?          @map("company_name")
+  companyVat       String?          @map("company_vat")
+  connectedAt      DateTime         @default(now()) @map("connected_at")
+  lastSyncAt       DateTime?        @map("last_sync_at")
   // Sync automático
-  autoSyncEnabled  Boolean            @default(false) @map("auto_sync_enabled")
-  autoSyncInterval Int                @default(60) @map("auto_sync_interval") // minutos
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
+  autoSyncEnabled  Boolean          @default(false) @map("auto_sync_enabled")
+  autoSyncInterval Int              @default(60) @map("auto_sync_interval") // minutos
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
   documents        MoloniDocument[]
   syncLogs         MoloniSyncLog[]
 
@@ -406,15 +443,15 @@ enum AutomationTrigger {
 }
 
 model AutomationLog {
-  id              String              @id @default(cuid())
-  templateId      String?             @map("template_id")
-  templateNome    String              @map("template_nome")
-  customerId      String              @map("customer_id")
-  workOrderId     String?             @map("work_order_id")
-  mensagemEnviada String              @map("mensagem_enviada") @db.Text
-  webhookOk       Boolean             @default(false) @map("webhook_ok")
-  webhookResponse String?             @map("webhook_response") @db.Text
-  createdAt       DateTime            @default(now()) @map("created_at")
+  id              String   @id @default(cuid())
+  templateId      String?  @map("template_id")
+  templateNome    String   @map("template_nome")
+  customerId      String   @map("customer_id")
+  workOrderId     String?  @map("work_order_id")
+  mensagemEnviada String   @map("mensagem_enviada") @db.Text
+  webhookOk       Boolean  @default(false) @map("webhook_ok")
+  webhookResponse String?  @map("webhook_response") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
 
   template  AutomationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   customer  Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -425,4 +462,22 @@ model AutomationLog {
   @@index([workOrderId])
   @@index([createdAt])
   @@map("automation_logs")
+}
+
+// Perfil / dados da empresa (singleton — id fixo "default")
+model CompanyProfile {
+  id           String   @id @default("default")
+  nome         String   @default("")
+  nif          String   @default("")
+  morada       String   @default("")
+  codigoPostal String   @default("") @map("codigo_postal")
+  cidade       String   @default("")
+  pais         String   @default("Portugal")
+  telefone     String   @default("")
+  email        String   @default("")
+  website      String   @default("")
+  logoPath     String?  @map("logo_path")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("company_profile")
 }

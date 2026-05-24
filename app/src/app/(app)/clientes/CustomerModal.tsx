@@ -19,6 +19,7 @@ export type CustomerForModal = {
   observacoes: string | null
   aniversario: string | null // ISO
   tag: CustomerTag
+  linguagem: 'pt' | 'en'
 }
 
 interface Props {
@@ -54,6 +55,7 @@ function initialState(c: CustomerForModal | null) {
     observacoes: c?.observacoes ?? '',
     aniversario: isoToDateInput(c?.aniversario ?? null),
     tag: (c?.tag ?? 'NOVO') as CustomerTag,
+    linguagem: (c?.linguagem ?? 'pt') as 'pt' | 'en',
   }
 }
 
@@ -70,6 +72,7 @@ export function CustomerModal({ open, onClose, customer, onSaved }: Props) {
   const [observacoes, setObservacoes] = useState(init.observacoes)
   const [aniversario, setAniversario] = useState(init.aniversario)
   const [tag, setTag] = useState<CustomerTag>(init.tag)
+  const [linguagem, setLinguagem] = useState<'pt' | 'en'>(init.linguagem)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
 
@@ -85,6 +88,7 @@ export function CustomerModal({ open, onClose, customer, onSaved }: Props) {
     setObservacoes(s.observacoes)
     setAniversario(s.aniversario)
     setTag(s.tag)
+    setLinguagem(s.linguagem)
     setErrors({})
     setError(null)
   }, [open, customer?.id])
@@ -104,6 +108,7 @@ export function CustomerModal({ open, onClose, customer, onSaved }: Props) {
     if (observacoes) fd.set('observacoes', observacoes)
     if (aniversario) fd.set('aniversario', aniversario)
     fd.set('tag', tag)
+    fd.set('linguagem', linguagem)
 
     startTransition(async () => {
       const res = await saveCustomer({ ok: false }, fd)
@@ -195,24 +200,50 @@ export function CustomerModal({ open, onClose, customer, onSaved }: Props) {
           />
         </div>
 
-        <div>
-          <label className="label">Tag</label>
-          <div className="grid grid-cols-4 gap-2">
-            {TAGS.map((t) => (
-              <button
-                type="button"
-                key={t.value}
-                onClick={() => setTag(t.value)}
-                className={cn(
-                  'py-2 rounded-lg text-xs font-semibold transition border',
-                  tag === t.value
-                    ? 'border-2 border-emerald-500 bg-emerald-50 text-emerald-700'
-                    : 'border-zinc-200 hover:bg-zinc-50 text-zinc-600'
-                )}
-              >
-                {t.label}
-              </button>
-            ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="label">Tag</label>
+            <div className="grid grid-cols-4 gap-2">
+              {TAGS.map((t) => (
+                <button
+                  type="button"
+                  key={t.value}
+                  onClick={() => setTag(t.value)}
+                  className={cn(
+                    'py-2 rounded-lg text-xs font-semibold transition border',
+                    tag === t.value
+                      ? 'border-2 border-emerald-500 bg-emerald-50 text-emerald-700'
+                      : 'border-zinc-200 hover:bg-zinc-50 text-zinc-600'
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="label">Língua preferida</label>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { value: 'pt', flag: '🇵🇹', label: 'Português' },
+                { value: 'en', flag: '🇬🇧', label: 'English' },
+              ] as const).map((l) => (
+                <button
+                  type="button"
+                  key={l.value}
+                  onClick={() => setLinguagem(l.value)}
+                  className={cn(
+                    'py-2 rounded-lg text-xs font-semibold transition border flex items-center justify-center gap-1.5',
+                    linguagem === l.value
+                      ? 'border-2 border-emerald-500 bg-emerald-50 text-emerald-700'
+                      : 'border-zinc-200 hover:bg-zinc-50 text-zinc-600'
+                  )}
+                >
+                  <span>{l.flag}</span>
+                  {l.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

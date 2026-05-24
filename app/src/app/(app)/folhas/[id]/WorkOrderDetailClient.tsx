@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Pencil, Trash2, Plus, Package, Wrench, Car,
   ChevronRight, CheckCircle2, TrendingUp, TrendingDown, Paperclip,
-  MessageCircle, Phone,
+  MessageCircle, Phone, Printer,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatEUR, formatDate, formatDateTime, whatsappUrl } from '@/lib/format'
@@ -29,6 +29,9 @@ import { MensagensSection, type TemplateRow, type AutomationLogRow } from './Men
 import { AutoSendModal } from '../AutoSendModal'
 import type { TemplateParaEnvio } from '../ConfirmacaoEnvioModal'
 import { MoloniInvoiceButton } from './MoloniInvoiceButton'
+import { ShareButton } from './ShareButton'
+import { CaucaoButton } from './CaucaoButton'
+import { CaucoesList } from './CaucoesList'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string }
 type CategoryOption = {
@@ -200,11 +203,38 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
               </>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => window.open(`/imprimir/folha/${workOrder.id}`, '_blank')}
+            className="btn-secondary inline-flex items-center gap-2 text-sm"
+            title="Imprimir folha de obra"
+          >
+            <Printer className="w-4 h-4" />
+            Imprimir
+          </button>
+          <ShareButton
+            workOrderId={workOrder.id}
+            numero={workOrder.numero}
+            initialToken={workOrder.shareToken}
+          />
+          {!workOrder.moloniDocumentId && (
+            <CaucaoButton
+              workOrderId={workOrder.id}
+              workOrderNumero={workOrder.numero}
+              customerNome={workOrder.customer.nome}
+              customerNif={workOrder.customer.nif}
+              totalRestante={workOrder.totalRestante}
+              accounts={accounts}
+              categories={categories.map((c) => ({ id: c.id, nome: c.nome, tipo: c.tipo, parentId: c.parentId ?? null }))}
+            />
+          )}
           <MoloniInvoiceButton
             workOrderId={workOrder.id}
             moloniDocumentId={workOrder.moloniDocumentId}
             moloniDocumentType={workOrder.moloniDocumentType}
             total={workOrder.total}
+            customerNome={workOrder.customer.nome}
+            customerNif={workOrder.customer.nif}
           />
           <button onClick={() => setEditOpen(true)} className="btn-secondary">
             <Pencil className="w-4 h-4" /> Editar
@@ -316,6 +346,13 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
               <p className="text-sm text-zinc-800 whitespace-pre-wrap">{workOrder.observacoes}</p>
             </div>
           )}
+
+          <CaucoesList
+            caucoes={workOrder.caucoes}
+            totalCaucoes={workOrder.totalCaucoes}
+            totalFolha={workOrder.total}
+            totalRestante={workOrder.totalRestante}
+          />
 
           <MensagensSection
             customerId={workOrder.customer.id}
@@ -646,13 +683,9 @@ function ItemList({
                   />
                 </td>
                 <td className="px-1 py-1 text-right text-zinc-600">
-                  <EditableCell
-                    value={it.iva ?? ''}
-                    kind="decimal"
-                    align="right"
-                    placeholder="—"
-                    formatDisplay={(v) => v === '' ? '—' : `${v}%`}
-                    onSave={(v) => updateWorkOrderItemField(it.id, { iva: v === '' ? null : Number(v) })}
+                  <IvaSelectCell
+                    value={it.iva}
+                    onSave={(v) => updateWorkOrderItemField(it.id, { iva: v })}
                   />
                 </td>
                 <td className="px-1 py-1 text-right font-semibold text-zinc-900">
@@ -846,6 +879,40 @@ function EditableCell({
     >
       {displayValue || placeholder || '—'}
     </button>
+  )
+}
+
+function IvaSelectCell({
+  value,
+  onSave,
+}: {
+  value: number | null
+  onSave: (v: number | null) => Promise<{ ok: boolean; message?: string }>
+}) {
+  const [pending, startTransition] = useTransition()
+  const router = useRouter()
+
+  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const raw = e.target.value
+    const next = raw === '' ? null : Number(raw)
+    startTransition(async () => {
+      const res = await onSave(next)
+      if (res.ok) router.refresh()
+    })
+  }
+
+  return (
+    <select
+      value={value ?? ''}
+      onChange={handleChange}
+      disabled={pending}
+      className="w-full px-2 py-1 rounded border border-transparent hover:border-zinc-200 bg-transparent text-right text-sm focus:outline-none focus:border-emerald-400 focus:bg-white cursor-pointer disabled:opacity-50"
+    >
+      <option value="">—</option>
+      <option value="6">6%</option>
+      <option value="13">13%</option>
+      <option value="23">23%</option>
+    </select>
   )
 }
 

@@ -19,6 +19,7 @@ const CustomerSchema = z.object({
   observacoes: z.string().max(2000).optional(),
   aniversario: z.string().optional(),
   tag: z.enum(['VIP', 'RECORRENTE', 'NOVO', 'INATIVO']),
+  linguagem: z.enum(['pt', 'en']).default('pt'),
 })
 
 export type CustomerFormState = {
@@ -42,6 +43,7 @@ export async function saveCustomer(
     observacoes: formData.get('observacoes')?.toString() || undefined,
     aniversario: formData.get('aniversario')?.toString() || undefined,
     tag: formData.get('tag')?.toString() || 'NOVO',
+    linguagem: formData.get('linguagem')?.toString() || 'pt',
   }
   const parsed = CustomerSchema.safeParse(raw)
   if (!parsed.success) {
@@ -62,6 +64,7 @@ export async function saveCustomer(
     observacoes: data.observacoes || null,
     aniversario: data.aniversario ? new Date(data.aniversario) : null,
     tag: data.tag,
+    linguagem: data.linguagem,
   }
 
   try {

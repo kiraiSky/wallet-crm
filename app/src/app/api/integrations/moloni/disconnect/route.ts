@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireOwner } from '@/lib/current-user'
 import { logAudit } from '@/lib/audit'
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   await requireOwner()
   const connections = await prisma.moloniConnection.findMany({ select: { id: true, companyName: true } })
   await prisma.moloniConnection.deleteMany({})
@@ -16,5 +16,6 @@ export async function POST() {
       before: connection,
     })
   }
-  return NextResponse.redirect(new URL('/integracoes/moloni?disconnected=1', process.env.NEXTAUTH_URL || 'http://localhost:3000'))
+  const origin = req.nextUrl.origin
+  return NextResponse.redirect(new URL('/integracoes/moloni', origin))
 }
