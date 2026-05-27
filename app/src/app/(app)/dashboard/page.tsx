@@ -54,17 +54,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const in7Days = new Date(today)
   in7Days.setDate(in7Days.getDate() + 7)
 
-  const [accounts, monthAgg, lastMonthAgg, recentTxs, allExpensesAgg, totalAgg, incomingTransfers, allTxs, scheduledTxs] =
+  // Buscar contas primeiro para saber quais excluir das métricas
+  const accounts = await prisma.account.findMany({
+    where: { archived: false },
+    orderBy: { createdAt: 'asc' },
+  })
+  const excludedIds = accounts.filter((a) => a.excluirDasMetricas).map((a) => a.id)
+  const metricWhere = excludedIds.length > 0 ? { accountId: { notIn: excludedIds } } : {}
+
+  const [monthAgg, lastMonthAgg, recentTxs, allExpensesAgg, totalAgg, incomingTransfers, allTxs, scheduledTxs] =
     await Promise.all([
-      prisma.account.findMany({ where: { archived: false }, orderBy: { createdAt: 'asc' } }),
       prisma.transaction.groupBy({
         by: ['tipo'],
-        where: { agendado: false, data: { gte: startOfMonth }, tipo: { in: ['ENTRADA', 'SAIDA'] } },
+        where: { agendado: false, data: { gte: startOfMonth }, tipo: { in: ['ENTRADA', 'SAIDA'] }, ...metricWhere },
         _sum: { valor: true },
       }),
       prisma.transaction.groupBy({
         by: ['tipo'],
-        where: { agendado: false, data: { gte: startOfLastMonth, lt: startOfMonth }, tipo: { in: ['ENTRADA', 'SAIDA'] } },
+        where: { agendado: false, data: { gte: startOfLastMonth, lt: startOfMonth }, tipo: { in: ['ENTRADA', 'SAIDA'] }, ...metricWhere },
         _sum: { valor: true },
       }),
       prisma.transaction.findMany({
@@ -81,7 +88,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       }),
       prisma.transaction.groupBy({
         by: ['categoryId'],
-        where: { agendado: false, tipo: 'SAIDA', data: { gte: startOfMonth }, categoryId: { not: null } },
+        where: { agendado: false, tipo: 'SAIDA', data: { gte: startOfMonth }, categoryId: { not: null }, ...metricWhere },
         _sum: { valor: true },
       }),
       prisma.transaction.groupBy({
@@ -95,7 +102,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         _sum: { valor: true },
       }),
       prisma.transaction.findMany({
-        where: { agendado: false, tipo: { in: ['ENTRADA', 'SAIDA'] } },
+        where: { agendado: false, tipo: { in: ['ENTRADA', 'SAIDA'] }, ...metricWhere },
         orderBy: { data: 'asc' },
         select: { tipo: true, valor: true, data: true },
       }),
@@ -127,7 +134,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     )
     balancesByAccount.set(acc.id, Number(acc.saldoInicial) + entradas - saidas - transfersOut + transfersIn)
   }
-  const saldoTotal = Array.from(balancesByAccount.values()).reduce((s, v) => s + v, 0)
+  // Saldo total exclui contas marcadas como "excluir das métricas"
+  const saldoTotal = accounts
+    .filter((a) => !a.excluirDasMetricas)
+    .reduce((s, a) => s + (balancesByAccount.get(a.id) ?? 0), 0)
 
   const entradasMes = Number(monthAgg.find((g) => g.tipo === 'ENTRADA')?._sum.valor ?? 0)
   const saidasMes = Number(monthAgg.find((g) => g.tipo === 'SAIDA')?._sum.valor ?? 0)
@@ -136,8 +146,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const entradasMesAnterior = Number(lastMonthAgg.find((g) => g.tipo === 'ENTRADA')?._sum.valor ?? 0)
   const saidasMesAnterior = Number(lastMonthAgg.find((g) => g.tipo === 'SAIDA')?._sum.valor ?? 0)
 
-  // Serie de saldo do periodo selecionado
-  const initialAccountsSaldo = accounts.reduce((s, a) => s + Number(a.saldoInicial), 0)
+  // Serie de saldo do periodo selecionado (exclui contas marcadas como excluir das métricas)
+  const initialAccountsSaldo = accounts
+    .filter((a) => !a.excluirDasMetricas)
+    .reduce((s, a) => s + Number(a.saldoInicial), 0)
   let cumulative = initialAccountsSaldo
   let txIdx = 0
   // Adiciona transações anteriores ao início da série
@@ -325,9 +337,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
                       <DynamicIcon name={acc.icone} className="w-4 h-4" />
                     </div>
-                    <span className="text-xs text-white/70">
-                      {acc.tipo.charAt(0) + acc.tipo.slice(1).toLowerCase()}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {acc.excluirDasMetricas && (
+                        <span className="text-[10px] bg-white/20 text-white/80 px-1.5 py-0.5 rounded font-medium">
+                          excluída
+                        </span>
+                      )}
+                      <span className="text-xs text-white/70">
+                        {acc.tipo.charAt(0) + acc.tipo.slice(1).toLowerCase()}
+                      </span>
+                    </div>
                   </div>
                   <div className="text-xs text-white/80 mb-0.5">{acc.nome}</div>
                   <div className="text-xl font-bold">{formatEUR(balancesByAccount.get(acc.id) ?? 0)}</div>

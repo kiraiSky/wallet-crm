@@ -14,6 +14,7 @@ const AccountSchema = z.object({
   saldoInicial: z.string().default('0,00'),
   cor: z.string().default('emerald'),
   icone: z.string().default('banknote'),
+  excluirDasMetricas: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
 })
 
 export type AccountFormState = {
@@ -45,6 +46,7 @@ export async function saveAccount(prevState: AccountFormState, formData: FormDat
           saldoInicial,
           cor: data.cor,
           icone: data.icone,
+          excluirDasMetricas: data.excluirDasMetricas,
         },
       })
     } else {
@@ -55,6 +57,7 @@ export async function saveAccount(prevState: AccountFormState, formData: FormDat
           saldoInicial,
           cor: data.cor,
           icone: data.icone,
+          excluirDasMetricas: data.excluirDasMetricas,
         },
       })
     }

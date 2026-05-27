@@ -22,6 +22,7 @@ function initialState(account: AccountWithBalance | null | undefined) {
     tipo: account?.tipo ?? 'DINHEIRO',
     saldoInicial: account ? account.saldoInicial.toFixed(2).replace('.', ',') : '0,00',
     cor: account?.cor ?? 'emerald',
+    excluirDasMetricas: account?.excluirDasMetricas ?? false,
   }
 }
 
@@ -39,6 +40,7 @@ export function AccountModal({ open, onClose, account, onAjusteSaldo }: Props) {
   const [tipo, setTipo] = useState<string>(init.tipo)
   const [saldoInicial, setSaldoInicial] = useState(init.saldoInicial)
   const [cor, setCor] = useState(init.cor)
+  const [excluirDasMetricas, setExcluirDasMetricas] = useState(init.excluirDasMetricas)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export function AccountModal({ open, onClose, account, onAjusteSaldo }: Props) {
     setTipo(s.tipo)
     setSaldoInicial(s.saldoInicial)
     setCor(s.cor)
+    setExcluirDasMetricas(s.excluirDasMetricas)
     setErrors({})
   }, [open, account?.id])
 
@@ -57,6 +60,7 @@ export function AccountModal({ open, onClose, account, onAjusteSaldo }: Props) {
     setTipo(s.tipo)
     setSaldoInicial(s.saldoInicial)
     setCor(s.cor)
+    setExcluirDasMetricas(s.excluirDasMetricas)
     setErrors({})
   }
 
@@ -75,6 +79,7 @@ export function AccountModal({ open, onClose, account, onAjusteSaldo }: Props) {
     fd.set('saldoInicial', saldoInicial)
     fd.set('cor', cor)
     fd.set('icone', account?.icone ?? tipoMeta.defaultIcon)
+    fd.set('excluirDasMetricas', excluirDasMetricas ? 'true' : 'false')
 
     startTransition(async () => {
       const res = await saveAccount({ ok: false }, fd)
@@ -156,6 +161,35 @@ export function AccountModal({ open, onClose, account, onAjusteSaldo }: Props) {
           <label className="label">Cor</label>
           <ColorPicker value={cor} onChange={setCor} />
         </div>
+
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <div className="relative flex-shrink-0 mt-0.5">
+            <input
+              type="checkbox"
+              checked={excluirDasMetricas}
+              onChange={(e) => setExcluirDasMetricas(e.target.checked)}
+              className="peer sr-only"
+            />
+            <div className={cn(
+              'w-5 h-5 rounded border-2 transition flex items-center justify-center',
+              excluirDasMetricas
+                ? 'bg-amber-500 border-amber-500'
+                : 'border-zinc-300 bg-white group-hover:border-amber-400'
+            )}>
+              {excluirDasMetricas && (
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+          </div>
+          <div>
+            <span className="text-sm font-medium text-zinc-700">Excluir das métricas</span>
+            <p className="text-[11px] text-zinc-400 mt-0.5">
+              Os movimentos desta conta não contam no resumo, evolução do saldo nem relatórios.
+            </p>
+          </div>
+        </label>
 
         {account && onAjusteSaldo && (
           <button

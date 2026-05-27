@@ -14,6 +14,7 @@ export type AccountWithBalance = {
   cor: string
   icone: string
   totalTransacoes: number
+  excluirDasMetricas: boolean
 }
 
 export default async function CaixasPage() {
@@ -66,6 +67,7 @@ export default async function CaixasPage() {
         cor: acc.cor,
         icone: acc.icone,
         totalTransacoes: acc._count.transactions,
+        excluirDasMetricas: acc.excluirDasMetricas,
       }
     })
   )

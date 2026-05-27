@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation'
 import {
   X, ExternalLink, Loader2, Car, Phone, Package, Wrench,
   Plus, Pencil, Trash2, TrendingUp, TrendingDown, ChevronRight,
-  ArrowRight, CheckCircle2, MessageCircle,
+  ArrowRight, CheckCircle2, MessageCircle, PartyPopper, XOctagon,
 } from 'lucide-react'
 import { whatsappUrl } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { formatEUR, formatDate } from '@/lib/format'
-import { STATUS_META, STATUS_LIST, nextStatus, type WorkOrderStatus } from './status'
+import { STATUS_META, STATUS_LIST, ACTIVE_STATUSES, ARQUIVO_STATUSES, nextStatus, type WorkOrderStatus } from './status'
 import { getWorkOrderPreview, changeStatus, deleteWorkOrder, deleteWorkOrderItem } from './actions'
 import { getActiveTemplates } from '@/app/(app)/crm/automacoes/actions'
 import { AutoSendModal } from './AutoSendModal'
@@ -44,6 +44,9 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
   const [editingItem, setEditingItem] = useState<ItemRow | null>(null)
   const [itemTipo, setItemTipo] = useState<'PECA' | 'MAO_OBRA'>('PECA')
   const [statusOpen, setStatusOpen] = useState(false)
+  const [confirmArquivo, setConfirmArquivo] = useState<'FINALIZADA' | 'PERDIDA' | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<ItemRow | null>(null)
   const [txModalOpen, setTxModalOpen] = useState(false)
   const [txTipo, setTxTipo] = useState<'ENTRADA' | 'SAIDA'>('SAIDA')
   const [editingTx, setEditingTx] = useState<TxRow | null>(null)
@@ -59,7 +62,11 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
   }, [workOrderId])
 
   useEffect(() => {
-    if (!workOrderId) { setData(null); return }
+    if (!workOrderId) {
+      setData(null)
+      prevId.current = null   // reset para que reabrir a mesma obra faça fetch
+      return
+    }
     if (prevId.current === workOrderId) return
     prevId.current = workOrderId
     setLoading(true)
@@ -118,7 +125,12 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
 
   function handleDelete() {
     if (!data) return
-    if (!confirm(`Eliminar a folha #${data.numero}? Esta ação é permanente.`)) return
+    setConfirmDelete(true)
+  }
+
+  function doDelete() {
+    if (!data) return
+    setConfirmDelete(false)
     startTransition(async () => {
       await deleteWorkOrder(data.id)
       onDeleted?.(data.id)
@@ -128,7 +140,11 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
   }
 
   function handleDeleteItem(item: ItemRow) {
-    if (!confirm(`Eliminar "${item.descricao}"?`)) return
+    setConfirmDeleteItem(item)
+  }
+
+  function doDeleteItem(item: ItemRow) {
+    setConfirmDeleteItem(null)
     startTransition(async () => {
       await deleteWorkOrderItem(item.id)
       await refresh()
@@ -183,9 +199,17 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                   <button onClick={() => setEditWoOpen(true)} className="btn-secondary text-xs py-1.5">
                     <Pencil className="w-3.5 h-3.5" /> Editar
                   </button>
-                  <button onClick={handleDelete} className="btn-secondary text-xs py-1.5 text-red-600 hover:bg-red-50">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {confirmDelete ? (
+                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                      <span className="text-xs text-red-700 font-medium">Eliminar folha?</span>
+                      <button onClick={doDelete} className="text-xs px-2 py-0.5 rounded bg-red-600 text-white hover:bg-red-700 font-semibold transition">Sim</button>
+                      <button onClick={() => setConfirmDelete(false)} className="text-xs px-2 py-0.5 rounded text-zinc-600 hover:bg-zinc-200 transition">Não</button>
+                    </div>
+                  ) : (
+                    <button onClick={handleDelete} className="btn-secondary text-xs py-1.5 text-red-600 hover:bg-red-50">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   <Link href={`/folhas/${data.id}`} onClick={onClose} className="btn-secondary text-xs py-1.5">
                     <ExternalLink className="w-3.5 h-3.5" /> Abrir
                   </Link>
@@ -304,7 +328,7 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                     items={pecas} emptyText="Sem peças."
                     onAdd={() => { setEditingItem(null); setItemTipo('PECA'); setItemModalOpen(true) }}
                     onEdit={(it) => { setEditingItem(it); setItemTipo(it.tipo); setItemModalOpen(true) }}
-                    onDelete={handleDeleteItem}
+                    onDelete={(it) => setConfirmDeleteItem(it)}
                   />
 
                   {/* Mão de obra */}
@@ -313,7 +337,7 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                     items={maoObra} emptyText="Sem mão de obra."
                     onAdd={() => { setEditingItem(null); setItemTipo('MAO_OBRA'); setItemModalOpen(true) }}
                     onEdit={(it) => { setEditingItem(it); setItemTipo(it.tipo); setItemModalOpen(true) }}
-                    onDelete={handleDeleteItem}
+                    onDelete={(it) => setConfirmDeleteItem(it)}
                   />
 
                   {/* Totais */}
@@ -384,7 +408,14 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setStatusOpen(false)} />
                     <div className="absolute left-0 bottom-full mb-1 bg-white border border-zinc-200 rounded-xl shadow-lg w-52 py-1 z-20">
-                      {STATUS_LIST.map((s) => (
+                      <div className="px-3 py-1.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wide">Ativas</div>
+                      {ACTIVE_STATUSES.map((s) => (
+                        <button key={s} onClick={() => handleChangeStatus(s)} className={cn('w-full text-left px-3 py-2 text-sm hover:bg-zinc-50 flex items-center gap-2', s === data.estado && 'bg-zinc-50 font-semibold')}>
+                          <span className={cn('w-2 h-2 rounded-full', STATUS_META[s].dot)} />{STATUS_META[s].label}
+                        </button>
+                      ))}
+                      <div className="border-t border-zinc-100 mt-1 pt-1 px-3 py-1.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wide">Arquivo</div>
+                      {ARQUIVO_STATUSES.map((s) => (
                         <button key={s} onClick={() => handleChangeStatus(s)} className={cn('w-full text-left px-3 py-2 text-sm hover:bg-zinc-50 flex items-center gap-2', s === data.estado && 'bg-zinc-50 font-semibold')}>
                           <span className={cn('w-2 h-2 rounded-full', STATUS_META[s].dot)} />{STATUS_META[s].label}
                         </button>
@@ -393,9 +424,62 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                   </>
                 )}
               </div>
-              <Link href={`/folhas/${data.id}`} onClick={onClose} className="btn-secondary ml-auto">
-                <ExternalLink className="w-4 h-4" /> Ver página completa
-              </Link>
+
+              {/* Botões de arquivo — apenas para obras ativas */}
+              {!ARQUIVO_STATUSES.includes(estado!) && !confirmArquivo && (
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    onClick={() => setConfirmArquivo('FINALIZADA')}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition"
+                  >
+                    <PartyPopper className="w-3.5 h-3.5" /> Finalizar
+                  </button>
+                  <button
+                    onClick={() => setConfirmArquivo('PERDIDA')}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition"
+                  >
+                    <XOctagon className="w-3.5 h-3.5" /> Perdida
+                  </button>
+                  <Link href={`/folhas/${data.id}`} onClick={onClose} className="btn-secondary text-xs py-1.5">
+                    <ExternalLink className="w-4 h-4" /> Ver página completa
+                  </Link>
+                </div>
+              )}
+
+              {/* Confirmação inline — sem confirm() nativo */}
+              {!ARQUIVO_STATUSES.includes(estado!) && confirmArquivo && (
+                <div className="ml-auto flex items-center gap-3 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5">
+                  <span className="text-sm text-zinc-700">
+                    {confirmArquivo === 'FINALIZADA'
+                      ? 'Marcar como finalizada e retirar do Kanban?'
+                      : 'Marcar como perdida e retirar do Kanban?'}
+                  </span>
+                  <button
+                    onClick={() => { handleChangeStatus(confirmArquivo); setConfirmArquivo(null) }}
+                    className={cn(
+                      'text-xs px-3 py-1.5 rounded-lg font-semibold transition',
+                      confirmArquivo === 'FINALIZADA'
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        : 'bg-red-600 text-white hover:bg-red-700'
+                    )}
+                  >
+                    Confirmar
+                  </button>
+                  <button
+                    onClick={() => setConfirmArquivo(null)}
+                    className="text-xs px-3 py-1.5 rounded-lg font-medium text-zinc-600 hover:bg-zinc-200 transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+
+              {/* Para obras já arquivadas, apenas o link */}
+              {ARQUIVO_STATUSES.includes(estado!) && (
+                <Link href={`/folhas/${data.id}`} onClick={onClose} className="btn-secondary ml-auto">
+                  <ExternalLink className="w-4 h-4" /> Ver página completa
+                </Link>
+              )}
             </div>
           )}
         </div>
@@ -437,6 +521,20 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
             onSaved={refresh}
           />
         </>
+      )}
+
+      {/* Confirmação inline de eliminar item */}
+      {confirmDeleteItem && (
+        <div className="fixed inset-0 z-[60] bg-zinc-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+            <p className="text-sm font-semibold text-zinc-900 mb-1">Eliminar item?</p>
+            <p className="text-sm text-zinc-500 mb-5">"{confirmDeleteItem.descricao}" será removido permanentemente.</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setConfirmDeleteItem(null)} className="btn-secondary text-sm">Cancelar</button>
+              <button onClick={() => doDeleteItem(confirmDeleteItem)} className="text-sm px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition">Eliminar</button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )

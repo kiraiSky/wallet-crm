@@ -6,8 +6,11 @@ export type WorkOrderStatus =
   | 'CONCLUIDA'
   | 'FATURADA'
   | 'CANCELADA'
+  | 'FINALIZADA'
+  | 'PERDIDA'
 
-export const STATUS_LIST: WorkOrderStatus[] = [
+// Estados que ficam no quadro Kanban
+export const ACTIVE_STATUSES: WorkOrderStatus[] = [
   'ABERTA',
   'EM_DIAGNOSTICO',
   'AGUARDA_PECAS',
@@ -17,7 +20,12 @@ export const STATUS_LIST: WorkOrderStatus[] = [
   'CANCELADA',
 ]
 
-// Fluxo "feliz" — usado para sugerir próximo estado e desenhar o Kanban no futuro
+// Estados terminais — saem do Kanban e vão para o Arquivo
+export const ARQUIVO_STATUSES: WorkOrderStatus[] = ['FINALIZADA', 'PERDIDA']
+
+export const STATUS_LIST: WorkOrderStatus[] = [...ACTIVE_STATUSES, ...ARQUIVO_STATUSES]
+
+// Fluxo "feliz" — usado para sugerir próximo estado e botão de avançar no Kanban
 export const STATUS_FLOW: WorkOrderStatus[] = [
   'ABERTA',
   'EM_DIAGNOSTICO',
@@ -72,6 +80,18 @@ export const STATUS_META: Record<
     chip: 'bg-zinc-100 text-zinc-600',
     dot: 'bg-zinc-400',
     ring: 'ring-zinc-400',
+  },
+  FINALIZADA: {
+    label: 'Finalizada',
+    chip: 'bg-emerald-100 text-emerald-800',
+    dot: 'bg-emerald-600',
+    ring: 'ring-emerald-600',
+  },
+  PERDIDA: {
+    label: 'Perdida',
+    chip: 'bg-red-100 text-red-700',
+    dot: 'bg-red-500',
+    ring: 'ring-red-500',
   },
 }
 

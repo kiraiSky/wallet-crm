@@ -36,6 +36,14 @@ export default async function RelatoriosPage({
     to: params.to,
   })
 
+  // Obter IDs das contas excluídas das métricas
+  const excludedAccounts = await prisma.account.findMany({
+    where: { archived: false, excluirDasMetricas: true },
+    select: { id: true },
+  })
+  const excludedIds = excludedAccounts.map((a) => a.id)
+  const metricWhere = excludedIds.length > 0 ? { accountId: { notIn: excludedIds } } : {}
+
   const [
     aggByTipo,
     expensesByCategory,
@@ -48,24 +56,24 @@ export default async function RelatoriosPage({
   ] = await Promise.all([
     prisma.transaction.groupBy({
       by: ['tipo'],
-      where: { data: { gte: period.start, lt: period.end }, tipo: { in: ['ENTRADA', 'SAIDA'] } },
+      where: { data: { gte: period.start, lt: period.end }, tipo: { in: ['ENTRADA', 'SAIDA'] }, ...metricWhere },
       _sum: { valor: true },
       _count: true,
     }),
     prisma.transaction.groupBy({
       by: ['categoryId'],
-      where: { tipo: 'SAIDA', data: { gte: period.start, lt: period.end }, categoryId: { not: null } },
+      where: { tipo: 'SAIDA', data: { gte: period.start, lt: period.end }, categoryId: { not: null }, ...metricWhere },
       _sum: { valor: true },
       orderBy: { _sum: { valor: 'desc' } },
     }),
     prisma.transaction.groupBy({
       by: ['categoryId'],
-      where: { tipo: 'ENTRADA', data: { gte: period.start, lt: period.end }, categoryId: { not: null } },
+      where: { tipo: 'ENTRADA', data: { gte: period.start, lt: period.end }, categoryId: { not: null }, ...metricWhere },
       _sum: { valor: true },
       orderBy: { _sum: { valor: 'desc' } },
     }),
     prisma.transaction.findMany({
-      where: { data: { gte: period.start, lt: period.end }, tipo: { in: ['ENTRADA', 'SAIDA'] } },
+      where: { data: { gte: period.start, lt: period.end }, tipo: { in: ['ENTRADA', 'SAIDA'] }, ...metricWhere },
       select: { data: true, valor: true, tipo: true },
     }),
     prisma.transaction.groupBy({
@@ -74,6 +82,7 @@ export default async function RelatoriosPage({
         tipo: 'ENTRADA',
         data: { gte: period.start, lt: period.end },
         customerId: { not: null },
+        ...metricWhere,
       },
       _sum: { valor: true },
       orderBy: { _sum: { valor: 'desc' } },

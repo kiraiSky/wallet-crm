@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { WorkOrdersClient } from './WorkOrdersClient'
-import { STATUS_LIST, type WorkOrderStatus } from './status'
+import { STATUS_LIST, ACTIVE_STATUSES, ARQUIVO_STATUSES, type WorkOrderStatus } from './status'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +13,7 @@ export type WorkOrderRow = {
   total: number
   dataAbertura: string
   dataPrevista: string | null
+  dataConclusao: string | null
   customer: { id: string; nome: string }
   vehicle: { id: string; matricula: string; marca: string; modelo: string } | null
   lastMessage: { templateNome: string; webhookOk: boolean; createdAt: string } | null
@@ -28,6 +29,40 @@ export type CustomerOption = {
 
 type SearchParams = Record<string, string | undefined>
 
+const WO_INCLUDE = {
+  customer: { select: { id: true, nome: true } },
+  vehicle: { select: { id: true, matricula: true, marca: true, modelo: true } },
+  automationLogs: {
+    orderBy: { createdAt: 'desc' as const },
+    take: 1,
+    select: { templateNome: true, webhookOk: true, createdAt: true },
+  },
+} as const
+
+function toRow(wo: {
+  id: string; numero: number; estado: string; problema: string; total: unknown;
+  dataAbertura: Date; dataPrevista: Date | null; dataConclusao: Date | null;
+  customer: { id: string; nome: string };
+  vehicle: { id: string; matricula: string; marca: string; modelo: string } | null;
+  automationLogs: { templateNome: string; webhookOk: boolean; createdAt: Date }[];
+}): WorkOrderRow {
+  return {
+    id: wo.id,
+    numero: wo.numero,
+    estado: wo.estado as WorkOrderStatus,
+    problema: wo.problema,
+    total: Number(wo.total),
+    dataAbertura: wo.dataAbertura.toISOString(),
+    dataPrevista: wo.dataPrevista ? wo.dataPrevista.toISOString() : null,
+    dataConclusao: wo.dataConclusao ? wo.dataConclusao.toISOString() : null,
+    customer: wo.customer,
+    vehicle: wo.vehicle,
+    lastMessage: wo.automationLogs[0]
+      ? { ...wo.automationLogs[0], createdAt: wo.automationLogs[0].createdAt.toISOString() }
+      : null,
+  }
+}
+
 export default async function FolhasPage({
   searchParams,
 }: {
@@ -40,8 +75,7 @@ export default async function FolhasPage({
     : undefined
   const customerFilter = params.customer || undefined
 
-  const where: Prisma.WorkOrderWhereInput = {
-    ...(estadoFilter && { estado: estadoFilter }),
+  const searchWhere: Prisma.WorkOrderWhereInput = {
     ...(customerFilter && { customerId: customerFilter }),
     ...(search && {
       OR: [
@@ -52,20 +86,30 @@ export default async function FolhasPage({
     }),
   }
 
-  const [workOrders, statusCounts, customers] = await Promise.all([
+  // Obras ativas (no kanban/lista principal)
+  const activeWhere: Prisma.WorkOrderWhereInput = {
+    estado: estadoFilter ? estadoFilter : { in: ACTIVE_STATUSES },
+    ...searchWhere,
+  }
+
+  // Obras arquivadas (FINALIZADA + PERDIDA)
+  const arquivoWhere: Prisma.WorkOrderWhereInput = {
+    estado: { in: ARQUIVO_STATUSES },
+    ...searchWhere,
+  }
+
+  const [workOrders, archivedOrders, statusCounts, customers] = await Promise.all([
     prisma.workOrder.findMany({
-      where,
+      where: activeWhere,
       orderBy: { dataAbertura: 'desc' },
       take: 200,
-      include: {
-        customer: { select: { id: true, nome: true } },
-        vehicle: { select: { id: true, matricula: true, marca: true, modelo: true } },
-        automationLogs: {
-          orderBy: { createdAt: 'desc' as const },
-          take: 1,
-          select: { templateNome: true, webhookOk: true, createdAt: true },
-        },
-      },
+      include: WO_INCLUDE,
+    }),
+    prisma.workOrder.findMany({
+      where: arquivoWhere,
+      orderBy: { dataAbertura: 'desc' },
+      take: 200,
+      include: WO_INCLUDE,
     }),
     prisma.workOrder.groupBy({ by: ['estado'], _count: true, _sum: { total: true } }),
     prisma.customer.findMany({
@@ -75,47 +119,30 @@ export default async function FolhasPage({
     }),
   ])
 
-  const rows: WorkOrderRow[] = workOrders.map((wo) => ({
-    id: wo.id,
-    numero: wo.numero,
-    estado: wo.estado as WorkOrderStatus,
-    problema: wo.problema,
-    total: Number(wo.total),
-    dataAbertura: wo.dataAbertura.toISOString(),
-    dataPrevista: wo.dataPrevista ? wo.dataPrevista.toISOString() : null,
-    customer: wo.customer,
-    vehicle: wo.vehicle,
-    lastMessage: wo.automationLogs[0]
-      ? { ...wo.automationLogs[0], createdAt: wo.automationLogs[0].createdAt.toISOString() }
-      : null,
-  }))
-
-  const counts: Record<WorkOrderStatus | 'TOTAL', number> = {
-    ABERTA: 0,
-    EM_DIAGNOSTICO: 0,
-    AGUARDA_PECAS: 0,
-    EM_REPARACAO: 0,
-    CONCLUIDA: 0,
-    FATURADA: 0,
-    CANCELADA: 0,
-    TOTAL: 0,
+  const counts: Record<WorkOrderStatus | 'TOTAL' | 'ARQUIVO', number> = {
+    ABERTA: 0, EM_DIAGNOSTICO: 0, AGUARDA_PECAS: 0, EM_REPARACAO: 0,
+    CONCLUIDA: 0, FATURADA: 0, CANCELADA: 0, FINALIZADA: 0, PERDIDA: 0,
+    TOTAL: 0, ARQUIVO: 0,
   }
   let valorEmAberto = 0
   for (const c of statusCounts) {
-    counts[c.estado as WorkOrderStatus] = c._count
-    counts.TOTAL += c._count
-    if (c.estado !== 'CANCELADA' && c.estado !== 'FATURADA') {
-      valorEmAberto += Number(c._sum.total ?? 0)
+    const s = c.estado as WorkOrderStatus
+    counts[s] = c._count
+    if (!ARQUIVO_STATUSES.includes(s)) {
+      counts.TOTAL += c._count
+      if (s !== 'CANCELADA' && s !== 'FATURADA') {
+        valorEmAberto += Number(c._sum.total ?? 0)
+      }
+    } else {
+      counts.ARQUIVO += c._count
     }
   }
 
   return (
     <WorkOrdersClient
-      workOrders={rows}
-      customers={customers.map((customer) => ({
-        ...customer,
-        createdAt: customer.createdAt.toISOString(),
-      }))}
+      workOrders={workOrders.map(toRow)}
+      archivedOrders={archivedOrders.map(toRow)}
+      customers={customers.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() }))}
       counts={counts}
       valorEmAberto={valorEmAberto}
       filters={{ search, estado: estadoFilter, customerId: customerFilter }}

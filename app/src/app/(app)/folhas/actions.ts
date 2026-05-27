@@ -15,6 +15,8 @@ const STATUSES = [
   'CONCLUIDA',
   'FATURADA',
   'CANCELADA',
+  'FINALIZADA',
+  'PERDIDA',
 ] as const
 
 const WorkOrderSchema = z.object({

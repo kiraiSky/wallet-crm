@@ -39,10 +39,11 @@ model Account {
   saldoInicial      Decimal       @default(0) @map("saldo_inicial") @db.Decimal(12, 2)
   cor               String        @default("emerald") // emerald | violet | orange | sky | rose | amber | teal | zinc
   icone             String        @default("banknote") // nome do ícone lucide
-  archived          Boolean       @default(false)
-  createdAt         DateTime      @default(now()) @map("created_at")
-  transactions      Transaction[] @relation("AccountTransactions")
-  receivedTransfers Transaction[] @relation("TransferDestination")
+  archived              Boolean       @default(false)
+  excluirDasMetricas    Boolean       @default(false) @map("excluir_das_metricas")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  transactions          Transaction[] @relation("AccountTransactions")
+  receivedTransfers     Transaction[] @relation("TransferDestination")
 
   @@map("accounts")
 }
@@ -264,6 +265,8 @@ enum WorkOrderStatus {
   CONCLUIDA
   FATURADA
   CANCELADA
+  FINALIZADA // obra concluída e entregue — sai do kanban
+  PERDIDA    // negócio não fechado — sai do kanban
 }
 
 model WorkOrderItem {
