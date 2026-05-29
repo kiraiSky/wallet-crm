@@ -7,6 +7,7 @@ export type AuditEntity =
   | 'VEHICLE'
   | 'WORK_ORDER'
   | 'WORK_ORDER_ITEM'
+  | 'WORK_ORDER_PHOTO'
   | 'USER'
   | 'ACCOUNT'
   | 'CATEGORY'

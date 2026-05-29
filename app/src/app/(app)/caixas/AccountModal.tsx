@@ -130,8 +130,8 @@ export function AccountModal({ open, onClose, account, onAjusteSaldo }: Props) {
                   className={cn(
                     'flex flex-col items-center gap-1 p-3 rounded-lg text-xs font-medium transition border',
                     active
-                      ? 'border-2 border-emerald-500 bg-emerald-50 text-emerald-700'
-                      : 'border-zinc-200 hover:bg-zinc-50 hover:border-emerald-300 text-zinc-600'
+                      ? 'border-2 border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-zinc-200 hover:bg-zinc-50 hover:border-indigo-300 text-zinc-600'
                   )}
                 >
                   <t.Icon className="w-5 h-5" />

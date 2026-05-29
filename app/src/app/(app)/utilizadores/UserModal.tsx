@@ -62,7 +62,7 @@ export function UserModal({ open, onClose, editing, onSaved }: Props) {
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             required
-            className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+            className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
           />
           {errors.nome && <p className="text-xs text-rose-600 mt-1">{errors.nome}</p>}
         </div>
@@ -75,7 +75,7 @@ export function UserModal({ open, onClose, editing, onSaved }: Props) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+            className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
           />
           {errors.email && <p className="text-xs text-rose-600 mt-1">{errors.email}</p>}
         </div>
@@ -90,7 +90,7 @@ export function UserModal({ open, onClose, editing, onSaved }: Props) {
                 onClick={() => setRole(r)}
                 className={`px-3 py-2 rounded-lg text-sm font-medium border transition ${
                   role === r
-                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                    ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
                     : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50'
                 }`}
               >
@@ -111,7 +111,7 @@ export function UserModal({ open, onClose, editing, onSaved }: Props) {
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
             placeholder={editing ? '••••••••' : 'mínimo 6 caracteres'}
-            className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+            className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
           />
           {errors.senha && <p className="text-xs text-rose-600 mt-1">{errors.senha}</p>}
         </div>

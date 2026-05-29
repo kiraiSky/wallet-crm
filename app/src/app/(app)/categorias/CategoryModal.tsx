@@ -117,7 +117,7 @@ export function CategoryModal({ open, onClose, category, defaultTipo, allCategor
               onClick={() => setTipo('SAIDA')}
               className={cn(
                 'py-2.5 rounded-lg font-semibold text-sm inline-flex items-center justify-center gap-1.5 transition',
-                tipo === 'SAIDA' ? 'bg-white shadow-sm text-red-500' : 'text-zinc-500'
+                tipo === 'SAIDA' ? 'bg-white shadow-sm text-rose-600' : 'text-zinc-500'
               )}
             >
               <TrendingDown className="w-4 h-4" /> Despesa
@@ -169,8 +169,8 @@ export function CategoryModal({ open, onClose, category, defaultTipo, allCategor
                 className={cn(
                   'w-9 h-9 rounded-lg flex items-center justify-center transition',
                   icone === ic
-                    ? 'border-2 border-emerald-500 bg-emerald-50 text-emerald-600'
-                    : 'border border-zinc-200 hover:border-emerald-300 text-zinc-600'
+                    ? 'border-2 border-indigo-500 bg-indigo-50 text-indigo-600'
+                    : 'border border-zinc-200 hover:border-indigo-300 text-zinc-600'
                 )}
                 aria-label={ic}
               >
@@ -202,7 +202,16 @@ export function CategoryModal({ open, onClose, category, defaultTipo, allCategor
           >
             Cancelar
           </button>
-          <button type="submit" disabled={pending} className="btn-primary flex-1">
+          <button
+            type="submit"
+            disabled={pending}
+            className={cn(
+              'flex-1',
+              tipo === 'SAIDA'
+                ? 'btn-danger'
+                : 'inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg shadow-sm shadow-emerald-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed'
+            )}
+          >
             {pending ? 'A guardar...' : 'Guardar categoria'}
           </button>
         </div>

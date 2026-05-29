@@ -186,7 +186,7 @@ export function ScheduledBlock({ items }: Props) {
                     {it.workOrder && (
                       <Link
                         href={`/folhas/${it.workOrder.id}`}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-indigo-100 text-indigo-700"
                         title={`Folha #${it.workOrder.numero}`}
                       >
                         <ClipboardList className="w-3 h-3" />#{it.workOrder.numero}
@@ -215,7 +215,7 @@ export function ScheduledBlock({ items }: Props) {
                 <div
                   className={cn(
                     'text-sm font-bold whitespace-nowrap mr-1',
-                    it.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'
+                    it.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-rose-600'
                   )}
                 >
                   {it.tipo === 'ENTRADA' ? '+ ' : '- '}
@@ -252,7 +252,7 @@ export function ScheduledBlock({ items }: Props) {
                     <button
                       onClick={() => handleConfirm(it.id)}
                       disabled={pending}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50"
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50"
                       title="Confirmar recebido/pago"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" /> Confirmar

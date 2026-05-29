@@ -1,7 +1,9 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { formatEUR } from '@/lib/format'
 import { getCurrentUser } from '@/lib/current-user'
+import { EMPLOYEE_HOME } from '@/lib/access'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { Gauge, Sparkline } from '@/components/Charts'
 import { colorGradient, colorHex } from '@/lib/colors'
@@ -49,6 +51,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const saldoPeriodLabel = SALDO_PERIODS.find((period) => period.key === saldoPeriod)?.caption ?? 'últimos 31 dias'
 
   const user = await getCurrentUser()
+  if (user.role === 'EMPLOYEE') redirect(EMPLOYEE_HOME)
+
   const primeiroNome = user.nome.split(' ')[0]
 
   const in7Days = new Date(today)
@@ -310,7 +314,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide">Contas</h2>
-          <Link href="/caixas" className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">
+          <Link href="/caixas" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
             Gerir →
           </Link>
         </div>
@@ -318,7 +322,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           {accounts.length === 0 ? (
             <Link
               href="/caixas?new=1"
-              className="flex-shrink-0 w-56 border-2 border-dashed border-zinc-300 rounded-2xl p-4 text-zinc-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50/50 transition flex items-center justify-center gap-2 font-medium text-sm min-h-[100px]"
+              className="flex-shrink-0 w-56 border-2 border-dashed border-zinc-300 rounded-2xl p-4 text-zinc-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition flex items-center justify-center gap-2 font-medium text-sm min-h-[100px]"
             >
               <Plus className="w-4 h-4" /> Criar primeira conta
             </Link>
@@ -354,7 +358,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               ))}
               <Link
                 href="/caixas?new=1"
-                className="flex-shrink-0 w-56 border-2 border-dashed border-zinc-300 rounded-2xl p-4 text-zinc-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50/50 transition flex items-center justify-center gap-2 font-medium text-sm"
+                className="flex-shrink-0 w-56 border-2 border-dashed border-zinc-300 rounded-2xl p-4 text-zinc-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition flex items-center justify-center gap-2 font-medium text-sm"
               >
                 <Plus className="w-4 h-4" /> Adicionar conta
               </Link>
@@ -387,7 +391,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
-              <div className="flex justify-center"><Gauge value={gaugeSaldo} color="#10b981" /></div>
+              <div className="flex justify-center"><Gauge value={gaugeSaldo} color="#4f46e5" /></div>
               <div className="text-[10px] text-zinc-500 uppercase tracking-wide mt-1 font-medium">Saldo</div>
               <div className="text-sm font-bold text-zinc-900">{formatEUR(saldoTotal)}</div>
             </div>
@@ -397,9 +401,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <div className="text-sm font-bold text-emerald-600">{formatEUR(entradasMes)}</div>
             </div>
             <div>
-              <div className="flex justify-center"><Gauge value={gaugeSaidas} color="#ef4444" /></div>
+              <div className="flex justify-center"><Gauge value={gaugeSaidas} color="#f43f5e" /></div>
               <div className="text-[10px] text-zinc-500 uppercase tracking-wide mt-1 font-medium">Saídas</div>
-              <div className="text-sm font-bold text-red-500">{formatEUR(saidasMes)}</div>
+              <div className="text-sm font-bold text-rose-600">{formatEUR(saidasMes)}</div>
             </div>
           </div>
         </div>
@@ -418,7 +422,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     'text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0',
                     variacaoSerie >= 0
                       ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-red-50 text-red-600'
+                      : 'bg-rose-50 text-rose-600'
                   )}
                 >
                   {variacaoSerie >= 0 ? '+' : ''}
@@ -436,7 +440,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                       className={cn(
                         'rounded-md px-2 py-1 font-medium transition-colors',
                         active
-                          ? 'bg-emerald-50 text-emerald-700'
+                          ? 'bg-indigo-50 text-indigo-700'
                           : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
                       )}
                     >
@@ -447,7 +451,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </div>
             </div>
           </div>
-          <Sparkline data={series} color="#10b981" height={96} />
+          <Sparkline data={series} color="#4f46e5" height={96} />
         </div>
 
         <div className="card p-5">
@@ -472,11 +476,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <div>
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="text-zinc-500">Saídas</span>
-                <span className="font-semibold text-red-500">- {formatEUR(saidasMes)}</span>
+                <span className="font-semibold text-rose-600">- {formatEUR(saidasMes)}</span>
               </div>
               <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-red-500 rounded-full"
+                  className="h-full bg-rose-500 rounded-full"
                   style={{
                     width: `${entradasMes === 0 && saidasMes === 0 ? 0 : (saidasMes / Math.max(entradasMes, saidasMes, 1)) * 100}%`,
                   }}
@@ -489,7 +493,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 <span
                   className={cn(
                     'text-lg font-bold',
-                    resultadoMes >= 0 ? 'text-zinc-900' : 'text-red-500'
+                    resultadoMes >= 0 ? 'text-emerald-700' : 'text-rose-600'
                   )}
                 >
                   {formatEUR(resultadoMes)}
@@ -507,7 +511,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <h3 className="font-semibold text-zinc-900">Despesas por categoria</h3>
             <Link
               href="/lancamentos?tipo=SAIDA"
-              className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+              className="text-xs text-rose-600 hover:text-rose-700 font-medium"
             >
               Ver →
             </Link>

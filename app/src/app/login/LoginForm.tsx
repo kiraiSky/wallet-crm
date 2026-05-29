@@ -37,7 +37,7 @@ export function LoginForm({
             autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full pl-10 pr-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition"
+            className="w-full pl-10 pr-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition"
           />
         </div>
       </div>
@@ -51,7 +51,7 @@ export function LoginForm({
             required
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
-            className="w-full pl-10 pr-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition"
+            className="w-full pl-10 pr-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition"
           />
         </div>
       </div>
@@ -65,7 +65,7 @@ export function LoginForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg shadow-sm shadow-emerald-500/20 transition inline-flex items-center justify-center gap-2"
+        className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg shadow-sm shadow-indigo-500/20 transition inline-flex items-center justify-center gap-2"
       >
         {pending && <Loader2 className="w-4 h-4 animate-spin" />}
         {pending ? 'A entrar…' : 'Entrar'}

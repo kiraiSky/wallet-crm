@@ -6,6 +6,7 @@ import { Plus, TrendingUp, TrendingDown, Pencil, Trash2 } from 'lucide-react'
 import { DynamicIcon } from '@/components/DynamicIcon'
 import { colorIconBg } from '@/lib/colors'
 import { formatEUR } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import { CategoryModal } from './CategoryModal'
 import { deleteCategory } from './actions'
 import type { CategoryWithStats } from './page'
@@ -57,7 +58,7 @@ export function CategoriesClient({ categories }: { categories: CategoryWithStats
           <h1 className="text-2xl font-bold text-zinc-900">Categorias</h1>
           <p className="text-zinc-500 text-sm">Organiza os teus movimentos com categorias personalizadas.</p>
         </div>
-        <button onClick={() => openNew('SAIDA')} className="btn-primary">
+        <button onClick={() => openNew('SAIDA')} className="btn-danger">
           <Plus className="w-4 h-4" />
           <span>Nova categoria</span>
         </button>
@@ -68,7 +69,7 @@ export function CategoriesClient({ categories }: { categories: CategoryWithStats
           title="Receitas"
           tipo="ENTRADA"
           Icon={TrendingUp}
-          accent="bg-emerald-100 text-emerald-600"
+          accent="bg-emerald-100 text-emerald-700"
           tree={buildTree(receitas)}
           orphans={orphans(receitas)}
           onAdd={() => openNew('ENTRADA')}
@@ -79,7 +80,7 @@ export function CategoriesClient({ categories }: { categories: CategoryWithStats
           title="Despesas"
           tipo="SAIDA"
           Icon={TrendingDown}
-          accent="bg-red-100 text-red-600"
+          accent="bg-rose-100 text-rose-700"
           tree={buildTree(despesas)}
           orphans={orphans(despesas)}
           onAdd={() => openNew('SAIDA')}
@@ -104,6 +105,7 @@ export function CategoriesClient({ categories }: { categories: CategoryWithStats
 
 function CategoryColumn({
   title,
+  tipo,
   Icon,
   accent,
   tree,
@@ -136,7 +138,12 @@ function CategoryColumn({
         </div>
         <button
           onClick={onAdd}
-          className="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1"
+          className={cn(
+            'text-xs font-medium inline-flex items-center gap-1',
+            tipo === 'ENTRADA'
+              ? 'text-emerald-600 hover:text-emerald-700'
+              : 'text-rose-600 hover:text-rose-700'
+          )}
         >
           <Plus className="w-3.5 h-3.5" /> Adicionar
         </button>

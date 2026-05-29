@@ -127,7 +127,7 @@ export function TemplateModal({ open, onClose, onSave, initial }: Props) {
             onChange={(e) => setNome(e.target.value)}
             required
             placeholder="Ex: Follow-up pós reparação"
-            className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
@@ -138,7 +138,7 @@ export function TemplateModal({ open, onClose, onSave, initial }: Props) {
             <select
               value={tipo}
               onChange={(e) => setTipo(e.target.value as TemplateInput['tipo'])}
-              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
@@ -150,7 +150,7 @@ export function TemplateModal({ open, onClose, onSave, initial }: Props) {
               onClick={() => setAtivo((a) => !a)}
               className={cn(
                 'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                ativo ? 'bg-emerald-500' : 'bg-zinc-200'
+                ativo ? 'bg-indigo-500' : 'bg-zinc-200'
               )}
             >
               <span className={cn(
@@ -167,7 +167,7 @@ export function TemplateModal({ open, onClose, onSave, initial }: Props) {
           <select
             value={trigger}
             onChange={(e) => setTrigger(e.target.value as TemplateInput['trigger'])}
-            className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             {TRIGGERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
@@ -188,7 +188,7 @@ export function TemplateModal({ open, onClose, onSave, initial }: Props) {
                   className={cn(
                     'text-xs font-medium px-3 py-1.5 rounded-full border transition',
                     triggerEstados.includes(e.value)
-                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      ? 'bg-indigo-600 text-white border-indigo-600'
                       : 'bg-white text-zinc-600 border-zinc-300 hover:border-zinc-400'
                   )}
                 >
@@ -212,7 +212,7 @@ export function TemplateModal({ open, onClose, onSave, initial }: Props) {
             required
             rows={4}
             placeholder="Olá {{nome}}, o seu {{viatura}} está pronto para levantamento!"
-            className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
           />
           <div className="mt-2">
             <p className="text-xs text-zinc-400 mb-1.5">Clica para inserir variável no cursor:</p>
@@ -244,7 +244,7 @@ export function TemplateModal({ open, onClose, onSave, initial }: Props) {
           <button
             type="submit"
             disabled={saving || !nome.trim() || !mensagem.trim()}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-medium transition"
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-medium transition"
           >
             {saving ? 'A guardar...' : 'Guardar'}
           </button>

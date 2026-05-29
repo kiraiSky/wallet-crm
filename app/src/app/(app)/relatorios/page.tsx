@@ -392,7 +392,7 @@ export default async function RelatoriosPage({
       </div>
 
       <p className="text-[11px] text-zinc-400 text-center print:block hidden">
-        Carteira · Relatório gerado a {formatDate(new Date(), 'dd/MM/yyyy HH:mm')}
+        Shift · Relatório gerado a {formatDate(new Date(), 'dd/MM/yyyy HH:mm')}
       </p>
     </>
   )

@@ -29,7 +29,7 @@ export function MoloniInvoiceButton({ workOrderId, moloniDocumentId, moloniDocum
   if (moloniDocumentId) {
     return (
       <div className="inline-flex items-center gap-2 flex-wrap">
-        <div className="inline-flex items-center gap-2 text-sm text-emerald-700 font-medium bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+        <div className="inline-flex items-center gap-2 text-sm text-indigo-700 font-medium bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
           <CheckCircle2 className="w-4 h-4" />
           Faturado no Moloni ({moloniDocumentType} #{moloniDocumentId})
         </div>
@@ -144,7 +144,7 @@ export function MoloniInvoiceButton({ workOrderId, moloniDocumentId, moloniDocum
                           onClick={() => handleDocTypeChange(val)}
                           className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                             docType === val
-                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                              ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                               : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
                           }`}
                         >
@@ -167,7 +167,7 @@ export function MoloniInvoiceButton({ workOrderId, moloniDocumentId, moloniDocum
                           onClick={() => setCustomerMode(val)}
                           className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                             customerMode === val
-                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                              ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                               : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
                           }`}
                         >
@@ -232,7 +232,7 @@ export function MoloniInvoiceButton({ workOrderId, moloniDocumentId, moloniDocum
 
             {step === 'done' && (
               <div className="text-center py-4">
-                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+                <CheckCircle2 className="w-12 h-12 text-indigo-500 mx-auto mb-3" />
                 <h2 className="text-lg font-semibold text-zinc-900 mb-1">{DOC_TYPE_META[docType].label} criada!</h2>
                 <p className="text-sm text-zinc-500 mb-4">
                   Documento #{createdDocId} criado no Moloni com sucesso.

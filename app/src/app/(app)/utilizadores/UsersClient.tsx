@@ -100,12 +100,12 @@ export function UsersClient({ users, currentUserId }: Props) {
                   <tr key={u.id} className={u.active ? '' : 'opacity-60'}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white text-xs font-bold flex items-center justify-center">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 text-white text-xs font-bold flex items-center justify-center">
                           {u.nome.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
                           <div className="font-medium text-zinc-900">
-                            {u.nome} {isMe && <span className="text-xs text-emerald-600 ml-1">(tu)</span>}
+                            {u.nome} {isMe && <span className="text-xs text-indigo-600 ml-1">(tu)</span>}
                           </div>
                           <div className="text-xs text-zinc-500">{u.email}</div>
                         </div>
@@ -123,7 +123,7 @@ export function UsersClient({ users, currentUserId }: Props) {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium ${
-                        u.active ? 'bg-emerald-50 text-emerald-700' : 'bg-zinc-100 text-zinc-500'
+                        u.active ? 'bg-indigo-50 text-indigo-700' : 'bg-zinc-100 text-zinc-500'
                       }`}>
                         {u.active ? 'Ativo' : 'Inativo'}
                       </span>
@@ -134,7 +134,7 @@ export function UsersClient({ users, currentUserId }: Props) {
                         <button
                           onClick={() => openEdit(u)}
                           title="Editar"
-                          className="p-2 text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg"
+                          className="p-2 text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>

@@ -164,7 +164,7 @@ export function AttachmentViewer({ open, onClose, transaction, initialAttachment
               </div>
               <div className={cn(
                 'text-base font-bold whitespace-nowrap',
-                transaction.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'
+                transaction.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-rose-600'
               )}>
                 {transaction.tipo === 'ENTRADA' ? '+ ' : '- '}{formatEUR(transaction.valor)}
               </div>
@@ -186,7 +186,7 @@ export function AttachmentViewer({ open, onClose, transaction, initialAttachment
                 value={
                   <a
                     href={transaction.workOrder.id ? `/folhas/${transaction.workOrder.id}` : '#'}
-                    className="text-emerald-600 hover:text-emerald-700 font-medium"
+                    className="text-indigo-600 hover:text-indigo-700 font-medium"
                   >
                     #{transaction.workOrder.numero}
                     {transaction.workOrder.customer && ` · ${transaction.workOrder.customer.nome}`}
@@ -207,7 +207,7 @@ export function AttachmentViewer({ open, onClose, transaction, initialAttachment
                       onClick={() => setIdx(i)}
                       className={cn(
                         'border rounded-lg overflow-hidden w-14 h-14 flex items-center justify-center bg-zinc-50',
-                        i === idx ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-zinc-200'
+                        i === idx ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-zinc-200'
                       )}
                       title={a.filename}
                     >
@@ -292,7 +292,7 @@ export function AttachmentThumb({
       }}
       className={cn(
         sizeClass,
-        'rounded-md border border-zinc-200 bg-zinc-50 overflow-hidden flex items-center justify-center hover:border-emerald-400 transition flex-shrink-0'
+        'rounded-md border border-zinc-200 bg-zinc-50 overflow-hidden flex items-center justify-center hover:border-indigo-400 transition flex-shrink-0'
       )}
       title={`Ver anexo: ${attachment.filename}`}
     >

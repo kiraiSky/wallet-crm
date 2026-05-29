@@ -9,7 +9,16 @@ export async function GET(
   const vehicles = await prisma.vehicle.findMany({
     where: { customerId: id, archived: false },
     orderBy: { createdAt: 'desc' },
-    select: { id: true, matricula: true, marca: true, modelo: true },
+    select: {
+      id: true,
+      matricula: true,
+      marca: true,
+      modelo: true,
+      ano: true,
+      cor: true,
+      km: true,
+      observacoes: true,
+    },
   })
   return NextResponse.json({ vehicles })
 }

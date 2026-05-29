@@ -82,7 +82,7 @@ export function MoloniClient({
           <label className="ml-auto flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              className="w-4 h-4 accent-emerald-600"
+              className="w-4 h-4 accent-indigo-600"
               checked={syncEnabled}
               disabled={pending || !selectedCompanyId}
               onChange={(e) => {
@@ -139,7 +139,7 @@ export function MoloniClient({
         </div>
       )}
 
-      <div className="rounded-lg border border-emerald-100 bg-emerald-50/70 p-3 text-sm text-emerald-900 flex gap-2">
+      <div className="rounded-lg border border-indigo-100 bg-indigo-50/70 p-3 text-sm text-indigo-900 flex gap-2">
         <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
         <p>Tokens ficam cifrados na base de dados. Ao sincronizar, os clientes são ligados automaticamente por NIF.</p>
       </div>

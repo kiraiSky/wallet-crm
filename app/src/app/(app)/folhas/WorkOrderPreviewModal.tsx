@@ -235,7 +235,7 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                   {/* Cliente */}
                   <div className="card p-4">
                     <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Cliente</p>
-                    <Link href={`/clientes/${data.customer.id}`} onClick={onClose} className="font-semibold text-zinc-900 hover:text-emerald-700 transition block">
+                    <Link href={`/clientes/${data.customer.id}`} onClick={onClose} className="font-semibold text-zinc-900 hover:text-indigo-700 transition block">
                       {data.customer.nome}
                     </Link>
                     {data.customer.telefone && (() => {
@@ -244,8 +244,8 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                         <div className="flex items-center gap-2 mt-1">
                           {wa && (
                             <a href={wa} target="_blank" rel="noreferrer" title="Abrir no WhatsApp"
-                              className="flex items-center gap-1.5 text-sm text-zinc-700 hover:text-emerald-600 transition">
-                              <MessageCircle className="w-4 h-4 text-emerald-500" />
+                              className="flex items-center gap-1.5 text-sm text-zinc-700 hover:text-indigo-600 transition">
+                              <MessageCircle className="w-4 h-4 text-indigo-500" />
                               {data.customer.telefone}
                             </a>
                           )}
@@ -361,7 +361,7 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                         <button onClick={() => { setTxTipo('ENTRADA'); setEditingTx(null); setTxModalOpen(true) }} className="btn-secondary text-xs py-1.5 text-emerald-600 hover:bg-emerald-50">
                           <TrendingUp className="w-3.5 h-3.5" /> Receita
                         </button>
-                        <button onClick={() => { setTxTipo('SAIDA'); setEditingTx(null); setTxModalOpen(true) }} className="btn-primary text-xs py-1.5">
+                        <button onClick={() => { setTxTipo('SAIDA'); setEditingTx(null); setTxModalOpen(true) }} className="btn-danger text-xs py-1.5">
                           <TrendingDown className="w-3.5 h-3.5" /> Despesa
                         </button>
                       </div>
@@ -372,14 +372,14 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                       <div className="divide-y divide-zinc-100">
                         {data.transactions.map((tx) => (
                           <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 cursor-pointer" onClick={() => { setEditingTx(tx); setTxTipo(tx.tipo); setTxModalOpen(true) }}>
-                            <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', tx.tipo === 'ENTRADA' ? 'bg-emerald-100' : 'bg-red-100')}>
-                              {tx.tipo === 'ENTRADA' ? <TrendingUp className="w-4 h-4 text-emerald-600" /> : <TrendingDown className="w-4 h-4 text-red-500" />}
+                            <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', tx.tipo === 'ENTRADA' ? 'bg-emerald-100' : 'bg-rose-100')}>
+                              {tx.tipo === 'ENTRADA' ? <TrendingUp className="w-4 h-4 text-emerald-600" /> : <TrendingDown className="w-4 h-4 text-rose-600" />}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-zinc-900 truncate">{tx.descricao}</p>
                               <p className="text-xs text-zinc-500">{tx.account.nome} · {formatDate(tx.data)}</p>
                             </div>
-                            <span className={cn('font-bold text-sm', tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500')}>
+                            <span className={cn('font-bold text-sm', tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-rose-600')}>
                               {tx.tipo === 'ENTRADA' ? '+' : '-'}{formatEUR(tx.valor)}
                             </span>
                           </div>

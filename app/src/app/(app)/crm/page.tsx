@@ -296,7 +296,7 @@ export default async function CrmOverviewPage() {
             </div>
             <Link
               href="/clientes?tag=INATIVO"
-              className="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1"
+              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium inline-flex items-center gap-1"
             >
               Ver todos <ArrowRight className="w-3 h-3" />
             </Link>
@@ -348,7 +348,7 @@ export default async function CrmOverviewPage() {
             <h3 className="font-semibold text-zinc-900">Últimos clientes</h3>
             <Link
               href="/clientes"
-              className="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1"
+              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium inline-flex items-center gap-1"
             >
               Ver todos <ArrowRight className="w-3 h-3" />
             </Link>
@@ -363,7 +363,7 @@ export default async function CrmOverviewPage() {
                   href={`/clientes/${c.id}`}
                   className="flex items-center gap-3 py-2.5 hover:bg-zinc-50 -mx-2 px-2 rounded transition"
                 >
-                  <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 text-xs font-bold">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 text-xs font-bold">
                     {c.nome
                       .split(/\s+/)
                       .slice(0, 2)
@@ -404,7 +404,7 @@ function KpiCard({
   tone: 'emerald' | 'rose' | 'amber' | 'violet'
 }) {
   const toneClass: Record<typeof tone, string> = {
-    emerald: 'bg-emerald-50 text-emerald-600',
+    emerald: 'bg-indigo-50 text-indigo-600',
     rose: 'bg-rose-50 text-rose-600',
     amber: 'bg-amber-50 text-amber-600',
     violet: 'bg-violet-50 text-violet-600',

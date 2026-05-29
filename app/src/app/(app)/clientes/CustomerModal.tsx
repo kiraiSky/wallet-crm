@@ -212,7 +212,7 @@ export function CustomerModal({ open, onClose, customer, onSaved }: Props) {
                   className={cn(
                     'py-2 rounded-lg text-xs font-semibold transition border',
                     tag === t.value
-                      ? 'border-2 border-emerald-500 bg-emerald-50 text-emerald-700'
+                      ? 'border-2 border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-zinc-200 hover:bg-zinc-50 text-zinc-600'
                   )}
                 >
@@ -235,7 +235,7 @@ export function CustomerModal({ open, onClose, customer, onSaved }: Props) {
                   className={cn(
                     'py-2 rounded-lg text-xs font-semibold transition border flex items-center justify-center gap-1.5',
                     linguagem === l.value
-                      ? 'border-2 border-emerald-500 bg-emerald-50 text-emerald-700'
+                      ? 'border-2 border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-zinc-200 hover:bg-zinc-50 text-zinc-600'
                   )}
                 >

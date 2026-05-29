@@ -78,7 +78,7 @@ export function ShareButton({ workOrderId, numero, initialToken }: Props) {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-zinc-900 flex items-center gap-2">
-                <LinkIcon className="w-4 h-4 text-emerald-500" />
+                <LinkIcon className="w-4 h-4 text-indigo-500" />
                 Partilhar folha #{numero}
               </h2>
               <button onClick={() => setOpen(false)} className="text-zinc-400 hover:text-zinc-600">
@@ -102,7 +102,7 @@ export function ShareButton({ workOrderId, numero, initialToken }: Props) {
                     className="text-zinc-400 hover:text-zinc-700 flex-shrink-0"
                     title="Copiar link"
                   >
-                    {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <Check className="w-4 h-4 text-indigo-500" /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
 
@@ -112,7 +112,7 @@ export function ShareButton({ workOrderId, numero, initialToken }: Props) {
                     onClick={handleCopy}
                     className="flex-1 btn-secondary text-sm inline-flex items-center justify-center gap-2"
                   >
-                    {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <Check className="w-4 h-4 text-indigo-500" /> : <Copy className="w-4 h-4" />}
                     {copied ? 'Copiado!' : 'Copiar'}
                   </button>
                   <button

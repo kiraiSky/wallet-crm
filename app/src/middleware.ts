@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { canAccess, EMPLOYEE_HOME, type Role } from '@/lib/access'
 
 const PUBLIC_PATHS = ['/login']
 
@@ -52,7 +53,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Redireciona para dashboard se já autenticado e vai para /login
+  // Colaborador (EMPLOYEE): restrito à área de CRM/folhas. Fora dela, redireciona
+  // para a sua página inicial. O OWNER passa sempre.
+  const role = token?.role as Role | undefined
+  if (isLogged && !isPublic && role === 'EMPLOYEE' && !canAccess('EMPLOYEE', pathname)) {
+    const url = req.nextUrl.clone()
+    url.pathname = EMPLOYEE_HOME
+    url.search = ''
+    return NextResponse.redirect(url)
+  }
+
   return NextResponse.next()
 }
 

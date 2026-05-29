@@ -109,7 +109,7 @@ export default async function MoloniPage({
         <div className="card p-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
             <div>
-              <div className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 mb-2">
+              <div className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 mb-2">
                 <CheckCircle2 className="w-4 h-4" />
                 Moloni conectado
               </div>
@@ -176,7 +176,7 @@ export default async function MoloniPage({
                         {doc.customer && (
                           <Link
                             href={`/clientes/${doc.customer.id}`}
-                            className="ml-1 inline-flex items-center gap-0.5 text-emerald-600 hover:underline"
+                            className="ml-1 inline-flex items-center gap-0.5 text-indigo-600 hover:underline"
                           >
                             <User className="w-3 h-3" />
                             {doc.customer.nome}
@@ -202,7 +202,7 @@ export default async function MoloniPage({
                 {connection.syncLogs.map((log) => (
                   <div key={log.id} className="rounded-lg border border-zinc-100 p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <span className={log.status === 'SUCCESS' ? 'text-sm font-semibold text-emerald-700' : 'text-sm font-semibold text-red-600'}>
+                      <span className={log.status === 'SUCCESS' ? 'text-sm font-semibold text-indigo-700' : 'text-sm font-semibold text-red-600'}>
                         {log.status === 'SUCCESS' ? 'Sucesso' : 'Erro'}
                       </span>
                       <span className="text-xs text-zinc-400">{formatDateTime(log.startedAt)}</span>

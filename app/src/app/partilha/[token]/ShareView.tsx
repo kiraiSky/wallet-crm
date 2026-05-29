@@ -44,7 +44,7 @@ const STATUS_LABEL: Record<string, { label: string; icon: React.ReactNode; color
   AGUARDA_PECAS: { label: 'Aguarda peças', icon: <Package className="w-4 h-4" />,  color: 'text-orange-600 bg-orange-50 border-orange-200' },
   EM_REPARACAO: { label: 'Em reparação',  icon: <Wrench className="w-4 h-4" />,    color: 'text-violet-600 bg-violet-50 border-violet-200' },
   CONCLUIDA: { label: 'Concluída',    icon: <CheckCircle2 className="w-4 h-4" />,  color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-  FATURADA:  { label: 'Faturada',     icon: <CheckCircle2 className="w-4 h-4" />,  color: 'text-emerald-700 bg-emerald-100 border-emerald-300' },
+  FATURADA:  { label: 'Faturada',     icon: <CheckCircle2 className="w-4 h-4" />,  color: 'text-indigo-700 bg-indigo-100 border-indigo-300' },
   ENTREGUE:  { label: 'Entregue',     icon: <CheckCircle2 className="w-4 h-4" />,  color: 'text-zinc-600 bg-zinc-100 border-zinc-300' },
   CANCELADA: { label: 'Cancelada',    icon: <AlertCircle className="w-4 h-4" />,   color: 'text-red-600 bg-red-50 border-red-200' },
 }

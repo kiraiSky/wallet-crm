@@ -205,7 +205,7 @@ export function CaucaoButton({
                         type="checkbox"
                         checked={criarTransacao}
                         onChange={(e) => setCriarTransacao(e.target.checked)}
-                        className="accent-emerald-600"
+                        className="accent-indigo-600"
                       />
                       <span className="text-sm font-medium text-zinc-800">Registar entrada na conta</span>
                     </label>
@@ -247,7 +247,7 @@ export function CaucaoButton({
                         type="checkbox"
                         checked={emitirMoloniFR}
                         onChange={(e) => handleToggleMoloni(e.target.checked)}
-                        className="accent-emerald-600"
+                        className="accent-indigo-600"
                       />
                       <span className="text-sm font-medium text-zinc-800">Emitir Fatura-Recibo (FR) no Moloni</span>
                     </label>
@@ -286,7 +286,7 @@ export function CaucaoButton({
                                 onClick={() => setMoloniCustomerMode(val)}
                                 className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                                   moloniCustomerMode === val
-                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                                     : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
                                 }`}
                               >
@@ -330,7 +330,7 @@ export function CaucaoButton({
 
             {step === 'done' && (
               <div className="text-center py-4">
-                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+                <CheckCircle2 className="w-12 h-12 text-indigo-500 mx-auto mb-3" />
                 <h2 className="text-lg font-semibold text-zinc-900 mb-1">Caução registada</h2>
                 <p className="text-sm text-zinc-500 mb-4">
                   {emitirMoloniFR ? 'FR emitida no Moloni e ' : ''}

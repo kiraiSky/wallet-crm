@@ -47,7 +47,7 @@ export function EmpresaForm({ profile }: { profile: Profile }) {
     <form action={action} className="space-y-6">
       {/* Feedback */}
       {state?.ok === true && (
-        <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+        <div className="flex items-center gap-2 text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3">
           <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
           Dados guardados com sucesso.
         </div>

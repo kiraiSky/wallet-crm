@@ -581,7 +581,7 @@ function CardContent({ wo, onAdvance, onCardClick, isDragOverlay }: {
   const next = nextStatus(wo.estado)
   const isPastDue = wo.dataPrevista && new Date(wo.dataPrevista) < new Date() && wo.estado !== 'CONCLUIDA' && wo.estado !== 'FATURADA' && wo.estado !== 'CANCELADA'
   return (
-    <div className={cn('bg-white rounded-xl border border-zinc-200 shadow-sm select-none', isDragOverlay ? 'shadow-2xl rotate-1 scale-105 border-emerald-300' : 'hover:border-emerald-400 hover:shadow-md transition group')}>
+    <div className={cn('bg-white rounded-xl border border-zinc-200 shadow-sm select-none', isDragOverlay ? 'shadow-2xl rotate-1 scale-105 border-indigo-300' : 'hover:border-indigo-400 hover:shadow-md transition group')}>
       <div className="p-3" onClick={() => onCardClick?.(wo.id)}>
         <div className="flex items-center justify-between mb-2">
           <span className="font-mono text-xs font-bold text-zinc-500">#{wo.numero}</span>
@@ -599,7 +599,7 @@ function CardContent({ wo, onAdvance, onCardClick, isDragOverlay }: {
         )}
         <p className="text-xs text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">{wo.problema}</p>
         {wo.lastMessage && (
-          <div className={cn('flex items-center gap-1 text-xs mt-1.5 px-1.5 py-0.5 rounded-md w-fit', wo.lastMessage.webhookOk ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500')}>
+          <div className={cn('flex items-center gap-1 text-xs mt-1.5 px-1.5 py-0.5 rounded-md w-fit', wo.lastMessage.webhookOk ? 'bg-indigo-50 text-indigo-700' : 'bg-red-50 text-red-500')}>
             {wo.lastMessage.webhookOk ? <CheckCircle className="w-3 h-3 flex-shrink-0" /> : <XCircle className="w-3 h-3 flex-shrink-0" />}
             <span className="truncate max-w-[140px]">{wo.lastMessage.templateNome}</span>
           </div>

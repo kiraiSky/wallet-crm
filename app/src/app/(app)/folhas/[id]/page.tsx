@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/current-user'
 import { WorkOrderDetailClient } from './WorkOrderDetailClient'
 import type { WorkOrderStatus } from '../status'
 
@@ -26,6 +27,15 @@ export type WorkOrderCaucaoRow = {
   moloniDocumentId: number | null
   moloniDocumentType: string | null
   createdAt: string
+}
+
+export type WorkOrderPhotoRow = {
+  id: string
+  slot: 'FRONT' | 'LEFT_SIDE' | 'RIGHT_SIDE' | 'REAR' | 'INTERIOR' | 'ODOMETER' | 'DAMAGE' | 'EXTRA'
+  filename: string
+  mimeType: string
+  note: string | null
+  uploadedAt: string
 }
 
 export type WorkOrderTransactionRow = {
@@ -77,6 +87,7 @@ export type WorkOrderDetail = {
   } | null
   items: WorkOrderItemRow[]
   caucoes: WorkOrderCaucaoRow[]
+  photos: WorkOrderPhotoRow[]
   totalCaucoes: number
   totalRestante: number
 }
@@ -87,6 +98,8 @@ export default async function WorkOrderDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const me = await getCurrentUser()
+  const isOwner = me.role === 'OWNER'
   const [wo, txList, accounts, categories, templates, automationLogs] = await Promise.all([
     prisma.workOrder.findUnique({
       where: { id },
@@ -95,6 +108,7 @@ export default async function WorkOrderDetailPage({
         vehicle: true,
         items: { orderBy: { createdAt: 'asc' } },
         caucoes: { orderBy: { data: 'asc' } },
+        photos: { orderBy: { uploadedAt: 'desc' } },
       },
     }),
     prisma.transaction.findMany({
@@ -182,6 +196,14 @@ export default async function WorkOrderDetailPage({
       moloniDocumentType: c.moloniDocumentType,
       createdAt: c.createdAt.toISOString(),
     })),
+    photos: wo.photos.map((photo) => ({
+      id: photo.id,
+      slot: photo.slot as WorkOrderPhotoRow['slot'],
+      filename: photo.filename,
+      mimeType: photo.mimeType,
+      note: photo.note,
+      uploadedAt: photo.uploadedAt.toISOString(),
+    })),
     totalCaucoes: wo.caucoes.reduce((acc, c) => acc + Number(c.valor), 0),
     totalRestante: Number(wo.total) - wo.caucoes.reduce((acc, c) => acc + Number(c.valor), 0),
   }
@@ -211,6 +233,7 @@ export default async function WorkOrderDetailPage({
       transactions={transactions}
       accounts={accounts}
       categories={categories.map((c) => ({ ...c, tipo: c.tipo as 'ENTRADA' | 'SAIDA' }))}
+      isOwner={isOwner}
       templates={templates}
       automationLogs={automationLogs.map((l) => ({
         ...l,

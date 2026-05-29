@@ -140,7 +140,7 @@ export function PrintClient({ data }: { data: Data }) {
                 FOLHA DE OBRA #{data.numero}
               </div>
               {data.moloniDocumentId && (
-                <div className="text-sm font-medium text-emerald-600 mt-1">
+                <div className="text-sm font-medium text-indigo-600 mt-1">
                   {data.moloniDocumentType} #{data.moloniDocumentId}
                 </div>
               )}

@@ -32,6 +32,7 @@ import { MoloniInvoiceButton } from './MoloniInvoiceButton'
 import { ShareButton } from './ShareButton'
 import { CaucaoButton } from './CaucaoButton'
 import { CaucoesList } from './CaucoesList'
+import { VehiclePhotosSection } from './VehiclePhotosSection'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string }
 type CategoryOption = {
@@ -48,11 +49,12 @@ interface Props {
   transactions: WorkOrderTransactionRow[]
   accounts: AccountOption[]
   categories: CategoryOption[]
+  isOwner: boolean
   templates: TemplateRow[]
   automationLogs: AutomationLogRow[]
 }
 
-export function WorkOrderDetailClient({ workOrder, transactions, accounts, categories, templates, automationLogs }: Props) {
+export function WorkOrderDetailClient({ workOrder, transactions, accounts, categories, isOwner, templates, automationLogs }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [editOpen, setEditOpen] = useState(false)
@@ -141,6 +143,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
   const items = workOrder.items
   const pecas = items.filter((i) => i.tipo === 'PECA')
   const maoObra = items.filter((i) => i.tipo === 'MAO_OBRA')
+  const frontPhoto = workOrder.photos.find((photo) => photo.slot === 'FRONT') ?? null
 
   return (
     <>
@@ -152,7 +155,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
       </Link>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+      <div className="mb-5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold text-zinc-900">Folha #{workOrder.numero}</h1>
@@ -164,14 +167,15 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
           <div className="text-sm text-zinc-500 flex flex-wrap gap-x-3 gap-y-0.5">
             <span>Aberta em {formatDate(workOrder.dataAbertura)}</span>
             {workOrder.dataPrevista && <span>· Prevista {formatDate(workOrder.dataPrevista)}</span>}
-            {workOrder.dataConclusao && <span>· Concluída {formatDate(workOrder.dataConclusao)}</span>}
+            {workOrder.dataConclusao && <span className="text-emerald-600">· Concluída {formatDate(workOrder.dataConclusao)}</span>}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-2 sm:border-0 sm:bg-transparent sm:p-0 lg:mt-0 lg:min-w-[360px] lg:max-w-[760px]">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center lg:justify-end">
           {proximoEstado && (
             <button
               onClick={() => handleChangeStatus(proximoEstado)}
-              className="btn-primary"
+              className="btn-primary w-full sm:w-auto"
               title={`Avançar para ${STATUS_META[proximoEstado].label}`}
             >
               <CheckCircle2 className="w-4 h-4" />
@@ -179,7 +183,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
             </button>
           )}
           <div className="relative">
-            <button onClick={() => setStatusOpen((v) => !v)} className="btn-secondary">
+            <button onClick={() => setStatusOpen((v) => !v)} className="btn-secondary w-full sm:w-auto">
               Estado <ChevronRight className="w-4 h-4 rotate-90" />
             </button>
             {statusOpen && (
@@ -206,42 +210,62 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
           <button
             type="button"
             onClick={() => window.open(`/imprimir/folha/${workOrder.id}`, '_blank')}
-            className="btn-secondary inline-flex items-center gap-2 text-sm"
+            className="btn-secondary w-full sm:w-auto inline-flex items-center gap-2 text-sm"
             title="Imprimir folha de obra"
           >
             <Printer className="w-4 h-4" />
             Imprimir
           </button>
-          <ShareButton
-            workOrderId={workOrder.id}
-            numero={workOrder.numero}
-            initialToken={workOrder.shareToken}
-          />
-          {!workOrder.moloniDocumentId && (
-            <CaucaoButton
-              workOrderId={workOrder.id}
-              workOrderNumero={workOrder.numero}
-              customerNome={workOrder.customer.nome}
-              customerNif={workOrder.customer.nif}
-              totalRestante={workOrder.totalRestante}
-              accounts={accounts}
-              categories={categories.map((c) => ({ id: c.id, nome: c.nome, tipo: c.tipo, parentId: c.parentId ?? null }))}
-            />
+          {isOwner && (
+            <div className="[&>button]:w-full sm:[&>button]:w-auto">
+              <ShareButton
+                workOrderId={workOrder.id}
+                numero={workOrder.numero}
+                initialToken={workOrder.shareToken}
+              />
+            </div>
           )}
-          <MoloniInvoiceButton
-            workOrderId={workOrder.id}
-            moloniDocumentId={workOrder.moloniDocumentId}
-            moloniDocumentType={workOrder.moloniDocumentType}
-            total={workOrder.total}
-            customerNome={workOrder.customer.nome}
-            customerNif={workOrder.customer.nif}
-          />
-          <button onClick={() => setEditOpen(true)} className="btn-secondary">
+          <button onClick={() => setEditOpen(true)} className="btn-secondary w-full sm:w-auto">
             <Pencil className="w-4 h-4" /> Editar
           </button>
-          <button onClick={handleDeleteWorkOrder} className="btn-secondary text-red-600 hover:bg-red-50">
+          <button
+            onClick={handleDeleteWorkOrder}
+            className="btn-secondary col-span-2 w-full sm:col-span-1 sm:w-10 text-red-600 hover:bg-red-50 px-2.5"
+            title="Eliminar folha"
+            aria-label="Eliminar folha"
+          >
             <Trash2 className="w-4 h-4" />
+            <span className="sm:hidden">Eliminar</span>
           </button>
+          </div>
+
+          {isOwner && (
+            <div className="mt-2 grid grid-cols-1 gap-2 min-[560px]:grid-cols-2 lg:flex lg:flex-wrap lg:items-center lg:justify-end">
+              {!workOrder.moloniDocumentId && (
+                <div className="min-w-0 [&>button]:w-full lg:[&>button]:w-auto">
+                  <CaucaoButton
+                    workOrderId={workOrder.id}
+                    workOrderNumero={workOrder.numero}
+                    customerNome={workOrder.customer.nome}
+                    customerNif={workOrder.customer.nif}
+                    totalRestante={workOrder.totalRestante}
+                    accounts={accounts}
+                    categories={categories.map((c) => ({ id: c.id, nome: c.nome, tipo: c.tipo, parentId: c.parentId ?? null }))}
+                  />
+                </div>
+              )}
+              <div className="min-w-0 [&>button]:w-full lg:[&>button]:w-auto">
+                <MoloniInvoiceButton
+                  workOrderId={workOrder.id}
+                  moloniDocumentId={workOrder.moloniDocumentId}
+                  moloniDocumentType={workOrder.moloniDocumentType}
+                  total={workOrder.total}
+                  customerNome={workOrder.customer.nome}
+                  customerNif={workOrder.customer.nif}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -253,7 +277,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
             <button
               type="button"
               onClick={() => openCustomerQuickView(workOrder.customer.id)}
-              className="text-base font-semibold text-zinc-900 hover:text-emerald-600 text-left"
+              className="text-base font-semibold text-zinc-900 hover:text-indigo-600 text-left"
             >
               {workOrder.customer.nome}
             </button>
@@ -266,10 +290,10 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
                       href={wa}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm text-zinc-600 hover:text-emerald-600"
+                      className="inline-flex items-center gap-1.5 text-sm text-zinc-600 hover:text-indigo-600"
                       title="Abrir no WhatsApp"
                     >
-                      <MessageCircle className="w-4 h-4 text-emerald-500" />
+                      <MessageCircle className="w-4 h-4 text-indigo-500" />
                       {workOrder.customer.telefone}
                     </a>
                   ) : (
@@ -291,9 +315,20 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
             <div className="card p-5">
               <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Viatura</h2>
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center flex-shrink-0">
-                  <Car className="w-5 h-5" />
-                </div>
+                {frontPhoto ? (
+                  <div className="w-32 h-24 rounded-xl border border-zinc-200 bg-zinc-100 overflow-hidden flex-shrink-0 shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/api/work-order-photos/${frontPhoto.id}`}
+                      alt="Foto frontal da viatura"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center flex-shrink-0">
+                    <Car className="w-5 h-5" />
+                  </div>
+                )}
                 <div className="min-w-0">
                   <div className="font-mono font-bold tracking-wider text-zinc-900">
                     {workOrder.vehicle.matricula}
@@ -347,12 +382,14 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
             </div>
           )}
 
-          <CaucoesList
-            caucoes={workOrder.caucoes}
-            totalCaucoes={workOrder.totalCaucoes}
-            totalFolha={workOrder.total}
-            totalRestante={workOrder.totalRestante}
-          />
+          {isOwner && (
+            <CaucoesList
+              caucoes={workOrder.caucoes}
+              totalCaucoes={workOrder.totalCaucoes}
+              totalFolha={workOrder.total}
+              totalRestante={workOrder.totalRestante}
+            />
+          )}
 
           <MensagensSection
             customerId={workOrder.customer.id}
@@ -365,6 +402,8 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
 
         {/* Coluna direita: items + totais */}
         <div className="lg:col-span-2 space-y-4">
+          <VehiclePhotosSection workOrderId={workOrder.id} photos={workOrder.photos} />
+
           <ItemList
             title="Peças"
             icon={Package}
@@ -405,7 +444,8 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
             </div>
           </div>
 
-          {/* Movimentos financeiros */}
+          {/* Movimentos financeiros — apenas OWNER */}
+          {isOwner && (
           <div className="card overflow-hidden">
             <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
               <div>
@@ -423,7 +463,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
                 </button>
                 <button
                   onClick={() => { setTxModalTipo('SAIDA'); setEditingTx(null); setTxModalOpen(true) }}
-                  className="btn-primary text-sm"
+                  className="btn-danger text-sm"
                 >
                   <TrendingDown className="w-4 h-4" /> Despesa
                 </button>
@@ -485,7 +525,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
                     </div>
                     <div className={cn(
                       'text-sm font-bold whitespace-nowrap',
-                      tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'
+                      tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-rose-600'
                     )}>
                       {tx.tipo === 'ENTRADA' ? '+ ' : '- '}{formatEUR(tx.valor)}
                     </div>
@@ -498,13 +538,14 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
                   return (
                     <div className="px-5 py-3 bg-zinc-50 flex items-center justify-end gap-6 text-sm">
                       <span className="text-zinc-500">Entradas: <strong className="text-emerald-600">+{formatEUR(entradas)}</strong></span>
-                      <span className="text-zinc-500">Saídas: <strong className="text-red-500">-{formatEUR(saidas)}</strong></span>
+                      <span className="text-zinc-500">Saídas: <strong className="text-rose-600">-{formatEUR(saidas)}</strong></span>
                     </div>
                   )
                 })()}
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
 
@@ -849,7 +890,7 @@ function EditableCell({
           inputMode={kind === 'decimal' ? 'decimal' : undefined}
           disabled={pending}
           className={cn(
-            'w-full px-2 py-1 rounded border border-emerald-400 bg-white outline-none focus:ring-2 focus:ring-emerald-200',
+            'w-full px-2 py-1 rounded border border-indigo-400 bg-white outline-none focus:ring-2 focus:ring-indigo-200',
             alignClass,
             inputClass
           )}
@@ -906,7 +947,7 @@ function IvaSelectCell({
       value={value ?? ''}
       onChange={handleChange}
       disabled={pending}
-      className="w-full px-2 py-1 rounded border border-transparent hover:border-zinc-200 bg-transparent text-right text-sm focus:outline-none focus:border-emerald-400 focus:bg-white cursor-pointer disabled:opacity-50"
+      className="w-full px-2 py-1 rounded border border-transparent hover:border-zinc-200 bg-transparent text-right text-sm focus:outline-none focus:border-indigo-400 focus:bg-white cursor-pointer disabled:opacity-50"
     >
       <option value="">—</option>
       <option value="6">6%</option>
@@ -915,4 +956,3 @@ function IvaSelectCell({
     </select>
   )
 }
-

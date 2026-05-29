@@ -8,7 +8,7 @@ import { dispararAutomacao } from '@/app/(app)/crm/automacoes/actions'
 const TIPO_META: Record<string, { label: string; color: string }> = {
   FOLLOW_UP: { label: 'Follow-up', color: 'bg-sky-100 text-sky-700' },
   LEMBRETE_PAGAMENTO: { label: 'Lembrete de pagamento', color: 'bg-amber-100 text-amber-700' },
-  LEMBRETE_LEVANTAMENTO: { label: 'Lembrete de levantamento', color: 'bg-emerald-100 text-emerald-700' },
+  LEMBRETE_LEVANTAMENTO: { label: 'Lembrete de levantamento', color: 'bg-indigo-100 text-indigo-700' },
   CUSTOM: { label: 'Personalizada', color: 'bg-violet-100 text-violet-700' },
 }
 
@@ -117,7 +117,7 @@ export function ConfirmacaoEnvioModal({ template, customerId, workOrderId, onClo
                 </button>
                 <button
                   onClick={handleConfirm}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 text-sm font-medium transition flex items-center justify-center gap-2"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 text-sm font-medium transition flex items-center justify-center gap-2"
                 >
                   <Send className="w-4 h-4" />
                   Confirmar envio
@@ -128,7 +128,7 @@ export function ConfirmacaoEnvioModal({ template, customerId, workOrderId, onClo
 
           {state === 'sending' && (
             <div className="flex flex-col items-center py-8 gap-3">
-              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
               <p className="text-sm text-zinc-500">A enviar para o webhook n8n…</p>
             </div>
           )}
@@ -167,7 +167,7 @@ export function ConfirmacaoEnvioModal({ template, customerId, workOrderId, onClo
                   className="sucesso-circulo"
                   cx="28" cy="28" r="26"
                   fill="#dcfce7"
-                  stroke="#22c55e"
+                  stroke="#4f46e5"
                   strokeWidth="2"
                 />
                 <path

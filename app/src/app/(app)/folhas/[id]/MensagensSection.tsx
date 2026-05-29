@@ -10,7 +10,7 @@ import { STATUS_META, type WorkOrderStatus } from '../status'
 const TIPO_META: Record<string, { label: string; color: string }> = {
   FOLLOW_UP: { label: 'Follow-up', color: 'bg-sky-100 text-sky-700' },
   LEMBRETE_PAGAMENTO: { label: 'Pagamento', color: 'bg-amber-100 text-amber-700' },
-  LEMBRETE_LEVANTAMENTO: { label: 'Levantamento', color: 'bg-emerald-100 text-emerald-700' },
+  LEMBRETE_LEVANTAMENTO: { label: 'Levantamento', color: 'bg-indigo-100 text-indigo-700' },
   CUSTOM: { label: 'Personalizada', color: 'bg-violet-100 text-violet-700' },
 }
 
@@ -66,7 +66,7 @@ export function MensagensSection({ customerId, workOrderId, workOrderEstado, tem
         className="w-full flex items-center justify-between px-4 py-3 border-b border-zinc-100 hover:bg-zinc-50 transition text-left"
       >
         <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-emerald-600" />
+          <MessageSquare className="w-4 h-4 text-indigo-600" />
           <span className="text-sm font-semibold text-zinc-900">Mensagens</span>
           {paraEsteEstado.length > 0 && (
             <span className={cn(
@@ -93,7 +93,7 @@ export function MensagensSection({ customerId, workOrderId, workOrderEstado, tem
           {paraEsteEstado.map((t) => (
             <div
               key={t.id}
-              className="flex items-center justify-between gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5"
+              className="flex items-center justify-between gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-3 py-2.5"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -106,7 +106,7 @@ export function MensagensSection({ customerId, workOrderId, workOrderEstado, tem
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); setSending(t) }}
-                className="flex-shrink-0 flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+                className="flex-shrink-0 flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
               >
                 <Send className="w-3.5 h-3.5" />
                 Enviar
@@ -123,7 +123,7 @@ export function MensagensSection({ customerId, workOrderId, workOrderEstado, tem
           {!hasAnything && (
             <p className="text-sm text-zinc-400 py-2 text-center">
               Nenhuma automação ativa.{' '}
-              <a href="/crm/automacoes" className="text-emerald-600 hover:underline">Criar templates</a>
+              <a href="/crm/automacoes" className="text-indigo-600 hover:underline">Criar templates</a>
             </p>
           )}
 
@@ -160,7 +160,7 @@ export function MensagensSection({ customerId, workOrderId, workOrderEstado, tem
               {logs.map((log) => (
                 <div key={log.id} className="text-xs flex items-start gap-2">
                   {log.webhookOk
-                    ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    ? <CheckCircle className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0 mt-0.5" />
                     : <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
                   }
                   <div className="flex-1 min-w-0">

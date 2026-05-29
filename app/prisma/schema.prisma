@@ -218,6 +218,7 @@ model WorkOrder {
   transactions   Transaction[]
   automationLogs AutomationLog[]
   caucoes        WorkOrderCaucao[]
+  photos         WorkOrderPhoto[]
 
   @@index([estado])
   @@index([customerId])
@@ -291,6 +292,36 @@ model WorkOrderItem {
 enum WorkOrderItemType {
   PECA
   MAO_OBRA
+}
+
+enum WorkOrderPhotoSlot {
+  FRONT
+  LEFT_SIDE
+  RIGHT_SIDE
+  REAR
+  INTERIOR
+  ODOMETER
+  DAMAGE
+  EXTRA
+}
+
+// Fotos de estado da viatura associadas a uma folha de obra
+model WorkOrderPhoto {
+  id          String             @id @default(cuid())
+  workOrderId String             @map("work_order_id")
+  slot        WorkOrderPhotoSlot
+  filename    String
+  storagePath String             @map("storage_path")
+  mimeType    String             @map("mime_type")
+  size        Int
+  note        String?
+  uploadedAt  DateTime           @default(now()) @map("uploaded_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@index([slot])
+  @@map("work_order_photos")
 }
 
 // Anexos (foto/PDF do comprovante)

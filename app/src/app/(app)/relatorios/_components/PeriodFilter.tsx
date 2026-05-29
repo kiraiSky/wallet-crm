@@ -53,7 +53,7 @@ export function PeriodFilter({
               onClick={() => apply(p.key)}
               className={cn(
                 'px-3 py-2 rounded-lg text-sm font-medium transition',
-                active ? 'bg-emerald-500 text-white' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                active ? 'bg-indigo-500 text-white' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
               )}
             >
               {p.label}
@@ -84,7 +84,7 @@ export function PeriodFilter({
           onClick={applyCustom}
           className={cn(
             'mt-2 sm:mt-0 sm:ml-1 w-full sm:w-auto px-3 py-2 rounded-lg text-sm font-medium transition',
-            current === 'custom' ? 'bg-emerald-500 text-white' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+            current === 'custom' ? 'bg-indigo-500 text-white' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
           )}
         >
           Aplicar

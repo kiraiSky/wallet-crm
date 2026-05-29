@@ -87,7 +87,7 @@ export function AccountsClient({ accounts, totalConsolidado }: Props) {
           <div className="text-3xl font-bold">{formatEUR(totalConsolidado)}</div>
           <div className="text-xs text-zinc-400 mt-1">{accounts.length} {accounts.length === 1 ? 'conta ativa' : 'contas ativas'}</div>
         </div>
-        <TrendingUp className="hidden sm:block w-12 h-12 text-emerald-400" />
+        <TrendingUp className="hidden sm:block w-12 h-12 text-indigo-400" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -116,7 +116,7 @@ export function AccountsClient({ accounts, totalConsolidado }: Props) {
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-zinc-500">Saídas (mês)</span>
-                <span className="font-semibold text-red-500">{acc.saidasMes > 0 ? '- ' : ''}{formatEUR(acc.saidasMes)}</span>
+                <span className="font-semibold text-rose-600">{acc.saidasMes > 0 ? '- ' : ''}{formatEUR(acc.saidasMes)}</span>
               </div>
               <div className="flex items-center justify-between text-xs pt-2 border-t border-zinc-100">
                 <span className="text-zinc-500">Movimentos</span>
@@ -145,7 +145,7 @@ export function AccountsClient({ accounts, totalConsolidado }: Props) {
 
         <button
           onClick={openNew}
-          className="border-2 border-dashed border-zinc-300 rounded-2xl p-8 text-zinc-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50/50 transition flex flex-col items-center justify-center gap-2 min-h-[200px]"
+          className="border-2 border-dashed border-zinc-300 rounded-2xl p-8 text-zinc-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition flex flex-col items-center justify-center gap-2 min-h-[200px]"
         >
           <Plus className="w-8 h-8" />
           <span className="font-semibold">Adicionar nova conta</span>

@@ -10,7 +10,7 @@ import type { TemplateParaEnvio } from './ConfirmacaoEnvioModal'
 const TIPO_META: Record<string, string> = {
   FOLLOW_UP: 'bg-sky-100 text-sky-700',
   LEMBRETE_PAGAMENTO: 'bg-amber-100 text-amber-700',
-  LEMBRETE_LEVANTAMENTO: 'bg-emerald-100 text-emerald-700',
+  LEMBRETE_LEVANTAMENTO: 'bg-indigo-100 text-indigo-700',
   CUSTOM: 'bg-violet-100 text-violet-700',
 }
 
@@ -66,7 +66,7 @@ export function AutoSendModal({ templates, novoEstado, customerId, workOrderId, 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-zinc-100">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-emerald-500" />
+            <Zap className="w-4 h-4 text-indigo-500" />
             <span className="font-bold text-zinc-900">Mensagens automáticas</span>
           </div>
           {!sending && (
@@ -114,7 +114,7 @@ export function AutoSendModal({ templates, novoEstado, customerId, workOrderId, 
                     {!result && sending && (
                       <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
                     )}
-                    {result?.ok && <CheckCircle className="w-4 h-4 text-emerald-500" />}
+                    {result?.ok && <CheckCircle className="w-4 h-4 text-indigo-500" />}
                     {result && !result.ok && <XCircle className="w-4 h-4 text-red-400" />}
                   </div>
                 </div>
@@ -135,7 +135,7 @@ export function AutoSendModal({ templates, novoEstado, customerId, workOrderId, 
               <button
                 onClick={handleSend}
                 disabled={sending}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-medium transition flex items-center justify-center gap-2"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-medium transition flex items-center justify-center gap-2"
               >
                 {sending ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> A enviar…</>
@@ -151,7 +151,7 @@ export function AutoSendModal({ templates, novoEstado, customerId, workOrderId, 
                 'w-full rounded-xl py-2.5 text-sm font-medium transition',
                 hasError
                   ? 'bg-zinc-200 hover:bg-zinc-300 text-zinc-700'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
               )}
             >
               {hasError ? 'Fechar (com erros)' : 'Concluído'}

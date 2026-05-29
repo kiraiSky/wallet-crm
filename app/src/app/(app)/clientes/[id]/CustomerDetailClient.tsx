@@ -28,7 +28,7 @@ interface Props {
 
 const TAG_META: Record<CustomerTag, { label: string; chip: string }> = {
   VIP: { label: 'VIP', chip: 'bg-amber-100 text-amber-700' },
-  RECORRENTE: { label: 'Recorrente', chip: 'bg-emerald-100 text-emerald-700' },
+  RECORRENTE: { label: 'Recorrente', chip: 'bg-indigo-100 text-indigo-700' },
   NOVO: { label: 'Novo', chip: 'bg-sky-100 text-sky-700' },
   INATIVO: { label: 'Inativo', chip: 'bg-zinc-100 text-zinc-600' },
 }
@@ -178,7 +178,7 @@ export function CustomerDetailClient({ customer, vehicles, workOrders, transacti
                 {vehicles.map((v) => (
                   <div
                     key={v.id}
-                    className="flex items-start gap-3 p-3 rounded-xl border border-zinc-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition group"
+                    className="flex items-start gap-3 p-3 rounded-xl border border-zinc-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition group"
                   >
                     <div className="w-10 h-10 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center flex-shrink-0">
                       <Car className="w-5 h-5" />
@@ -231,7 +231,7 @@ export function CustomerDetailClient({ customer, vehicles, workOrders, transacti
               </h2>
               <Link
                 href={`/folhas?customer=${customer.id}`}
-                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
               >
                 Ver todas →
               </Link>
@@ -300,14 +300,14 @@ export function CustomerDetailClient({ customer, vehicles, workOrders, transacti
                   return (
                     <div className="text-xs text-zinc-500 mt-0.5 flex gap-3">
                       <span>Entradas: <strong className="text-emerald-600">+{formatEUR(entradas)}</strong></span>
-                      <span>Saídas: <strong className="text-red-500">-{formatEUR(saidas)}</strong></span>
+                      <span>Saídas: <strong className="text-rose-600">-{formatEUR(saidas)}</strong></span>
                     </div>
                   )
                 })()}
               </div>
               <Link
                 href={`/lancamentos`}
-                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
               >
                 Ver em lançamentos →
               </Link>
@@ -335,7 +335,7 @@ export function CustomerDetailClient({ customer, vehicles, workOrders, transacti
                       <div className="text-xs text-zinc-500">
                         {tx.category.nome} · {tx.account.nome}
                         {tx.workOrder && (
-                          <> · <Link href={`/folhas/${tx.workOrderId}`} className="hover:text-emerald-600">
+                          <> · <Link href={`/folhas/${tx.workOrderId}`} className="hover:text-indigo-600">
                             Folha #{tx.workOrder.numero}
                           </Link></>
                         )}
@@ -344,7 +344,7 @@ export function CustomerDetailClient({ customer, vehicles, workOrders, transacti
                     </div>
                     <div className={cn(
                       'text-sm font-bold whitespace-nowrap',
-                      tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'
+                      tx.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-rose-600'
                     )}>
                       {tx.tipo === 'ENTRADA' ? '+ ' : '- '}{formatEUR(tx.valor)}
                     </div>
@@ -388,7 +388,7 @@ function InfoRow({
         <div className="text-[10px] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
         {value ? (
           href ? (
-            <a href={href} className="text-zinc-900 hover:text-emerald-600 truncate block">
+            <a href={href} className="text-zinc-900 hover:text-indigo-600 truncate block">
               {value}
             </a>
           ) : (

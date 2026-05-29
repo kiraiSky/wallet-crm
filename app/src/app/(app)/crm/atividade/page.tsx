@@ -31,7 +31,7 @@ const kindMeta: Record<EventKind, { icon: typeof Activity; tone: string; ring: s
   'customer-new': { icon: UserPlus, tone: 'bg-sky-100 text-sky-700', ring: 'ring-sky-200' },
   'wo-new': { icon: ClipboardList, tone: 'bg-violet-100 text-violet-700', ring: 'ring-violet-200' },
   'wo-status': { icon: Activity, tone: 'bg-amber-100 text-amber-700', ring: 'ring-amber-200' },
-  tx: { icon: ArrowLeftRight, tone: 'bg-emerald-100 text-emerald-700', ring: 'ring-emerald-200' },
+  tx: { icon: ArrowLeftRight, tone: 'bg-zinc-100 text-zinc-700', ring: 'ring-zinc-200' },
   birthday: { icon: Cake, tone: 'bg-rose-100 text-rose-700', ring: 'ring-rose-200' },
   inactive: { icon: AlertTriangle, tone: 'bg-zinc-100 text-zinc-600', ring: 'ring-zinc-200' },
 }
@@ -232,7 +232,7 @@ export default async function AtividadePage({
               className={cn(
                 'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition',
                 active
-                  ? 'bg-emerald-500 text-white'
+                  ? 'bg-indigo-500 text-white'
                   : 'bg-white border border-zinc-200 text-zinc-600 hover:border-zinc-300'
               )}
             >
@@ -283,7 +283,7 @@ export default async function AtividadePage({
                           <div
                             className={cn(
                               'text-sm font-bold whitespace-nowrap',
-                              ev.amountTone === 'positive' ? 'text-emerald-600' : 'text-rose-500'
+                              ev.amountTone === 'positive' ? 'text-emerald-600' : 'text-rose-600'
                             )}
                           >
                             {ev.amountTone === 'positive' ? '+ ' : '- '}

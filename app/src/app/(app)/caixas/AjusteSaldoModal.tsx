@@ -81,7 +81,7 @@ export function AjusteSaldoModal({ open, onClose, account }: Props) {
           <div
             className={`rounded-xl px-4 py-3 text-sm font-medium ${
               diff === 0
-                ? 'bg-emerald-50 text-emerald-700'
+                ? 'bg-indigo-50 text-indigo-700'
                 : diff > 0
                 ? 'bg-blue-50 text-blue-700'
                 : 'bg-red-50 text-red-700'

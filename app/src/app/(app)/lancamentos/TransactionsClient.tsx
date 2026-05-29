@@ -242,7 +242,7 @@ export function TransactionsClient({
           <p className="text-zinc-500 text-sm">Todas as entradas e saídas das tuas contas.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => openNewTx('SAIDA')} className="btn-primary">
+          <button onClick={() => openNewTx('SAIDA')} className="btn-danger">
             <Plus className="w-4 h-4" /> Nova despesa
           </button>
         </div>
@@ -307,8 +307,8 @@ export function TransactionsClient({
       </div>
 
       {selectedCount > 0 && (
-        <div className="card p-3 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-emerald-200 bg-emerald-50/70">
-          <div className="flex items-center gap-2 text-sm font-medium text-emerald-900">
+        <div className="card p-3 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-indigo-200 bg-indigo-50/70">
+          <div className="flex items-center gap-2 text-sm font-medium text-indigo-900">
             <button
               type="button"
               onClick={clearSelection}
@@ -337,7 +337,7 @@ export function TransactionsClient({
           <div className="p-12 text-center">
             <FileText className="w-12 h-12 mx-auto text-zinc-300 mb-3" />
             <p className="text-sm text-zinc-500">Sem movimentos ainda.</p>
-            <button onClick={() => openNewTx('SAIDA')} className="btn-primary mt-4">
+            <button onClick={() => openNewTx('SAIDA')} className="btn-danger mt-4">
               <Plus className="w-4 h-4" /> Registar primeira despesa
             </button>
           </div>
@@ -353,7 +353,7 @@ export function TransactionsClient({
                       checked={allSelected}
                       onChange={(e) => setAllSelected(e.target.checked)}
                       aria-label="Selecionar todos os movimentos"
-                      className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                      className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                     />
                   </th>
                   <SortHeader label="Data" field="data" sort={sort} onSort={handleSort} />
@@ -381,7 +381,7 @@ export function TransactionsClient({
                         checked={selectedIds.has(tx.id)}
                         onChange={() => toggleSelected(tx.id)}
                         aria-label={`Selecionar ${tx.descricao}`}
-                        className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                        className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                       />
                     </td>
                     <td className="px-4 py-3 text-zinc-600 whitespace-nowrap text-xs">
@@ -451,7 +451,7 @@ export function TransactionsClient({
                       ) : tx.tipo === 'ENTRADA' ? (
                         <span className="text-emerald-600">+ {formatEUR(tx.valor)}</span>
                       ) : (
-                        <span className="text-red-500">- {formatEUR(tx.valor)}</span>
+                        <span className="text-rose-600">- {formatEUR(tx.valor)}</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -493,7 +493,7 @@ export function TransactionsClient({
                     checked={selectedIds.has(tx.id)}
                     onChange={() => toggleSelected(tx.id)}
                     aria-label={`Selecionar ${tx.descricao}`}
-                    className="h-4 w-4 shrink-0 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                    className="h-4 w-4 shrink-0 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                   />
                   {tx.attachments.length > 0 ? (
                     <AttachmentThumb
@@ -545,7 +545,7 @@ export function TransactionsClient({
                     ) : tx.tipo === 'ENTRADA' ? (
                       <span className="text-emerald-600">+ {formatEUR(tx.valor)}</span>
                     ) : (
-                      <span className="text-red-500">- {formatEUR(tx.valor)}</span>
+                      <span className="text-rose-600">- {formatEUR(tx.valor)}</span>
                     )}
                   </div>
                   <button
@@ -613,7 +613,7 @@ function KPI({
   color: 'emerald' | 'red' | 'zinc'
   prefix?: string
 }) {
-  const colorClass = color === 'emerald' ? 'text-emerald-600' : color === 'red' ? 'text-red-500' : 'text-zinc-900'
+  const colorClass = color === 'emerald' ? 'text-emerald-600' : color === 'red' ? 'text-rose-600' : 'text-zinc-900'
   return (
     <div className="card p-4">
       <div className="text-xs text-zinc-500 mb-1">{title}</div>

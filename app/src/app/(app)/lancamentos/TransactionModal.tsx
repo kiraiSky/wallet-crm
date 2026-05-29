@@ -243,7 +243,7 @@ export function TransactionModal({
             onClick={() => switchTipo('SAIDA')}
             className={cn(
               'py-2.5 rounded-lg font-semibold text-sm transition',
-              tipo === 'SAIDA' ? 'bg-white shadow-sm text-red-500' : 'text-zinc-500'
+              tipo === 'SAIDA' ? 'bg-white shadow-sm text-rose-600' : 'text-zinc-500'
             )}
           >
             ↙ Saída
@@ -482,20 +482,20 @@ export function TransactionModal({
           <div>
             <label className="label">Folha de obra (opcional)</label>
             {selectedWO ? (
-              <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <ClipboardList className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <ClipboardList className="w-4 h-4 text-indigo-600 flex-shrink-0" />
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-emerald-900 truncate">
+                    <div className="text-sm font-medium text-indigo-900 truncate">
                       #{selectedWO.numero} · {selectedWO.customerNome}
                     </div>
-                    <div className="text-xs text-emerald-700 truncate">{selectedWO.problema}</div>
+                    <div className="text-xs text-indigo-700 truncate">{selectedWO.problema}</div>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => { setWorkOrderId(''); setWoSearch('') }}
-                  className="text-emerald-600 hover:text-red-500 ml-2 flex-shrink-0"
+                  className="text-indigo-600 hover:text-red-500 ml-2 flex-shrink-0"
                 >
                   <XIcon className="w-4 h-4" />
                 </button>
@@ -542,22 +542,22 @@ export function TransactionModal({
         <div>
           <label className="label">Comprovativo (opcional)</label>
           {file ? (
-            <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-              <div className="text-sm text-emerald-900 truncate">{file.name}</div>
+            <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+              <div className="text-sm text-indigo-900 truncate">{file.name}</div>
               <button
                 type="button"
                 onClick={() => {
                   setFile(null)
                   if (fileRef.current) fileRef.current.value = ''
                 }}
-                className="text-emerald-700 hover:text-red-600"
+                className="text-indigo-700 hover:text-red-600"
                 aria-label="Remover"
               >
                 <XIcon className="w-4 h-4" />
               </button>
             </div>
           ) : (
-            <label className="flex flex-col items-center justify-center gap-1.5 px-3 py-4 bg-zinc-50 border-2 border-dashed border-zinc-200 hover:border-emerald-400 hover:bg-emerald-50/30 rounded-lg cursor-pointer transition">
+            <label className="flex flex-col items-center justify-center gap-1.5 px-3 py-4 bg-zinc-50 border-2 border-dashed border-zinc-200 hover:border-indigo-400 hover:bg-indigo-50/30 rounded-lg cursor-pointer transition">
               <UploadCloud className="w-6 h-6 text-zinc-400" />
               <span className="text-sm font-medium text-zinc-600">Clica para anexar</span>
               <span className="text-[11px] text-zinc-400">JPG, PNG, WebP ou PDF · até 5MB</span>
@@ -605,7 +605,12 @@ export function TransactionModal({
           <button
             type="submit"
             disabled={pending || accounts.length === 0 || filteredCategories.length === 0}
-            className="btn-primary flex-1"
+            className={cn(
+              'flex-1',
+              tipo === 'SAIDA'
+                ? 'btn-danger'
+                : 'inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg shadow-sm shadow-emerald-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed'
+            )}
           >
             {pending ? 'A guardar...' : 'Guardar'}
           </button>

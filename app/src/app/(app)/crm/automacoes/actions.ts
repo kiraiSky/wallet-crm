@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { fireAutomation } from '@/lib/automations'
+import { requireOwner } from '@/lib/current-user'
 
 export type TemplateInput = {
   id?: string
@@ -46,6 +47,7 @@ export async function getWorkOrderAutomationLogs(workOrderId: string) {
 }
 
 export async function saveTemplate(data: TemplateInput) {
+  await requireOwner() // só o OWNER pode criar/alterar automações
   const payload = {
     nome: data.nome.trim(),
     tipo: data.tipo,
@@ -63,11 +65,13 @@ export async function saveTemplate(data: TemplateInput) {
 }
 
 export async function deleteTemplate(id: string) {
+  await requireOwner() // só o OWNER pode apagar automações
   await prisma.automationTemplate.delete({ where: { id } })
   revalidatePath('/crm/automacoes')
 }
 
 export async function toggleTemplate(id: string, ativo: boolean) {
+  await requireOwner() // só o OWNER pode ativar/desativar automações
   await prisma.automationTemplate.update({ where: { id }, data: { ativo } })
   revalidatePath('/crm/automacoes')
 }

@@ -15,7 +15,7 @@ import { STATUS_META, type WorkOrderStatus } from '@/app/(app)/folhas/status'
 
 const TAG_STYLE: Record<CustomerQuickSummary['tag'], string> = {
   VIP: 'bg-amber-100 text-amber-700',
-  RECORRENTE: 'bg-emerald-100 text-emerald-700',
+  RECORRENTE: 'bg-indigo-100 text-indigo-700',
   NOVO: 'bg-sky-100 text-sky-700',
   INATIVO: 'bg-zinc-100 text-zinc-600',
 }
@@ -71,7 +71,7 @@ export function CustomerQuickModal() {
           <>
             {/* Header */}
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center text-base font-bold flex-shrink-0">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 text-white flex items-center justify-center text-base font-bold flex-shrink-0">
                 {data.nome
                   .split(/\s+/)
                   .map((p) => p[0])
@@ -109,10 +109,10 @@ export function CustomerQuickModal() {
                         href={wa}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-2 text-sm text-zinc-700 hover:text-emerald-600 hover:bg-emerald-50 px-3 py-2 transition flex-1 min-w-0"
+                        className="flex items-center gap-2 text-sm text-zinc-700 hover:text-indigo-600 hover:bg-indigo-50 px-3 py-2 transition flex-1 min-w-0"
                         title="Abrir no WhatsApp"
                       >
-                        <MessageCircle className="w-4 h-4 text-emerald-500" />
+                        <MessageCircle className="w-4 h-4 text-indigo-500" />
                         <span className="truncate">{data.telefone}</span>
                       </a>
                     ) : (
@@ -134,7 +134,7 @@ export function CustomerQuickModal() {
               {data.email && (
                 <a
                   href={`mailto:${data.email}`}
-                  className="flex items-center gap-2 text-sm text-zinc-700 hover:text-emerald-600 bg-zinc-50 hover:bg-emerald-50 rounded-lg px-3 py-2 transition"
+                  className="flex items-center gap-2 text-sm text-zinc-700 hover:text-indigo-600 bg-zinc-50 hover:bg-indigo-50 rounded-lg px-3 py-2 transition"
                 >
                   <Mail className="w-4 h-4 text-zinc-400" />
                   <span className="truncate">{data.email}</span>
@@ -166,11 +166,11 @@ export function CustomerQuickModal() {
                   </div>
                   <div className="text-base font-bold text-emerald-700 mt-0.5">+{formatEUR(data.totalReceitas)}</div>
                 </div>
-                <div className="rounded-lg bg-red-50 px-3 py-2">
-                  <div className="text-[10px] uppercase tracking-wide text-red-600 font-semibold flex items-center gap-1">
+                <div className="rounded-lg bg-rose-50 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-rose-600 font-semibold flex items-center gap-1">
                     <TrendingDown className="w-3 h-3" /> Saídas
                   </div>
-                  <div className="text-base font-bold text-red-600 mt-0.5">-{formatEUR(data.totalDespesas)}</div>
+                  <div className="text-base font-bold text-rose-600 mt-0.5">-{formatEUR(data.totalDespesas)}</div>
                 </div>
               </div>
             )}

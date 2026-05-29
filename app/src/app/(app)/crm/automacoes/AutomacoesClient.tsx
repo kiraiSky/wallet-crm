@@ -43,7 +43,7 @@ interface Props {
 const TIPO_META: Record<AutomationType, { label: string; color: string; icon: React.ElementType }> = {
   FOLLOW_UP: { label: 'Follow-up', color: 'bg-sky-100 text-sky-700', icon: MessageCircle },
   LEMBRETE_PAGAMENTO: { label: 'Pagamento', color: 'bg-amber-100 text-amber-700', icon: BellRing },
-  LEMBRETE_LEVANTAMENTO: { label: 'Levantamento', color: 'bg-emerald-100 text-emerald-700', icon: Car },
+  LEMBRETE_LEVANTAMENTO: { label: 'Levantamento', color: 'bg-indigo-100 text-indigo-700', icon: Car },
   CUSTOM: { label: 'Personalizada', color: 'bg-violet-100 text-violet-700', icon: Bot },
 }
 
@@ -98,7 +98,7 @@ export function AutomacoesClient({ templates, logs }: Props) {
         </div>
         <button
           onClick={openNew}
-          className="flex-shrink-0 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition"
+          className="flex-shrink-0 flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition"
         >
           <Plus className="w-4 h-4" />
           Nova
@@ -115,7 +115,7 @@ export function AutomacoesClient({ templates, logs }: Props) {
           </p>
           <button
             onClick={openNew}
-            className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
+            className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
           >
             + Criar primeira automação
           </button>
@@ -173,7 +173,7 @@ export function AutomacoesClient({ templates, logs }: Props) {
                       title={t.ativo ? 'Desativar' : 'Ativar'}
                       className={cn(
                         'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                        t.ativo ? 'bg-emerald-500' : 'bg-zinc-200'
+                        t.ativo ? 'bg-indigo-500' : 'bg-zinc-200'
                       )}
                     >
                       <span className={cn(
@@ -218,7 +218,7 @@ export function AutomacoesClient({ templates, logs }: Props) {
             {logs.map((log) => (
               <div key={log.id} className="px-4 py-3 flex items-center gap-3">
                 {log.webhookOk
-                  ? <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  ? <CheckCircle className="w-4 h-4 text-indigo-500 flex-shrink-0" />
                   : <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
                 }
                 <div className="flex-1 min-w-0">

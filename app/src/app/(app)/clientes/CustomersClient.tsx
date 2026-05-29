@@ -27,8 +27,8 @@ const TAG_META: Record<CustomerTag, { label: string; chip: string; dot: string }
   },
   RECORRENTE: {
     label: 'Recorrente',
-    chip: 'bg-emerald-100 text-emerald-700',
-    dot: 'bg-emerald-500',
+    chip: 'bg-indigo-100 text-indigo-700',
+    dot: 'bg-indigo-500',
   },
   NOVO: {
     label: 'Novo',
@@ -86,8 +86,8 @@ export function CustomersClient({ customers, counts, filters }: Props) {
           icon={Repeat}
           label="Recorrentes"
           value={counts.RECORRENTE}
-          accent="text-emerald-700"
-          bg="bg-emerald-100 text-emerald-700"
+          accent="text-indigo-700"
+          bg="bg-indigo-100 text-indigo-700"
         />
         <StatCard
           icon={UserPlus}

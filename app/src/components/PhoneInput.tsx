@@ -60,7 +60,7 @@ export function PhoneInput({
   return (
     <div className="relative" ref={ref}>
       <div className={cn(
-        'flex items-stretch rounded-lg overflow-hidden border bg-zinc-50 focus-within:bg-white focus-within:border-emerald-500 transition',
+        'flex items-stretch rounded-lg overflow-hidden border bg-zinc-50 focus-within:bg-white focus-within:border-indigo-500 transition',
         error ? 'border-red-300' : 'border-zinc-200'
       )}>
         <button
@@ -94,7 +94,7 @@ export function PhoneInput({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Procurar país ou código..."
-              className="w-full pl-9 pr-2 py-1.5 text-sm bg-zinc-50 rounded-lg border border-transparent focus:border-emerald-500 focus:bg-white outline-none transition"
+              className="w-full pl-9 pr-2 py-1.5 text-sm bg-zinc-50 rounded-lg border border-transparent focus:border-indigo-500 focus:bg-white outline-none transition"
             />
           </div>
           <div className="max-h-64 overflow-y-auto py-1">
@@ -111,7 +111,7 @@ export function PhoneInput({
                   }}
                   className={cn(
                     'w-full text-left flex items-center gap-2 px-3 py-2 hover:bg-zinc-50 transition text-sm',
-                    c.iso2 === country.iso2 && 'bg-emerald-50 text-emerald-700 font-medium'
+                    c.iso2 === country.iso2 && 'bg-indigo-50 text-indigo-700 font-medium'
                   )}
                 >
                   <Flag iso2={c.iso2} alt={c.name} />

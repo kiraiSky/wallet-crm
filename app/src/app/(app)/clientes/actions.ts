@@ -164,6 +164,7 @@ export type VehicleFormState = {
   ok: boolean
   errors?: Record<string, string>
   message?: string
+  id?: string
 }
 
 export async function saveVehicle(
@@ -213,6 +214,8 @@ export async function saveVehicle(
         before,
         after: updated,
       })
+      revalidatePath(`/clientes/${data.customerId}`)
+      return { ok: true, id: updated.id }
     } else {
       const created = await prisma.vehicle.create({
         data: { ...payload, customerId: data.customerId },
@@ -224,9 +227,9 @@ export async function saveVehicle(
         summary: `Viatura • ${created.matricula} ${created.marca} ${created.modelo}`,
         after: created,
       })
+      revalidatePath(`/clientes/${data.customerId}`)
+      return { ok: true, id: created.id }
     }
-    revalidatePath(`/clientes/${data.customerId}`)
-    return { ok: true }
   } catch (e) {
     console.error(e)
     return { ok: false, message: 'Erro ao guardar viatura' }

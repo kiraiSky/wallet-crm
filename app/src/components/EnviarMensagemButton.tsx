@@ -24,7 +24,7 @@ const TIPO_LABELS: Record<string, string> = {
 const TIPO_COLORS: Record<string, string> = {
   FOLLOW_UP: 'bg-sky-100 text-sky-700',
   LEMBRETE_PAGAMENTO: 'bg-amber-100 text-amber-700',
-  LEMBRETE_LEVANTAMENTO: 'bg-emerald-100 text-emerald-700',
+  LEMBRETE_LEVANTAMENTO: 'bg-indigo-100 text-indigo-700',
   CUSTOM: 'bg-violet-100 text-violet-700',
 }
 
@@ -84,7 +84,7 @@ export function EnviarMensagemButton({ customerId, workOrderId, className }: Pro
             <div className="text-center py-6">
               {result.ok ? (
                 <>
-                  <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+                  <CheckCircle className="w-12 h-12 text-indigo-500 mx-auto mb-3" />
                   <p className="font-semibold text-zinc-900">Mensagem enviada!</p>
                   <p className="text-sm text-zinc-500 mt-1">O webhook n8n foi disparado com sucesso.</p>
                 </>
@@ -130,7 +130,7 @@ export function EnviarMensagemButton({ customerId, workOrderId, className }: Pro
                     className={cn(
                       'text-left p-3 rounded-xl border transition',
                       selected?.id === t.id
-                        ? 'border-emerald-500 bg-emerald-50'
+                        ? 'border-indigo-500 bg-indigo-50'
                         : 'border-zinc-200 hover:border-zinc-300 bg-white'
                     )}
                   >
@@ -157,7 +157,7 @@ export function EnviarMensagemButton({ customerId, workOrderId, className }: Pro
                 <button
                   onClick={handleSend}
                   disabled={!selected}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-xl py-2.5 text-sm font-medium transition"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white rounded-xl py-2.5 text-sm font-medium transition"
                 >
                   Enviar
                 </button>

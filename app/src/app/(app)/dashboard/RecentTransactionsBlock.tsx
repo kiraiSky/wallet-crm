@@ -80,25 +80,25 @@ export function RecentTransactionsBlock({ transactions }: Props) {
               checked={allSelected}
               onChange={(e) => setAllSelected(e.target.checked)}
               aria-label="Selecionar todos os movimentos visíveis"
-              className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
             />
           )}
           <h3 className="font-semibold text-zinc-900">Últimos movimentos</h3>
         </div>
         <Link
           href="/lancamentos"
-          className="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1"
+          className="text-xs text-indigo-600 hover:text-indigo-700 font-medium inline-flex items-center gap-1"
         >
           Ver todos <ArrowRight className="w-3 h-3" />
         </Link>
       </div>
 
       {selectedCount > 0 && (
-        <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50/70 p-2 flex items-center justify-between gap-2">
+        <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50/70 p-2 flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => setSelectedIds(new Set())}
-            className="inline-flex items-center gap-2 text-xs font-medium text-emerald-900"
+            className="inline-flex items-center gap-2 text-xs font-medium text-indigo-900"
           >
             <X className="w-4 h-4" />
             {selectedCount} selecionado{selectedCount === 1 ? '' : 's'}
@@ -118,7 +118,7 @@ export function RecentTransactionsBlock({ transactions }: Props) {
       {transactions.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-sm text-zinc-500 mb-3">Sem movimentos ainda.</p>
-          <Link href="/lancamentos?new=despesa" className="btn-primary inline-flex">
+          <Link href="/lancamentos?new=despesa" className="btn-danger inline-flex">
             <Plus className="w-4 h-4" /> Primeira despesa
           </Link>
         </div>
@@ -131,7 +131,7 @@ export function RecentTransactionsBlock({ transactions }: Props) {
                 checked={selectedIds.has(tx.id)}
                 onChange={() => toggleSelected(tx.id)}
                 aria-label={`Selecionar ${tx.descricao}`}
-                className="h-4 w-4 shrink-0 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                className="h-4 w-4 shrink-0 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
               />
               {tx.tipo === 'TRANSFERENCIA' ? (
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-zinc-100">
@@ -164,7 +164,7 @@ export function RecentTransactionsBlock({ transactions }: Props) {
                 ) : tx.tipo === 'ENTRADA' ? (
                   <span className="text-emerald-600">+ {formatEUR(tx.valor)}</span>
                 ) : (
-                  <span className="text-red-500">- {formatEUR(tx.valor)}</span>
+                  <span className="text-rose-600">- {formatEUR(tx.valor)}</span>
                 )}
               </div>
               <button

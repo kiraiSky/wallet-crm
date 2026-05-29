@@ -43,7 +43,7 @@ const entityMeta: Record<EntityKey, { label: string; icon: typeof User; href?: (
 }
 
 const actionMeta: Record<string, { label: string; icon: typeof Plus; tone: string }> = {
-  CREATE: { label: 'Criado', icon: Plus, tone: 'bg-emerald-50 text-emerald-700' },
+  CREATE: { label: 'Criado', icon: Plus, tone: 'bg-indigo-50 text-indigo-700' },
   UPDATE: { label: 'Editado', icon: Pencil, tone: 'bg-sky-50 text-sky-700' },
   DELETE: { label: 'Eliminado', icon: Trash2, tone: 'bg-rose-50 text-rose-700' },
   ARCHIVE: { label: 'Arquivado', icon: Archive, tone: 'bg-amber-50 text-amber-700' },
@@ -109,7 +109,7 @@ export default async function AuditoriaPage({
               className={cn(
                 'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition',
                 active
-                  ? 'bg-emerald-500 text-white'
+                  ? 'bg-indigo-500 text-white'
                   : 'bg-white border border-zinc-200 text-zinc-600 hover:border-zinc-300'
               )}
             >

@@ -2,24 +2,25 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Wallet, Plus, LogOut, Users, ChevronDown, ShieldCheck, Plug, Building2 } from 'lucide-react'
+import { Plus, LogOut, Users, ChevronDown, ShieldCheck, Plug, Building2 } from 'lucide-react'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { logoutAction } from '@/app/login/actions'
 import { dispatchNewTx } from '@/lib/newTxBus'
 import { CrmSubNav } from '../crm/_components/CrmSubNav'
+import { ShiftLogo } from '@/components/ShiftLogo'
 
 const navItems = [
-  { href: '/dashboard', label: 'Painel', match: (p: string) => p.startsWith('/dashboard') },
-  { href: '/lancamentos', label: 'Movimentos', match: (p: string) => p.startsWith('/lancamentos') },
+  { href: '/dashboard', label: 'Painel', ownerOnly: true, match: (p: string) => p.startsWith('/dashboard') },
+  { href: '/lancamentos', label: 'Movimentos', ownerOnly: true, match: (p: string) => p.startsWith('/lancamentos') },
   {
     href: '/crm',
     label: 'CRM',
     match: (p: string) => p.startsWith('/crm') || p.startsWith('/clientes') || p.startsWith('/folhas'),
   },
-  { href: '/relatorios', label: 'Relatórios', match: (p: string) => p.startsWith('/relatorios') },
-  { href: '/caixas', label: 'Contas', match: (p: string) => p.startsWith('/caixas') },
-  { href: '/categorias', label: 'Categorias', match: (p: string) => p.startsWith('/categorias') },
+  { href: '/relatorios', label: 'Relatórios', ownerOnly: true, match: (p: string) => p.startsWith('/relatorios') },
+  { href: '/caixas', label: 'Contas', ownerOnly: true, match: (p: string) => p.startsWith('/caixas') },
+  { href: '/categorias', label: 'Categorias', ownerOnly: true, match: (p: string) => p.startsWith('/categorias') },
 ]
 
 export function TopNav({
@@ -35,6 +36,10 @@ export function TopNav({
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const [pending, start] = useTransition()
+
+  const isOwner = userRole === 'OWNER'
+  const visibleNav = navItems.filter((item) => !item.ownerOnly || isOwner)
+  const homeHref = isOwner ? '/dashboard' : '/crm'
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -55,14 +60,11 @@ export function TopNav({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-5 min-w-0">
-            <Link href="/dashboard" className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-zinc-900 hidden sm:inline">Carteira</span>
+            <Link href={homeHref} className="flex items-center flex-shrink-0">
+              <ShiftLogo size={28} />
             </Link>
             <div className="hidden md:flex items-center gap-1 min-w-0">
-              {navItems.map((item) => {
+              {visibleNav.map((item) => {
                 const active = item.match(pathname)
                 return (
                   <Link
@@ -71,7 +73,7 @@ export function TopNav({
                     className={cn(
                       'px-3 py-2 rounded-lg font-medium text-sm transition whitespace-nowrap',
                       active
-                        ? 'bg-emerald-50 text-emerald-700'
+                        ? 'bg-indigo-50 text-indigo-700'
                         : 'text-zinc-600 hover:bg-zinc-100'
                     )}
                   >
@@ -83,21 +85,23 @@ export function TopNav({
           </div>
 
           <div className="flex items-center gap-3 flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => dispatchNewTx('SAIDA')}
-              className="hidden xl:inline-flex btn-primary active:scale-[0.97] ease-apple flex-shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nova despesa</span>
-            </button>
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => dispatchNewTx('SAIDA')}
+                className="hidden xl:inline-flex btn-danger active:scale-[0.97] ease-apple flex-shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nova despesa</span>
+              </button>
+            )}
 
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-full hover:bg-zinc-100 transition pl-1 pr-2 py-1"
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
                   {userInitials}
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
@@ -163,7 +167,7 @@ export function TopNav({
           </div>
         </div>
       </div>
-      <CrmSubNav />
+      <CrmSubNav isOwner={isOwner} />
     </nav>
   )
 }

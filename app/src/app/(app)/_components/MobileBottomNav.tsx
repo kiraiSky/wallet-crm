@@ -15,6 +15,9 @@ import {
   ShieldCheck,
   X,
   UserCog,
+  LayoutGrid,
+  ClipboardList,
+  Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dispatchNewTx } from '@/lib/newTxBus'
@@ -51,6 +54,39 @@ export function MobileBottomNav({ isOwner }: { isOwner: boolean }) {
   ]
   const visibleMore = moreItems.filter((i) => !i.ownerOnly || isOwner)
 
+  // Colaborador: navegação dedicada à área de CRM/folhas, sem itens financeiros.
+  if (!isOwner) {
+    const crmItems = [
+      { href: '/crm', label: 'CRM', icon: LayoutGrid, match: (p: string) => p === '/crm' },
+      { href: '/folhas', label: 'Folhas', icon: ClipboardList, match: (p: string) => p.startsWith('/folhas') },
+      { href: '/clientes', label: 'Clientes', icon: Users, match: (p: string) => p.startsWith('/clientes') },
+      { href: '/crm/atividade', label: 'Atividade', icon: Activity, match: (p: string) => p.startsWith('/crm/atividade') },
+    ]
+    return (
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30">
+        <div className="grid grid-cols-4 h-16">
+          {crmItems.map((item) => {
+            const Icon = item.icon
+            const active = item.match(pathname)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex flex-col items-center justify-center gap-0.5',
+                  active ? 'text-indigo-600' : 'text-zinc-500'
+                )}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
+    )
+  }
+
   return (
     <>
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-30">
@@ -59,7 +95,7 @@ export function MobileBottomNav({ isOwner }: { isOwner: boolean }) {
             href="/dashboard"
             className={cn(
               'flex flex-col items-center justify-center gap-0.5',
-              isActive('/dashboard') ? 'text-emerald-600' : 'text-zinc-500'
+              isActive('/dashboard') ? 'text-indigo-600' : 'text-zinc-500'
             )}
           >
             <LayoutDashboard className="w-5 h-5" />
@@ -69,7 +105,7 @@ export function MobileBottomNav({ isOwner }: { isOwner: boolean }) {
             href="/crm"
             className={cn(
               'flex flex-col items-center justify-center gap-0.5',
-              isActive('/crm') || isActive('/clientes') ? 'text-emerald-600' : 'text-zinc-500'
+              isActive('/crm') || isActive('/clientes') ? 'text-indigo-600' : 'text-zinc-500'
             )}
           >
             <Users className="w-5 h-5" />
@@ -81,7 +117,7 @@ export function MobileBottomNav({ isOwner }: { isOwner: boolean }) {
             className="flex flex-col items-center justify-center"
             aria-label="Nova despesa"
           >
-            <div className="w-12 h-12 -mt-4 bg-emerald-500 hover:bg-emerald-600 active:scale-95 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white transition-[transform,background-color] duration-200 ease-apple">
+            <div className="w-12 h-12 -mt-4 bg-rose-500 hover:bg-rose-600 active:scale-95 rounded-full flex items-center justify-center shadow-lg shadow-rose-500/25 text-white transition-[transform,background-color] duration-200 ease-apple">
               <Plus className="w-6 h-6" />
             </div>
           </button>
@@ -89,7 +125,7 @@ export function MobileBottomNav({ isOwner }: { isOwner: boolean }) {
             href="/lancamentos"
             className={cn(
               'flex flex-col items-center justify-center gap-0.5',
-              isActive('/lancamentos') ? 'text-emerald-600' : 'text-zinc-500'
+              isActive('/lancamentos') ? 'text-indigo-600' : 'text-zinc-500'
             )}
           >
             <List className="w-5 h-5" />
@@ -106,7 +142,7 @@ export function MobileBottomNav({ isOwner }: { isOwner: boolean }) {
                 isActive('/categorias') ||
                 isActive('/utilizadores') ||
                 isActive('/auditoria')
-                ? 'text-emerald-600'
+                ? 'text-indigo-600'
                 : 'text-zinc-500'
             )}
             aria-label="Mais"
@@ -151,7 +187,7 @@ export function MobileBottomNav({ isOwner }: { isOwner: boolean }) {
                     className={cn(
                       'flex flex-col items-center justify-center gap-1.5 rounded-xl py-4 transition',
                       active
-                        ? 'bg-emerald-50 text-emerald-700'
+                        ? 'bg-indigo-50 text-indigo-700'
                         : 'bg-zinc-50 text-zinc-700 hover:bg-zinc-100'
                     )}
                   >
