@@ -423,6 +423,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
             onEdit={openEditItem}
             onDelete={handleDeleteItem}
             emptyText="Sem peças adicionadas."
+            isOwner={isOwner}
           />
           <ItemList
             title="Mão de obra"
@@ -433,9 +434,11 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
             onEdit={openEditItem}
             onDelete={handleDeleteItem}
             emptyText="Sem mão de obra adicionada."
+            isOwner={isOwner}
           />
 
-          {/* Totais */}
+          {/* Totais — apenas OWNER */}
+          {isOwner && (
           <div className="card p-5">
             <h2 className="font-semibold text-zinc-900 mb-3">Totais</h2>
             <div className="space-y-2 text-sm">
@@ -453,6 +456,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
               </div>
             </div>
           </div>
+          )}
 
           {/* Movimentos financeiros — apenas OWNER */}
           {isOwner && (
@@ -750,6 +754,7 @@ function ItemList({
   onEdit,
   onDelete,
   emptyText,
+  isOwner,
 }: {
   title: string
   icon: React.ComponentType<{ className?: string }>
@@ -759,6 +764,7 @@ function ItemList({
   onEdit: (it: WorkOrderItemRow) => void
   onDelete: (it: WorkOrderItemRow) => void
   emptyText: string
+  isOwner: boolean
 }) {
   const subtotal = items.reduce((s, i) => s + i.total, 0)
   return (
@@ -771,7 +777,7 @@ function ItemList({
           <div>
             <h3 className="font-semibold text-zinc-900">{title}</h3>
             <div className="text-xs text-zinc-500">
-              {items.length} {items.length === 1 ? 'item' : 'items'} · {formatEUR(subtotal)}
+              {items.length} {items.length === 1 ? 'item' : 'items'}{isOwner ? ` · ${formatEUR(subtotal)}` : ''}
             </div>
           </div>
         </div>
@@ -788,10 +794,10 @@ function ItemList({
             <tr className="text-left text-xs uppercase tracking-wide text-zinc-500">
               <th className="px-4 py-2 font-semibold">Descrição</th>
               <th className="px-4 py-2 font-semibold text-right w-16">Qtd</th>
-              <th className="px-4 py-2 font-semibold text-right w-24">Preço</th>
-              <th className="px-4 py-2 font-semibold text-right w-20">Margem</th>
-              <th className="px-4 py-2 font-semibold text-right w-20">IVA</th>
-              <th className="px-4 py-2 font-semibold text-right w-24">Total</th>
+              {isOwner && <th className="px-4 py-2 font-semibold text-right w-24">Preço</th>}
+              {isOwner && <th className="px-4 py-2 font-semibold text-right w-20">Margem</th>}
+              {isOwner && <th className="px-4 py-2 font-semibold text-right w-20">IVA</th>}
+              {isOwner && <th className="px-4 py-2 font-semibold text-right w-24">Total</th>}
               <th className="px-4 py-2 w-16"></th>
             </tr>
           </thead>
@@ -822,53 +828,61 @@ function ItemList({
                     onSave={(v) => updateWorkOrderItemField(it.id, { quantidade: Number(v) })}
                   />
                 </td>
-                <td className="px-1 py-1 text-right text-zinc-600">
-                  <EditableCell
-                    value={it.precoUnit}
-                    kind="decimal"
-                    align="right"
-                    formatDisplay={(v) => formatEUR(Number(v))}
-                    onSave={(v) => updateWorkOrderItemField(it.id, { precoUnit: Number(v) })}
-                  />
-                </td>
-                <td className="px-1 py-1 text-right text-zinc-600">
-                  <EditableCell
-                    value={it.margem ?? ''}
-                    kind="decimal"
-                    align="right"
-                    placeholder="—"
-                    formatDisplay={(v) => v === '' ? '—' : `${v}%`}
-                    onSave={(v) => updateWorkOrderItemField(it.id, { margem: v === '' ? null : Number(v) })}
-                  />
-                </td>
-                <td className="px-1 py-1 text-right text-zinc-600">
-                  <IvaSelectCell
-                    value={it.iva}
-                    onSave={(v) => updateWorkOrderItemField(it.id, { iva: v })}
-                  />
-                </td>
-                <td className="px-1 py-1 text-right font-semibold text-zinc-900">
-                  <EditableCell
-                    value={it.total}
-                    kind="decimal"
-                    align="right"
-                    formatDisplay={(v) => formatEUR(Number(v))}
-                    onSave={(v) => {
-                      const newTotal = Number(v)
-                      if (it.quantidade <= 0) {
-                        return Promise.resolve({ ok: false, message: 'Quantidade tem de ser > 0' })
-                      }
-                      const m = it.margem ?? 0
-                      const i = it.iva ?? 0
-                      const factor = it.quantidade * (1 + m / 100) * (1 + i / 100)
-                      if (factor <= 0) {
-                        return Promise.resolve({ ok: false, message: 'Fatores inválidos' })
-                      }
-                      const newPreco = +(newTotal / factor).toFixed(4)
-                      return updateWorkOrderItemField(it.id, { precoUnit: newPreco })
-                    }}
-                  />
-                </td>
+                {isOwner && (
+                  <td className="px-1 py-1 text-right text-zinc-600">
+                    <EditableCell
+                      value={it.precoUnit}
+                      kind="decimal"
+                      align="right"
+                      formatDisplay={(v) => formatEUR(Number(v))}
+                      onSave={(v) => updateWorkOrderItemField(it.id, { precoUnit: Number(v) })}
+                    />
+                  </td>
+                )}
+                {isOwner && (
+                  <td className="px-1 py-1 text-right text-zinc-600">
+                    <EditableCell
+                      value={it.margem ?? ''}
+                      kind="decimal"
+                      align="right"
+                      placeholder="—"
+                      formatDisplay={(v) => v === '' ? '—' : `${v}%`}
+                      onSave={(v) => updateWorkOrderItemField(it.id, { margem: v === '' ? null : Number(v) })}
+                    />
+                  </td>
+                )}
+                {isOwner && (
+                  <td className="px-1 py-1 text-right text-zinc-600">
+                    <IvaSelectCell
+                      value={it.iva}
+                      onSave={(v) => updateWorkOrderItemField(it.id, { iva: v })}
+                    />
+                  </td>
+                )}
+                {isOwner && (
+                  <td className="px-1 py-1 text-right font-semibold text-zinc-900">
+                    <EditableCell
+                      value={it.total}
+                      kind="decimal"
+                      align="right"
+                      formatDisplay={(v) => formatEUR(Number(v))}
+                      onSave={(v) => {
+                        const newTotal = Number(v)
+                        if (it.quantidade <= 0) {
+                          return Promise.resolve({ ok: false, message: 'Quantidade tem de ser > 0' })
+                        }
+                        const m = it.margem ?? 0
+                        const i = it.iva ?? 0
+                        const factor = it.quantidade * (1 + m / 100) * (1 + i / 100)
+                        if (factor <= 0) {
+                          return Promise.resolve({ ok: false, message: 'Fatores inválidos' })
+                        }
+                        const newPreco = +(newTotal / factor).toFixed(4)
+                        return updateWorkOrderItemField(it.id, { precoUnit: newPreco })
+                      }}
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-2.5 text-right">
                   <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition">
                     <button

@@ -5,19 +5,21 @@ import { usePathname } from 'next/navigation'
 import { LayoutGrid, Users, Activity, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const items = [
-  { href: '/crm', label: 'Visão geral', icon: LayoutGrid, match: (p: string) => p === '/crm' },
-  { href: '/folhas', label: 'Folhas', icon: ClipboardList, match: (p: string) => p.startsWith('/folhas') },
-  { href: '/clientes', label: 'Clientes', icon: Users, match: (p: string) => p.startsWith('/clientes') },
-  { href: '/crm/atividade', label: 'Atividade', icon: Activity, match: (p: string) => p.startsWith('/crm/atividade') },
+const allItems = [
+  { href: '/crm', label: 'Visão geral', icon: LayoutGrid, match: (p: string) => p === '/crm', ownerOnly: true },
+  { href: '/folhas', label: 'Folhas', icon: ClipboardList, match: (p: string) => p.startsWith('/folhas'), ownerOnly: false },
+  { href: '/clientes', label: 'Clientes', icon: Users, match: (p: string) => p.startsWith('/clientes'), ownerOnly: false },
+  { href: '/crm/atividade', label: 'Atividade', icon: Activity, match: (p: string) => p.startsWith('/crm/atividade'), ownerOnly: false },
 ]
 
-export function CrmSubNav({ isOwner: _isOwner }: { isOwner: boolean }) {
+export function CrmSubNav({ isOwner }: { isOwner: boolean }) {
   const pathname = usePathname()
   const isCrmArea =
     pathname.startsWith('/crm') || pathname.startsWith('/clientes') || pathname.startsWith('/folhas')
 
   if (!isCrmArea) return null
+
+  const items = allItems.filter((it) => !it.ownerOnly || isOwner)
 
   return (
     <div className="border-t border-zinc-100 bg-white">

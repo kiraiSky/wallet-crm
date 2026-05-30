@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { formatEUR, formatDate } from '@/lib/format'
@@ -8,6 +9,7 @@ import { Users, Award, TrendingUp, AlertTriangle, Cake, ArrowRight, ClipboardLis
 import { cn } from '@/lib/utils'
 import { MechanicFilterSelect } from './MechanicFilterSelect'
 import { PeriodFilterSelect, type CrmPeriod } from './PeriodFilterSelect'
+import { getCurrentUser } from '@/lib/current-user'
 import type { UserOption } from '../folhas/page'
 import type { WorkOrderStatus } from '../folhas/status'
 
@@ -104,6 +106,9 @@ export default async function CrmOverviewPage({
 }: {
   searchParams: Promise<SearchParams>
 }) {
+  const currentUser = await getCurrentUser()
+  if (currentUser.role === 'EMPLOYEE') redirect('/folhas')
+
   const params = await searchParams
   const now = new Date()
   const selectedPeriod = periodOptions.includes(params.period as CrmPeriod)

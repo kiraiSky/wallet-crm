@@ -45,6 +45,7 @@ interface Props {
   counts: Record<WorkOrderStatus | 'TOTAL' | 'ARQUIVO', number>
   valorEmAberto: number
   filters: { search?: string; estado?: WorkOrderStatus; customerId?: string }
+  isOwner: boolean
 }
 
 const KANBAN_COL_BG: Record<WorkOrderStatus, string> = {
@@ -99,6 +100,7 @@ export function WorkOrdersClient({
   counts,
   valorEmAberto,
   filters,
+  isOwner,
 }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -268,25 +270,27 @@ export function WorkOrdersClient({
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <div className="card p-4">
-          <div className="text-xs text-zinc-500 mb-1">Ativas</div>
-          <div className="text-lg font-bold text-zinc-900">{counts.TOTAL}</div>
+      {/* KPIs — apenas visíveis para o owner */}
+      {isOwner && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+          <div className="card p-4">
+            <div className="text-xs text-zinc-500 mb-1">Ativas</div>
+            <div className="text-lg font-bold text-zinc-900">{counts.TOTAL}</div>
+          </div>
+          <div className="card p-4">
+            <div className="text-xs text-zinc-500 mb-1">Em curso</div>
+            <div className="text-lg font-bold text-orange-600">{emCurso}</div>
+          </div>
+          <div className="card p-4">
+            <div className="text-xs text-zinc-500 mb-1">Concluídas</div>
+            <div className="text-lg font-bold text-emerald-600">{counts.CONCLUIDA}</div>
+          </div>
+          <div className="card p-4">
+            <div className="text-xs text-zinc-500 mb-1">Valor em aberto</div>
+            <div className="text-lg font-bold text-zinc-900">{formatEUR(valorEmAberto)}</div>
+          </div>
         </div>
-        <div className="card p-4">
-          <div className="text-xs text-zinc-500 mb-1">Em curso</div>
-          <div className="text-lg font-bold text-orange-600">{emCurso}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-xs text-zinc-500 mb-1">Concluídas</div>
-          <div className="text-lg font-bold text-emerald-600">{counts.CONCLUIDA}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-xs text-zinc-500 mb-1">Valor em aberto</div>
-          <div className="text-lg font-bold text-zinc-900">{formatEUR(valorEmAberto)}</div>
-        </div>
-      </div>
+      )}
 
       {/* Filtros */}
       <div className="card p-3 mb-4 flex flex-wrap gap-2 items-center">
@@ -404,8 +408,8 @@ export function WorkOrdersClient({
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
-          <div className="overflow-x-auto pb-4 -mx-4 px-4">
-            <div className="flex gap-3" style={{ minWidth: `${KANBAN_COLS.length * 272 + (KANBAN_COLS.length - 1) * 12}px` }}>
+          <div className="overflow-x-auto pt-4 pb-1 -mx-4 px-4" style={{ transform: 'scaleY(-1)' }}>
+            <div className="flex gap-3" style={{ minWidth: `${KANBAN_COLS.length * 272 + (KANBAN_COLS.length - 1) * 12}px`, transform: 'scaleY(-1)' }}>
               {KANBAN_COLS.map((status) => {
                 const ids = columns[status] ?? []
                 const cards = ids.map((id) => wosById[id]).filter(Boolean) as WorkOrderRow[]

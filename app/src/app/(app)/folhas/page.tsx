@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/current-user'
 import { WorkOrdersClient } from './WorkOrdersClient'
 import { STATUS_LIST, ACTIVE_STATUSES, ARQUIVO_STATUSES, type WorkOrderStatus } from './status'
 
@@ -115,6 +116,9 @@ export default async function FolhasPage({
     ...searchWhere,
   }
 
+  const currentUser = await getCurrentUser()
+  const isOwner = currentUser.role === 'OWNER'
+
   const [workOrders, archivedOrders, statusCounts, customers, users] = await Promise.all([
     prisma.workOrder.findMany({
       where: activeWhere,
@@ -174,6 +178,7 @@ export default async function FolhasPage({
       counts={counts}
       valorEmAberto={valorEmAberto}
       filters={{ search, estado: estadoFilter, customerId: customerFilter }}
+      isOwner={isOwner}
     />
   )
 }
