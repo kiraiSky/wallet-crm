@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/current-user'
 import { WorkOrderDetailClient } from './WorkOrderDetailClient'
 import type { WorkOrderStatus } from '../status'
+import type { UserOption } from '../page'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,6 +76,8 @@ export type WorkOrderDetail = {
   total: number
   moloniDocumentId: number | null
   moloniDocumentType: string | null
+  responsibleId: string | null
+  responsible: { id: string; nome: string; photoUrl: string | null } | null
   customer: { id: string; nome: string; telefone: string | null; nif: string | null; createdAt: string }
   vehicle: {
     id: string
@@ -100,12 +103,13 @@ export default async function WorkOrderDetailPage({
   const { id } = await params
   const me = await getCurrentUser()
   const isOwner = me.role === 'OWNER'
-  const [wo, txList, accounts, categories, templates, automationLogs] = await Promise.all([
+  const [wo, txList, accounts, categories, templates, automationLogs, users] = await Promise.all([
     prisma.workOrder.findUnique({
       where: { id },
       include: {
         customer: { select: { id: true, nome: true, telefone: true, nif: true, createdAt: true } },
         vehicle: true,
+        responsible: { select: { id: true, nome: true, photoStoragePath: true } },
         items: { orderBy: { createdAt: 'asc' } },
         caucoes: { orderBy: { data: 'asc' } },
         photos: { orderBy: { uploadedAt: 'desc' } },
@@ -142,6 +146,11 @@ export default async function WorkOrderDetailPage({
       take: 10,
       select: { id: true, templateNome: true, mensagemEnviada: true, webhookOk: true, webhookResponse: true, createdAt: true },
     }),
+    prisma.user.findMany({
+      where: { active: true },
+      orderBy: { nome: 'asc' },
+      select: { id: true, nome: true, role: true, photoStoragePath: true },
+    }),
   ])
   if (!wo) notFound()
 
@@ -162,6 +171,14 @@ export default async function WorkOrderDetailPage({
     total: Number(wo.total),
     moloniDocumentId: wo.moloniDocumentId,
     moloniDocumentType: wo.moloniDocumentType,
+    responsibleId: wo.responsibleId,
+    responsible: wo.responsible
+      ? {
+          id: wo.responsible.id,
+          nome: wo.responsible.nome,
+          photoUrl: wo.responsible.photoStoragePath ? `/api/users/${wo.responsible.id}/photo` : null,
+        }
+      : null,
     shareToken: wo.shareToken,
     customer: { ...wo.customer, createdAt: wo.customer.createdAt.toISOString() },
     vehicle: wo.vehicle
@@ -235,6 +252,12 @@ export default async function WorkOrderDetailPage({
       categories={categories.map((c) => ({ ...c, tipo: c.tipo as 'ENTRADA' | 'SAIDA' }))}
       isOwner={isOwner}
       templates={templates}
+      users={users.map((u) => ({
+        id: u.id,
+        nome: u.nome,
+        role: u.role as UserOption['role'],
+        photoUrl: u.photoStoragePath ? `/api/users/${u.id}/photo` : null,
+      }))}
       automationLogs={automationLogs.map((l) => ({
         ...l,
         createdAt: l.createdAt.toISOString(),

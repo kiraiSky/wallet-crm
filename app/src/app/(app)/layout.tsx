@@ -52,6 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <TopNav
         userName={user.nome}
         userInitials={initialsOf(user.nome)}
+        userPhotoUrl={user.photoStoragePath ? `/api/users/${user.id}/photo` : null}
         userRole={user.role}
       />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">

@@ -264,6 +264,7 @@ export function CustomerDetailClient({ customer, vehicles, workOrders, transacti
                           )}
                           <span>{formatDate(wo.dataAbertura)}</span>
                         </div>
+                        <ResponsibleMini responsible={wo.responsible} className="mt-1" />
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <span
@@ -367,6 +368,29 @@ export function CustomerDetailClient({ customer, vehicles, workOrders, transacti
         vehicle={editingVehicle}
       />
     </>
+  )
+}
+
+function ResponsibleMini({
+  responsible,
+  className,
+}: {
+  responsible: { id: string; nome: string; photoUrl?: string | null } | null
+  className?: string
+}) {
+  const name = responsible?.nome ?? 'Sem responsavel'
+  return (
+    <div className={cn('inline-flex items-center gap-1.5 text-zinc-500 min-w-0', className)}>
+      <span className="w-5 h-5 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700 flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+        {responsible?.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={responsible.photoUrl} alt={name} className="w-full h-full rounded-full object-cover" />
+        ) : (
+          initials(name)
+        )}
+      </span>
+      <span className="text-[11px] font-medium truncate">{name}</span>
+    </div>
   )
 }
 

@@ -35,12 +35,13 @@ import { ACTIVE_STATUSES, ARQUIVO_STATUSES, STATUS_META, STATUS_FLOW, nextStatus
 import { WorkOrderModal } from './WorkOrderModal'
 import { WorkOrderPreviewModal } from './WorkOrderPreviewModal'
 import { changeStatus } from './actions'
-import type { WorkOrderRow, CustomerOption } from './page'
+import type { WorkOrderRow, CustomerOption, UserOption } from './page'
 
 interface Props {
   workOrders: WorkOrderRow[]
   archivedOrders: WorkOrderRow[]
   customers: CustomerOption[]
+  users: UserOption[]
   counts: Record<WorkOrderStatus | 'TOTAL' | 'ARQUIVO', number>
   valorEmAberto: number
   filters: { search?: string; estado?: WorkOrderStatus; customerId?: string }
@@ -94,6 +95,7 @@ export function WorkOrdersClient({
   workOrders,
   archivedOrders,
   customers,
+  users,
   counts,
   valorEmAberto,
   filters,
@@ -334,7 +336,7 @@ export function WorkOrdersClient({
                     <th className="px-4 py-3 font-semibold">Cliente · Viatura</th>
                     <th className="px-4 py-3 font-semibold">Problema</th>
                     <th className="px-4 py-3 font-semibold">Estado</th>
-                    <th className="px-4 py-3 font-semibold">Data</th>
+                    <th className="px-4 py-3 font-semibold">Data / responsavel</th>
                     <th className="px-4 py-3 font-semibold text-right">Total</th>
                   </tr>
                 </thead>
@@ -354,7 +356,10 @@ export function WorkOrdersClient({
                       </td>
                       <td className="px-4 py-3 text-zinc-700 max-w-xs truncate">{wo.problema}</td>
                       <td className="px-4 py-3"><StatusChip estado={wo.estado} /></td>
-                      <td className="px-4 py-3 text-zinc-500 text-xs whitespace-nowrap">{formatDate(wo.dataAbertura)}</td>
+                      <td className="px-4 py-3 text-zinc-500 text-xs whitespace-nowrap">
+                        <div>{formatDate(wo.dataAbertura)}</div>
+                        <ResponsibleMini responsible={wo.responsible} className="mt-1" />
+                      </td>
                       <td className="px-4 py-3 text-right font-bold text-zinc-900 whitespace-nowrap">{formatEUR(wo.total)}</td>
                     </tr>
                   ))}
@@ -376,10 +381,11 @@ export function WorkOrdersClient({
                       </div>
                     )}
                     <div className="text-xs text-zinc-600 mt-1 truncate">{wo.problema}</div>
-                    <div className="flex items-center justify-between mt-2 text-xs">
+                    <div className="flex items-center justify-between mt-2 text-xs gap-3">
                       <span className="text-zinc-500">{formatDate(wo.dataAbertura)}</span>
                       <span className="font-bold text-zinc-900">{formatEUR(wo.total)}</span>
                     </div>
+                    <ResponsibleMini responsible={wo.responsible} className="mt-2" />
                   </div>
                 ))}
               </div>
@@ -443,7 +449,7 @@ export function WorkOrdersClient({
                     <th className="px-4 py-3 font-semibold">Cliente · Viatura</th>
                     <th className="px-4 py-3 font-semibold">Problema</th>
                     <th className="px-4 py-3 font-semibold">Estado</th>
-                    <th className="px-4 py-3 font-semibold">Data</th>
+                    <th className="px-4 py-3 font-semibold">Data / responsavel</th>
                     <th className="px-4 py-3 font-semibold text-right">Total</th>
                   </tr>
                 </thead>
@@ -467,7 +473,10 @@ export function WorkOrdersClient({
                       </td>
                       <td className="px-4 py-3 text-zinc-500 max-w-xs truncate">{wo.problema}</td>
                       <td className="px-4 py-3"><StatusChip estado={wo.estado} /></td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs whitespace-nowrap">{formatDate(wo.dataAbertura)}</td>
+                      <td className="px-4 py-3 text-zinc-400 text-xs whitespace-nowrap">
+                        <div>{formatDate(wo.dataAbertura)}</div>
+                        <ResponsibleMini responsible={wo.responsible} className="mt-1" muted />
+                      </td>
                       <td className="px-4 py-3 text-right font-bold text-zinc-700 whitespace-nowrap">{formatEUR(wo.total)}</td>
                     </tr>
                   ))}
@@ -487,6 +496,7 @@ export function WorkOrdersClient({
                       <span className="text-zinc-400">{formatDate(wo.dataAbertura)}</span>
                       <span className="font-bold text-zinc-700">{formatEUR(wo.total)}</span>
                     </div>
+                    <ResponsibleMini responsible={wo.responsible} className="mt-2" muted />
                   </div>
                 ))}
               </div>
@@ -500,11 +510,13 @@ export function WorkOrdersClient({
         onClose={() => setModalOpen(false)}
         workOrder={null}
         customers={customers}
+        users={users}
         defaultCustomerId={filters.customerId}
       />
 
       <WorkOrderPreviewModal
         workOrderId={previewId}
+        users={users}
         onClose={() => setPreviewId(null)}
         onStatusChanged={(woId, newStatus) => {
           if (ARQUIVO_STATUSES.includes(newStatus)) {
@@ -598,6 +610,7 @@ function CardContent({ wo, onAdvance, onCardClick, isDragOverlay }: {
           </div>
         )}
         <p className="text-xs text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">{wo.problema}</p>
+        <ResponsibleMini responsible={wo.responsible} className="mt-2" />
         {wo.lastMessage && (
           <div className={cn('flex items-center gap-1 text-xs mt-1.5 px-1.5 py-0.5 rounded-md w-fit', wo.lastMessage.webhookOk ? 'bg-indigo-50 text-indigo-700' : 'bg-red-50 text-red-500')}>
             {wo.lastMessage.webhookOk ? <CheckCircle className="w-3 h-3 flex-shrink-0" /> : <XCircle className="w-3 h-3 flex-shrink-0" />}
@@ -625,4 +638,42 @@ export function StatusChip({ estado }: { estado: WorkOrderStatus }) {
       {meta.label}
     </span>
   )
+}
+
+function ResponsibleMini({
+  responsible,
+  className,
+  muted = false,
+}: {
+  responsible: { id: string; nome: string; photoUrl?: string | null } | null
+  className?: string
+  muted?: boolean
+}) {
+  const name = responsible?.nome ?? 'Sem responsavel'
+  return (
+    <div className={cn('inline-flex items-center gap-1.5 min-w-0', muted ? 'text-zinc-400' : 'text-zinc-500', className)}>
+      <span className={cn(
+        'w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-bold flex-shrink-0',
+        muted ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+      )}>
+        {responsible?.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={responsible.photoUrl} alt={name} className="w-full h-full rounded-full object-cover" />
+        ) : (
+          initials(name)
+        )}
+      </span>
+      <span className="text-[11px] font-medium truncate max-w-[150px]">{name}</span>
+    </div>
+  )
+}
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || '--'
 }

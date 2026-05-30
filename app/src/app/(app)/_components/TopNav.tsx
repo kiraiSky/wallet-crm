@@ -26,10 +26,12 @@ const navItems = [
 export function TopNav({
   userName,
   userInitials,
+  userPhotoUrl,
   userRole,
 }: {
   userName: string
   userInitials: string
+  userPhotoUrl?: string | null
   userRole: 'OWNER' | 'EMPLOYEE'
 }) {
   const pathname = usePathname()
@@ -101,8 +103,12 @@ export function TopNav({
                 onClick={() => setOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-full hover:bg-zinc-100 transition pl-1 pr-2 py-1"
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                  {userInitials}
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                  {userPhotoUrl ? (
+                    <img src={userPhotoUrl} alt={userName} className="w-full h-full object-cover" />
+                  ) : (
+                    userInitials
+                  )}
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
               </button>

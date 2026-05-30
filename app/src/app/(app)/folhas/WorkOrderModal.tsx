@@ -9,6 +9,7 @@ import {
   Camera,
   Car,
   CheckCircle2,
+  ClipboardList,
   ImageIcon,
   Loader2,
   Phone,
@@ -19,9 +20,10 @@ import {
 } from 'lucide-react'
 import { Modal } from '@/components/Modal'
 import { saveWorkOrder } from './actions'
+import { STATUS_META, type WorkOrderStatus } from './status'
 import { saveCustomer, saveVehicle } from '../clientes/actions'
 import { saveWorkOrderPhoto, type WorkOrderPhotoSlot } from './[id]/photo-actions'
-import type { CustomerOption } from './page'
+import type { CustomerOption, UserOption } from './page'
 import { cn } from '@/lib/utils'
 import { compressImageFile } from '@/lib/image-compression'
 
@@ -35,6 +37,7 @@ export type WorkOrderForModal = {
   observacoes: string | null
   kmEntrada: number | null
   dataPrevista: string | null // ISO
+  responsibleId: string | null
 }
 
 interface Props {
@@ -42,6 +45,7 @@ interface Props {
   onClose: () => void
   workOrder: WorkOrderForModal | null
   customers: CustomerOption[]
+  users: UserOption[]
   defaultCustomerId?: string
 }
 
@@ -54,6 +58,14 @@ type VehicleOption = {
   cor?: string | null
   km?: number | null
   observacoes?: string | null
+  workOrders?: {
+    id: string
+    numero: number
+    estado: string
+    problema: string
+    dataAbertura: string
+    dataConclusao: string | null
+  }[]
 }
 
 function isoToDateInput(iso: string | null): string {
@@ -73,6 +85,7 @@ function initialState(w: WorkOrderForModal | null, defaultCustomerId?: string) {
     observacoes: w?.observacoes ?? '',
     kmEntrada: w?.kmEntrada !== null && w?.kmEntrada !== undefined ? String(w.kmEntrada) : '',
     dataPrevista: isoToDateInput(w?.dataPrevista ?? null),
+    responsibleId: w?.responsibleId ?? '',
   }
 }
 
@@ -100,6 +113,7 @@ function CreateWorkOrderWizard({
   open,
   onClose,
   customers,
+  users,
   defaultCustomerId,
 }: Props) {
   const router = useRouter()
@@ -118,6 +132,7 @@ function CreateWorkOrderWizard({
 
   const [vehicles, setVehicles] = useState<VehicleOption[]>([])
   const [vehicleId, setVehicleId] = useState('')
+  const [vehicleMode, setVehicleMode] = useState<'new' | 'existing' | null>(null)
   const [creatingVehicle, setCreatingVehicle] = useState(false)
   const [vehicleForm, setVehicleForm] = useState({
     matricula: '',
@@ -130,6 +145,7 @@ function CreateWorkOrderWizard({
   })
 
   const [problema, setProblema] = useState('')
+  const [responsibleId, setResponsibleId] = useState('')
   const [mainPhoto, setMainPhoto] = useState<File | null>(null)
   const [mainPhotoPreview, setMainPhotoPreview] = useState<string | null>(null)
   const [takeAllPhotos, setTakeAllPhotos] = useState(false)
@@ -186,9 +202,11 @@ function CreateWorkOrderWizard({
     setNewCustomerPhone('')
     setVehicles([])
     setVehicleId('')
+    setVehicleMode(null)
     setCreatingVehicle(false)
     setVehicleForm({ matricula: '', marca: '', modelo: '', ano: '', cor: '', km: '', observacoes: '' })
     setProblema('')
+    setResponsibleId('')
     clearPhotoState()
     setErrors({})
     setError(null)
@@ -197,13 +215,19 @@ function CreateWorkOrderWizard({
   useEffect(() => {
     if (!customerId) {
       setVehicles([])
+      setVehicleMode(null)
       return
     }
     let cancelled = false
     fetch(`/api/customers/${customerId}/vehicles`)
       .then((r) => r.json())
       .then((data) => {
-        if (!cancelled) setVehicles(data.vehicles ?? [])
+        if (!cancelled) {
+          const nextVehicles = data.vehicles ?? []
+          setVehicles(nextVehicles)
+          setVehicleMode((current) => current ?? (nextVehicles.length > 0 ? 'existing' : 'new'))
+          setCreatingVehicle(nextVehicles.length === 0)
+        }
       })
       .catch(() => {
         if (!cancelled) setVehicles([])
@@ -233,6 +257,7 @@ function CreateWorkOrderWizard({
     setCustomerSearchOpen(false)
     setCreatingCustomer(false)
     setVehicleId('')
+    setVehicleMode(null)
     setErrors((current) => omitKeys(current, ['customerId', 'nome', 'telefone']))
   }
 
@@ -300,7 +325,7 @@ function CreateWorkOrderWizard({
       return
     }
 
-    const shouldCreateVehicle = creatingVehicle || vehicles.length === 0
+    const shouldCreateVehicle = vehicleMode === 'new' || creatingVehicle || vehicles.length === 0
     if (!shouldCreateVehicle) {
       setErrors({ vehicleId: 'Escolhe uma viatura ou cria uma nova.' })
       return
@@ -331,6 +356,8 @@ function CreateWorkOrderWizard({
         }
         setVehicles((current) => [vehicle, ...current])
         setVehicleId(vehicle.id)
+        setVehicleMode('existing')
+        setCreatingVehicle(false)
         setStep(3)
       } else if (res.errors) {
         setErrors(res.errors)
@@ -382,6 +409,7 @@ function CreateWorkOrderWizard({
     fd.set('customerId', customerId)
     fd.set('vehicleId', vehicleId)
     fd.set('problema', problema.trim())
+    if (responsibleId) fd.set('responsibleId', responsibleId)
     if (selectedVehicle?.km) fd.set('kmEntrada', String(selectedVehicle.km))
 
     setSubmitting(true)
@@ -421,12 +449,19 @@ function CreateWorkOrderWizard({
   }
 
   const canContinueCustomer = Boolean(customerId || (creatingCustomer && newCustomerName.trim()))
+  const canContinueVehicle = vehicleMode === 'new' || Boolean(vehicleId)
   const canFinish = Boolean(mainPhoto && problema.trim() && !busy && !processingSlot)
 
   return (
-    <Modal open={open} onClose={onClose} title="Nova folha de obra" size="lg">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={step === 1 ? 'Nova folha de obra' : step === 2 ? 'Adicionar viatura' : 'Fotos da viatura'}
+      size="xl"
+      hideTitle
+    >
       <div className="p-5 space-y-5">
-        <StepHeader step={step} />
+        <StepHeader step={step} onGoToStep={setStep} />
 
         {step === 1 && (
           <section className="space-y-4">
@@ -438,6 +473,7 @@ function CreateWorkOrderWizard({
                   type="text"
                   value={customerQuery}
                   onFocus={() => setCustomerSearchOpen(true)}
+                  onBlur={() => setTimeout(() => setCustomerSearchOpen(false), 150)}
                   onChange={(e) => {
                     setCustomerQuery(e.target.value)
                     setCustomerId('')
@@ -450,7 +486,7 @@ function CreateWorkOrderWizard({
                   autoFocus
                 />
                 {customerSearchOpen && (
-                  <div className="absolute z-50 mt-1 w-full rounded-xl border border-zinc-200 bg-white shadow-lg overflow-hidden">
+                  <div className="relative z-10 mt-1 w-full rounded-xl border border-zinc-200 bg-white shadow-lg overflow-hidden">
                     {customerQuery.trim() && (
                       <button
                         type="button"
@@ -536,139 +572,228 @@ function CreateWorkOrderWizard({
 
         {step === 2 && (
           <section className="space-y-4">
-            <div className="rounded-xl border border-zinc-200 p-4">
-              <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">Cliente</div>
-              <div className="text-sm font-semibold text-zinc-900">{selectedCustomer?.nome}</div>
+            <div className="rounded-xl border border-zinc-200 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                  <UserRound className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Cliente selecionado</div>
+                  <div className="text-base font-semibold text-zinc-900 truncate">{selectedCustomer?.nome}</div>
+                  {selectedCustomer && <CustomerMeta customer={selectedCustomer} />}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={goToCustomerStep}
+                className="btn-secondary text-xs px-3 py-1.5 sm:w-auto"
+              >
+                Alterar cliente
+              </button>
             </div>
 
-            {vehicles.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {vehicles.map((vehicle) => (
-                  <button
-                    key={vehicle.id}
-                    type="button"
-                    onClick={() => {
-                      setVehicleId(vehicle.id)
-                      setCreatingVehicle(false)
-                      setErrors((current) => omitKeys(current, ['vehicleId']))
-                    }}
+            <div>
+              <div className="mb-2">
+                <h4 className="text-sm font-semibold text-zinc-900">Adicionar viatura</h4>
+                <p className="text-sm text-zinc-500">Escolha se vai criar uma viatura nova ou usar uma já registada.</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVehicleMode('new')
+                    setCreatingVehicle(true)
+                    setVehicleId('')
+                    setErrors((current) => omitKeys(current, ['vehicleId']))
+                  }}
+                  className={cn(
+                    'rounded-xl border p-4 text-left transition flex items-center justify-between gap-4',
+                    vehicleMode === 'new'
+                      ? 'border-indigo-400 bg-indigo-50 ring-2 ring-indigo-100'
+                      : 'border-zinc-200 hover:bg-zinc-50'
+                  )}
+                >
+                  <span className="flex items-center gap-3 min-w-0">
+                    <span className="w-11 h-11 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                      <Car className="w-5 h-5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-zinc-900">Nova viatura</span>
+                      <span className="block text-sm text-zinc-500">Adicionar uma viatura que ainda não existe</span>
+                    </span>
+                  </span>
+                  <span
                     className={cn(
-                      'rounded-xl border p-3 text-left transition',
-                      vehicle.id === vehicleId
-                        ? 'border-indigo-300 bg-indigo-50 ring-2 ring-indigo-100'
-                        : 'border-zinc-200 hover:bg-zinc-50'
+                      'w-5 h-5 rounded-full border-2 flex-shrink-0',
+                      vehicleMode === 'new' ? 'border-indigo-600 bg-indigo-600 ring-4 ring-indigo-100' : 'border-zinc-300'
                     )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-500">
-                        <Car className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-mono text-sm font-bold tracking-wider text-zinc-900">{vehicle.matricula}</div>
-                        <div className="text-sm text-zinc-700 truncate">{vehicle.marca} {vehicle.modelo}</div>
-                        <div className="text-xs text-zinc-500">
-                          {[vehicle.ano, vehicle.cor, vehicle.km ? `${vehicle.km} km` : null].filter(Boolean).join(' · ') || 'Sem detalhes extra'}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVehicleMode('existing')
+                    setCreatingVehicle(false)
+                    setErrors((current) => omitKeys(current, ['vehicleId']))
+                  }}
+                  className={cn(
+                    'rounded-xl border p-4 text-left transition flex items-center justify-between gap-4',
+                    vehicleMode === 'existing'
+                      ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-100'
+                      : 'border-zinc-200 hover:bg-zinc-50'
+                  )}
+                >
+                  <span className="flex items-center gap-3 min-w-0">
+                    <span className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                      <ClipboardList className="w-5 h-5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-zinc-900">Viatura existente</span>
+                      <span className="block text-sm text-zinc-500">Selecionar uma viatura já registada</span>
+                    </span>
+                  </span>
+                  <span
+                    className={cn(
+                      'w-5 h-5 rounded-full border-2 flex-shrink-0',
+                      vehicleMode === 'existing' ? 'border-emerald-600 bg-emerald-600 ring-4 ring-emerald-100' : 'border-zinc-300'
+                    )}
+                  />
+                </button>
               </div>
-            )}
+            </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setCreatingVehicle(true)
-                setVehicleId('')
-              }}
-              className="btn-secondary w-full"
+            <div
+              className={cn(
+                'grid transition-[grid-template-rows] duration-300 ease-apple',
+                vehicleMode === 'existing' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+              )}
             >
-              <Plus className="w-4 h-4" />
-              Criar nova viatura
-            </button>
-
-            {(creatingVehicle || vehicles.length === 0) && (
-              <div className="rounded-xl border border-zinc-200 p-4 space-y-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
-                  <Car className="w-4 h-4" />
-                  Dados da viatura
-                </div>
-                <div>
-                  <label className="label">Matrícula *</label>
-                  <input
-                    value={vehicleForm.matricula}
-                    onChange={(e) => setVehicleForm((v) => ({ ...v, matricula: e.target.value.toUpperCase() }))}
-                    className="input-base !uppercase tracking-wider font-semibold"
-                    placeholder="AA-00-AA"
-                  />
-                  {errors.matricula && <p className="text-xs text-red-500 mt-1">{errors.matricula}</p>}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="label">Marca *</label>
-                    <input
-                      value={vehicleForm.marca}
-                      onChange={(e) => setVehicleForm((v) => ({ ...v, marca: e.target.value }))}
-                      className="input-base"
-                      placeholder="Seat"
-                    />
-                    {errors.marca && <p className="text-xs text-red-500 mt-1">{errors.marca}</p>}
-                  </div>
-                  <div>
-                    <label className="label">Modelo *</label>
-                    <input
-                      value={vehicleForm.modelo}
-                      onChange={(e) => setVehicleForm((v) => ({ ...v, modelo: e.target.value }))}
-                      className="input-base"
-                      placeholder="Ibiza"
-                    />
-                    {errors.modelo && <p className="text-xs text-red-500 mt-1">{errors.modelo}</p>}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="label">Ano</label>
-                    <input
-                      value={vehicleForm.ano}
-                      onChange={(e) => setVehicleForm((v) => ({ ...v, ano: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
-                      className="input-base"
-                      inputMode="numeric"
-                      placeholder="2020"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Cor</label>
-                    <input
-                      value={vehicleForm.cor}
-                      onChange={(e) => setVehicleForm((v) => ({ ...v, cor: e.target.value }))}
-                      className="input-base"
-                      placeholder="Branco"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Km</label>
-                    <input
-                      value={vehicleForm.km}
-                      onChange={(e) => setVehicleForm((v) => ({ ...v, km: e.target.value.replace(/\D/g, '') }))}
-                      className="input-base"
-                      inputMode="numeric"
-                      placeholder="125000"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="label">Observações</label>
-                  <textarea
-                    value={vehicleForm.observacoes}
-                    onChange={(e) => setVehicleForm((v) => ({ ...v, observacoes: e.target.value }))}
-                    className="input-base resize-none"
-                    rows={2}
-                    placeholder="Notas sobre a viatura..."
-                  />
+              <div className="min-h-0 overflow-hidden">
+                <div
+                  className={cn(
+                    'space-y-3 transition-all duration-300 ease-apple',
+                    vehicleMode === 'existing' ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'
+                  )}
+                >
+                  {vehicles.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-zinc-300 p-5 text-sm text-zinc-500">
+                      Este cliente ainda não tem viaturas registadas.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {vehicles.map((vehicle) => (
+                        <VehicleHistoryCard
+                          key={vehicle.id}
+                          vehicle={vehicle}
+                          selected={vehicle.id === vehicleId}
+                          onSelect={() => {
+                            setVehicleId(vehicle.id)
+                            setErrors((current) => omitKeys(current, ['vehicleId']))
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
+
+            <div
+              className={cn(
+                'grid transition-[grid-template-rows] duration-300 ease-apple',
+                vehicleMode === 'new' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+              )}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <div
+                  className={cn(
+                    'rounded-xl border border-zinc-200 p-4 space-y-3 transition-all duration-300 ease-apple',
+                    vehicleMode === 'new' ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Car className="w-5 h-5 text-zinc-700" />
+                    <div>
+                      <div className="text-base font-semibold text-zinc-900">Dados da viatura</div>
+                      <div className="text-sm text-zinc-500">Preencha as informações principais da viatura.</div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Matrícula *</label>
+                    <input
+                      value={vehicleForm.matricula}
+                      onChange={(e) => setVehicleForm((v) => ({ ...v, matricula: e.target.value.toUpperCase() }))}
+                      className="input-base !uppercase tracking-wider font-semibold"
+                      placeholder="AA-00-AA"
+                    />
+                    {errors.matricula && <p className="text-xs text-red-500 mt-1">{errors.matricula}</p>}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">Marca *</label>
+                      <input
+                        value={vehicleForm.marca}
+                        onChange={(e) => setVehicleForm((v) => ({ ...v, marca: e.target.value }))}
+                        className="input-base"
+                        placeholder="Seat"
+                      />
+                      {errors.marca && <p className="text-xs text-red-500 mt-1">{errors.marca}</p>}
+                    </div>
+                    <div>
+                      <label className="label">Modelo *</label>
+                      <input
+                        value={vehicleForm.modelo}
+                        onChange={(e) => setVehicleForm((v) => ({ ...v, modelo: e.target.value }))}
+                        className="input-base"
+                        placeholder="Ibiza"
+                      />
+                      {errors.modelo && <p className="text-xs text-red-500 mt-1">{errors.modelo}</p>}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="label">Ano</label>
+                      <input
+                        value={vehicleForm.ano}
+                        onChange={(e) => setVehicleForm((v) => ({ ...v, ano: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                        className="input-base"
+                        inputMode="numeric"
+                        placeholder="2020"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Cor</label>
+                      <input
+                        value={vehicleForm.cor}
+                        onChange={(e) => setVehicleForm((v) => ({ ...v, cor: e.target.value }))}
+                        className="input-base"
+                        placeholder="Branco"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Km</label>
+                      <input
+                        value={vehicleForm.km}
+                        onChange={(e) => setVehicleForm((v) => ({ ...v, km: e.target.value.replace(/\D/g, '') }))}
+                        className="input-base"
+                        inputMode="numeric"
+                        placeholder="125000"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Observações</label>
+                    <textarea
+                      value={vehicleForm.observacoes}
+                      onChange={(e) => setVehicleForm((v) => ({ ...v, observacoes: e.target.value }))}
+                      className="input-base resize-none"
+                      rows={2}
+                      placeholder="Notas sobre a viatura..."
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
             {errors.vehicleId && <p className="text-xs text-red-500">{errors.vehicleId}</p>}
           </section>
         )}
@@ -680,6 +805,22 @@ function CreateWorkOrderWizard({
               <div className="text-sm font-semibold text-zinc-900">
                 {selectedVehicle?.matricula} · {selectedVehicle?.marca} {selectedVehicle?.modelo}
               </div>
+            </div>
+
+            <div>
+              <label className="label">Responsavel</label>
+              <select
+                value={responsibleId}
+                onChange={(e) => setResponsibleId(e.target.value)}
+                className="input-base"
+              >
+                <option value="">Quem criar a folha</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.nome}{user.role === 'OWNER' ? ' - Admin' : ''}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -763,7 +904,7 @@ function CreateWorkOrderWizard({
             </button>
           )}
           {step === 2 && (
-            <button type="button" onClick={goToPhotoStep} disabled={busy} className="btn-primary flex-1">
+            <button type="button" onClick={goToPhotoStep} disabled={busy || !canContinueVehicle} className="btn-primary flex-1">
               {busy ? 'A guardar...' : 'Continuar'}
               <ArrowRight className="w-4 h-4" />
             </button>
@@ -784,6 +925,7 @@ function EditWorkOrderModal({
   onClose,
   workOrder,
   customers,
+  users,
   defaultCustomerId,
 }: Props) {
   const router = useRouter()
@@ -797,6 +939,7 @@ function EditWorkOrderModal({
   const [observacoes, setObservacoes] = useState(init.observacoes)
   const [kmEntrada, setKmEntrada] = useState(init.kmEntrada)
   const [dataPrevista, setDataPrevista] = useState(init.dataPrevista)
+  const [responsibleId, setResponsibleId] = useState(init.responsibleId)
   const [vehicles, setVehicles] = useState<VehicleOption[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
@@ -835,6 +978,7 @@ function EditWorkOrderModal({
     setObservacoes(s.observacoes)
     setKmEntrada(s.kmEntrada)
     setDataPrevista(s.dataPrevista)
+    setResponsibleId(s.responsibleId)
     const initialCustomer = customers.find((customer) => customer.id === s.customerId)
     setCustomerQuery(initialCustomer?.nome ?? '')
     setCustomerSearchOpen(false)
@@ -876,6 +1020,7 @@ function EditWorkOrderModal({
     if (observacoes) fd.set('observacoes', observacoes)
     if (kmEntrada) fd.set('kmEntrada', kmEntrada)
     if (dataPrevista) fd.set('dataPrevista', dataPrevista)
+    if (responsibleId) fd.set('responsibleId', responsibleId)
 
     startTransition(async () => {
       const res = await saveWorkOrder({ ok: false }, fd)
@@ -1013,6 +1158,22 @@ function EditWorkOrderModal({
         </div>
 
         <div>
+          <label className="label">Responsavel pela folha</label>
+          <select
+            value={responsibleId}
+            onChange={(e) => setResponsibleId(e.target.value)}
+            className="input-base"
+          >
+            <option value="">Manter responsavel atual</option>
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.nome}{user.role === 'OWNER' ? ' - Admin' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
           <label className="label">Problema reportado *</label>
           <textarea
             value={problema}
@@ -1107,7 +1268,7 @@ function EditWorkOrderModal({
   )
 }
 
-function StepHeader({ step }: { step: 1 | 2 | 3 }) {
+function StepHeader({ step, onGoToStep }: { step: 1 | 2 | 3; onGoToStep: (s: 1 | 2 | 3) => void }) {
   const steps = [
     { value: 1, label: 'Cliente' },
     { value: 2, label: 'Viatura' },
@@ -1115,42 +1276,168 @@ function StepHeader({ step }: { step: 1 | 2 | 3 }) {
   ] as const
 
   return (
-    <div className="grid grid-cols-3 gap-2">
-      {steps.map((item) => {
-        const active = step === item.value
-        const done = step > item.value
-        return (
-          <div
-            key={item.value}
-            className={cn(
-              'rounded-xl border px-3 py-2 transition',
-              active
-                ? 'border-indigo-300 bg-indigo-50 text-indigo-800'
-                : done
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                  : 'border-zinc-200 bg-white text-zinc-500'
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold',
-                  active
-                    ? 'bg-indigo-600 text-white'
-                    : done
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-zinc-100 text-zinc-500'
+    <div className="px-1 sm:px-10 py-2">
+      <div className="grid grid-cols-[minmax(72px,1fr)_minmax(32px,1.4fr)_minmax(72px,1fr)_minmax(32px,1.4fr)_minmax(72px,1fr)] items-start">
+        {steps.map((item, index) => {
+          const active = step === item.value
+          const done = step > item.value
+          const reached = step >= item.value
+          const status = done ? 'Concluído' : active ? 'Em preenchimento' : 'Pendente'
+
+          return (
+            <FragmentStep
+              key={item.value}
+              showConnector={index < steps.length - 1}
+              connectorActive={step > item.value}
+            >
+              <button
+                type="button"
+                onClick={() => done && onGoToStep(item.value)}
+                disabled={!done}
+                  className={cn(
+                    'group flex w-full flex-col items-center text-center transition-all duration-700 ease-apple',
+                  done ? 'cursor-pointer' : 'cursor-default',
+                  active && 'scale-[1.02]'
                 )}
               >
-                {done ? <CheckCircle2 className="w-3.5 h-3.5" /> : item.value}
-              </span>
-              <span className="text-xs font-semibold truncate">{item.label}</span>
-            </div>
-          </div>
-        )
-      })}
+                <span
+                  className={cn(
+                    'w-12 h-12 rounded-full border flex items-center justify-center text-sm font-bold transition-all duration-1000 ease-apple',
+                    done && 'border-emerald-200 bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200',
+                    active && 'border-indigo-500 bg-white text-indigo-700 ring-4 ring-indigo-100 shadow-sm',
+                    !reached && 'border-zinc-200 bg-zinc-50 text-zinc-500'
+                  )}
+                >
+                  {done ? <CheckCircle2 className="w-5 h-5" /> : item.value}
+                </span>
+                <span
+                  className={cn(
+                    'mt-2 text-sm font-semibold transition-colors duration-700',
+                    done && 'text-emerald-700',
+                    active && 'text-indigo-700',
+                    !reached && 'text-zinc-600'
+                  )}
+                >
+                  {item.label}
+                </span>
+                <span className="mt-0.5 text-xs text-zinc-500 transition-opacity duration-700">
+                  {status}
+                </span>
+              </button>
+            </FragmentStep>
+          )
+        })}
+      </div>
     </div>
   )
+}
+
+function FragmentStep({
+  children,
+  showConnector,
+  connectorActive,
+}: {
+  children: React.ReactNode
+  showConnector: boolean
+  connectorActive: boolean
+}) {
+  return (
+    <>
+      <div>{children}</div>
+      {showConnector && (
+        <div className="pt-6 px-2 sm:px-4">
+          <div className="h-0.5 bg-zinc-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-indigo-600 rounded-full transition-all duration-1000 ease-apple"
+              style={{ width: connectorActive ? '100%' : '0%' }}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+function VehicleHistoryCard({
+  vehicle,
+  selected,
+  onSelect,
+}: {
+  vehicle: VehicleOption
+  selected: boolean
+  onSelect: () => void
+}) {
+  const history = vehicle.workOrders ?? []
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'rounded-xl border p-4 text-left transition bg-white',
+        selected
+          ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-100'
+          : 'border-zinc-200 hover:bg-zinc-50'
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div className="w-11 h-11 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-500 flex-shrink-0">
+          <Car className="w-5 h-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="font-mono text-sm font-bold tracking-wider text-zinc-900">{vehicle.matricula}</div>
+              <div className="text-sm text-zinc-700 truncate">{vehicle.marca} {vehicle.modelo}</div>
+              <div className="text-xs text-zinc-500">
+                {[vehicle.ano, vehicle.cor, vehicle.km ? `${vehicle.km} km` : null].filter(Boolean).join(' · ') || 'Sem detalhes extra'}
+              </div>
+            </div>
+            <span
+              className={cn(
+                'w-5 h-5 rounded-full border-2 flex-shrink-0 mt-1',
+                selected ? 'border-emerald-600 bg-emerald-600 ring-4 ring-emerald-100' : 'border-zinc-300'
+              )}
+            />
+          </div>
+
+          <div className="mt-3 border-t border-zinc-100 pt-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 mb-2">
+              Histórico de obra
+            </div>
+            {history.length === 0 ? (
+              <div className="text-xs text-zinc-400">Sem folhas anteriores para esta viatura.</div>
+            ) : (
+              <div className="space-y-1.5">
+                {history.map((wo) => {
+                  const meta = STATUS_META[wo.estado as WorkOrderStatus]
+                  const openedAt = formatShortDate(wo.dataAbertura)
+                  return (
+                    <div key={wo.id} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="min-w-0 flex-1 truncate" title={`#${wo.numero} · ${wo.problema}`}>
+                        <span className="font-semibold text-zinc-700">#{wo.numero}</span>
+                        <span className="text-zinc-500"> · {wo.problema}</span>
+                        {openedAt && <span className="text-zinc-400"> · {openedAt}</span>}
+                      </span>
+                      <span className={cn('px-1.5 py-0.5 rounded-full font-medium flex-shrink-0', meta?.chip ?? 'bg-zinc-100 text-zinc-600')}>
+                        {meta?.label ?? wo.estado}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </button>
+  )
+}
+
+function formatShortDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })
 }
 
 function PhotoInputCard({

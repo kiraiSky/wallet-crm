@@ -12,7 +12,7 @@ import { whatsappUrl } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { formatEUR, formatDate } from '@/lib/format'
 import { STATUS_META, STATUS_LIST, ACTIVE_STATUSES, ARQUIVO_STATUSES, nextStatus, type WorkOrderStatus } from './status'
-import { getWorkOrderPreview, changeStatus, deleteWorkOrder, deleteWorkOrderItem } from './actions'
+import { getWorkOrderPreview, changeStatus, changeResponsible, deleteWorkOrder, deleteWorkOrderItem } from './actions'
 import { getActiveTemplates } from '@/app/(app)/crm/automacoes/actions'
 import { AutoSendModal } from './AutoSendModal'
 import { WorkOrderModal } from './WorkOrderModal'
@@ -20,6 +20,7 @@ import { ItemModal } from './[id]/ItemModal'
 import { TransactionModal } from '@/app/(app)/lancamentos/TransactionModal'
 import { MensagensSection } from './[id]/MensagensSection'
 import type { TemplateParaEnvio } from './ConfirmacaoEnvioModal'
+import type { UserOption } from './page'
 
 type Preview = NonNullable<Awaited<ReturnType<typeof getWorkOrderPreview>>>
 type ItemRow = Preview['items'][0]
@@ -27,12 +28,13 @@ type TxRow = Preview['transactions'][0]
 
 interface Props {
   workOrderId: string | null
+  users: UserOption[]
   onClose: () => void
   onStatusChanged: (woId: string, newStatus: WorkOrderStatus) => void
   onDeleted?: (woId: string) => void
 }
 
-export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, onDeleted }: Props) {
+export function WorkOrderPreviewModal({ workOrderId, users, onClose, onStatusChanged, onDeleted }: Props) {
   const router = useRouter()
   const [data, setData] = useState<Preview | null>(null)
   const [loading, setLoading] = useState(false)
@@ -156,6 +158,7 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
     id: data.id, customerId: data.customer.id, vehicleId: data.vehicle?.id ?? null,
     problema: data.problema, diagnostico: data.diagnostico, trabalho: data.trabalho,
     observacoes: data.observacoes, kmEntrada: data.kmEntrada, dataPrevista: data.dataPrevista,
+    responsibleId: data.responsibleId,
   } : null
 
   return (
@@ -284,6 +287,13 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
                   <div className="card p-4">
                     <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Datas</p>
                     <p className="text-sm text-zinc-700">Aberta: {formatDate(data.dataAbertura)}</p>
+                    <ResponsibleMini
+                      workOrderId={data.id}
+                      responsible={data.responsible}
+                      users={users}
+                      onChanged={refresh}
+                      className="mt-2"
+                    />
                     {data.dataPrevista && (
                       <p className={cn('text-sm', new Date(data.dataPrevista) < new Date() && !data.dataConclusao ? 'text-red-500 font-medium' : 'text-zinc-500')}>
                         Prevista: {formatDate(data.dataPrevista)}
@@ -493,6 +503,7 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
             onClose={() => setEditWoOpen(false)}
             workOrder={woForModal}
             customers={[data.customer]}
+            users={users}
           />
 
           <ItemModal
@@ -541,6 +552,116 @@ export function WorkOrderPreviewModal({ workOrderId, onClose, onStatusChanged, o
 }
 
 /* ── Item list inline ── */
+function ResponsibleMini({
+  workOrderId,
+  responsible,
+  users,
+  onChanged,
+  className,
+}: {
+  workOrderId: string
+  responsible: { id: string; nome: string; photoUrl?: string | null } | null
+  users: UserOption[]
+  onChanged: () => Promise<void>
+  className?: string
+}) {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [pending, startTransition] = useTransition()
+  const name = responsible?.nome ?? 'Sem responsavel'
+  const otherUsers = users.filter((user) => user.id !== responsible?.id)
+
+  function selectResponsible(userId: string) {
+    const fd = new FormData()
+    fd.set('workOrderId', workOrderId)
+    fd.set('responsibleId', userId)
+    startTransition(async () => {
+      const res = await changeResponsible(fd)
+      if (res.ok) {
+        setOpen(false)
+        await onChanged()
+        router.refresh()
+      }
+    })
+  }
+
+  return (
+    <div className={cn('relative inline-flex items-center gap-2 text-xs text-zinc-600', className)}>
+      <span className="w-6 h-6 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700 flex items-center justify-center text-[10px] font-bold">
+        {responsible?.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={responsible.photoUrl} alt={name} className="w-full h-full rounded-full object-cover" />
+        ) : (
+          initials(name)
+        )}
+      </span>
+      <span className="font-medium text-zinc-700">{name}</span>
+      {users.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          disabled={pending}
+          className="w-6 h-6 inline-flex items-center justify-center rounded-md text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+          title="Trocar responsavel"
+          aria-label="Trocar responsavel"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      )}
+      {open && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-20 cursor-default"
+            aria-label="Fechar seletor de responsavel"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute left-0 top-full z-30 mt-2 w-56 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-lg">
+            {otherUsers.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-zinc-400">Sem outros colaboradores.</div>
+            ) : (
+              otherUsers.map((user) => (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => selectResponsible(user.id)}
+                  disabled={pending}
+                  className="w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-zinc-50 disabled:opacity-50"
+                >
+                  <span className="w-7 h-7 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    {user.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={user.photoUrl} alt={user.nome} className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      initials(user.nome)
+                    )}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-zinc-800">{user.nome}</span>
+                    <span className="block text-[10px] uppercase tracking-wide text-zinc-400">
+                      {user.role === 'OWNER' ? 'Admin' : 'Colaborador'}
+                    </span>
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || '--'
+}
+
 function PreviewItemList({ title, icon: Icon, iconBg, items, emptyText, onAdd, onEdit, onDelete }: {
   title: string
   icon: React.ComponentType<{ className?: string }>

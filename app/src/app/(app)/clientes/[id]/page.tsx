@@ -13,6 +13,7 @@ export type CustomerWorkOrderRow = {
   problema: string
   total: number
   dataAbertura: string
+  responsible: { id: string; nome: string; photoUrl: string | null } | null
   vehicle: { matricula: string; marca: string; modelo: string } | null
 }
 
@@ -75,6 +76,7 @@ export default async function CustomerDetailPage({
       take: 50,
       include: {
         vehicle: { select: { matricula: true, marca: true, modelo: true } },
+        responsible: { select: { id: true, nome: true, photoStoragePath: true } },
       },
     }),
     prisma.transaction.findMany({
@@ -123,6 +125,13 @@ export default async function CustomerDetailPage({
     problema: wo.problema,
     total: Number(wo.total),
     dataAbertura: wo.dataAbertura.toISOString(),
+    responsible: wo.responsible
+      ? {
+          id: wo.responsible.id,
+          nome: wo.responsible.nome,
+          photoUrl: wo.responsible.photoStoragePath ? `/api/users/${wo.responsible.id}/photo` : null,
+        }
+      : null,
     vehicle: wo.vehicle,
   }))
 

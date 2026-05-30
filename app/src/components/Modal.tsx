@@ -9,16 +9,19 @@ interface ModalProps {
   onClose: () => void
   title: string
   children: React.ReactNode
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
+  hideTitle?: boolean
+  hideHeader?: boolean
 }
 
 const sizes = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-lg',
+  xl: 'max-w-5xl',
 }
 
-export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
+export function Modal({ open, onClose, title, children, size = 'md', hideTitle = false, hideHeader = false }: ModalProps) {
   const [mounted, setMounted] = useState(open)
   const [visible, setVisible] = useState(false)
 
@@ -73,16 +76,18 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-5 border-b border-zinc-100">
-          <h3 className="font-bold text-zinc-900">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-zinc-400 hover:text-zinc-700"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        {!hideHeader && (
+          <div className="flex items-center justify-between p-5 border-b border-zinc-100">
+            <h3 className={cn('font-bold text-zinc-900', hideTitle && 'sr-only')}>{title}</h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-zinc-400 hover:text-zinc-700"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
         {children}
       </div>
     </div>

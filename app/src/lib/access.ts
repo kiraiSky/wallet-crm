@@ -20,6 +20,7 @@ const EMPLOYEE_ALLOWED = [
   '/partilha',
   '/api/customers',
   '/api/company-logo',
+  '/api/users',
   '/api/work-order-photos',
 ]
 

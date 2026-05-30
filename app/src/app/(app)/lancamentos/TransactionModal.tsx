@@ -224,10 +224,11 @@ export function TransactionModal({
         reset()
       }}
       title={transaction ? 'Editar movimento' : tipo === 'SAIDA' ? 'Nova despesa' : 'Nova receita'}
+      size="xl"
     >
-      <form onSubmit={handleSubmit} className="p-5 space-y-4">
+      <form onSubmit={handleSubmit} className="p-5 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4 items-start">
         {/* Toggle tipo */}
-        <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-100 rounded-xl">
+        <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-100 rounded-xl md:col-span-2">
           <button
             type="button"
             onClick={() => switchTipo('ENTRADA')}
@@ -250,11 +251,11 @@ export function TransactionModal({
           </button>
         </div>
 
-        {/* Valor */}
-        <div>
+        {/* Valor — largura total para não desalinhar com Descrição */}
+        <div className="md:col-span-2">
           <label className="label">Valor *</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-semibold">€</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-semibold text-lg">€</span>
             <input
               type="text"
               value={valor}
@@ -263,7 +264,7 @@ export function TransactionModal({
               placeholder="0,00"
               required
               autoFocus
-              className="input-base !text-2xl !font-bold !py-3 pl-10"
+              className="input-base !text-3xl !font-bold !py-3 pl-10"
             />
           </div>
           {errors.valor && <p className="text-xs text-red-500 mt-1">{errors.valor}</p>}
@@ -283,146 +284,144 @@ export function TransactionModal({
           {errors.descricao && <p className="text-xs text-red-500 mt-1">{errors.descricao}</p>}
         </div>
 
-        {/* Categoria + Caixa */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label">Categoria *</label>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setCategoryOpen((v) => !v)}
-                className={cn(
-                  'input-base text-left flex items-center gap-2 w-full',
-                  !categoryId && 'text-zinc-400'
-                )}
-              >
-                {selectedCategory ? (
-                  <>
-                    <span className={cn(
-                      'w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0',
-                      colorIconBg[selectedCategory.cor] || colorIconBg.violet
-                    )}>
-                      <DynamicIcon name={selectedCategory.icone} className="w-3 h-3" />
-                    </span>
-                    <span className="flex-1 truncate">
-                      {selectedCategoryParent ? (
-                        <>
-                          <span className="text-zinc-400">{selectedCategoryParent.nome}</span>
-                          <span className="text-zinc-400 mx-1">›</span>
-                          {selectedCategory.nome}
-                        </>
-                      ) : (
-                        selectedCategory.nome
-                      )}
-                    </span>
-                  </>
-                ) : (
-                  <span className="flex-1">Seleciona...</span>
-                )}
-                <ChevronDown className="w-4 h-4 text-zinc-400 flex-shrink-0" />
-              </button>
-              {categoryOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setCategoryOpen(false)} />
-                  <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                    {categoryTree.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-zinc-400">
-                        Sem categorias de {tipo === 'SAIDA' ? 'despesa' : 'receita'}.
-                      </div>
-                    ) : (
-                      categoryTree.map(({ cat: c, child }) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => { setCategoryId(c.id); setCategoryOpen(false) }}
-                          className={cn(
-                            'w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2.5 text-sm transition',
-                            child && 'pl-8',
-                            c.id === categoryId && 'bg-zinc-50 font-semibold'
-                          )}
-                        >
-                          {child && <span className="text-zinc-300">└</span>}
-                          <span className={cn(
-                            'w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0',
-                            colorIconBg[c.cor] || colorIconBg.violet
-                          )}>
-                            <DynamicIcon name={c.icone} className="w-3.5 h-3.5" />
-                          </span>
-                          {c.nome}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </>
+        {/* Conta */}
+        <div>
+          <label className="label">Conta *</label>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setAccountOpen((v) => !v)}
+              className={cn(
+                'input-base text-left flex items-center gap-2 w-full',
+                !accountId && 'text-zinc-400'
               )}
-            </div>
-            {filteredCategories.length === 0 && (
-              <p className="text-xs text-amber-600 mt-1">
-                Sem categorias de {tipo === 'SAIDA' ? 'despesa' : 'receita'} registadas.
-              </p>
-            )}
-            {errors.categoryId && <p className="text-xs text-red-500 mt-1">{errors.categoryId}</p>}
-          </div>
-          <div>
-            <label className="label">Conta *</label>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setAccountOpen((v) => !v)}
-                className={cn(
-                  'input-base text-left flex items-center gap-2 w-full',
-                  !accountId && 'text-zinc-400'
-                )}
-              >
-                {selectedAccount ? (
-                  <>
-                    <span className={cn(
-                      'w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0',
-                      colorIconBg[selectedAccount.cor] || colorIconBg.zinc
-                    )}>
-                      <DynamicIcon name={selectedAccount.icone} className="w-3 h-3" />
-                    </span>
-                    <span className="flex-1 truncate">{selectedAccount.nome}</span>
-                  </>
-                ) : (
-                  <span className="flex-1">Seleciona...</span>
-                )}
-                <ChevronDown className="w-4 h-4 text-zinc-400 flex-shrink-0" />
-              </button>
-              {accountOpen && (
+            >
+              {selectedAccount ? (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setAccountOpen(false)} />
-                  <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden">
-                    {accounts.map((a) => (
+                  <span className={cn(
+                    'w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0',
+                    colorIconBg[selectedAccount.cor] || colorIconBg.zinc
+                  )}>
+                    <DynamicIcon name={selectedAccount.icone} className="w-3 h-3" />
+                  </span>
+                  <span className="flex-1 truncate">{selectedAccount.nome}</span>
+                </>
+              ) : (
+                <span className="flex-1">Seleciona...</span>
+              )}
+              <ChevronDown className="w-4 h-4 text-zinc-400 flex-shrink-0" />
+            </button>
+            {accountOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setAccountOpen(false)} />
+                <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden">
+                  {accounts.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => { setAccountId(a.id); setAccountOpen(false) }}
+                      className={cn(
+                        'w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2.5 text-sm transition',
+                        a.id === accountId && 'bg-zinc-50 font-semibold'
+                      )}
+                    >
+                      <span className={cn(
+                        'w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0',
+                        colorIconBg[a.cor] || colorIconBg.zinc
+                      )}>
+                        <DynamicIcon name={a.icone} className="w-3.5 h-3.5" />
+                      </span>
+                      {a.nome}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          {accounts.length === 0 && (
+            <p className="text-xs text-amber-600 mt-1">Cria uma conta primeiro.</p>
+          )}
+          {errors.accountId && <p className="text-xs text-red-500 mt-1">{errors.accountId}</p>}
+        </div>
+
+        {/* Categoria */}
+        <div>
+          <label className="label">Categoria *</label>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setCategoryOpen((v) => !v)}
+              className={cn(
+                'input-base text-left flex items-center gap-2 w-full',
+                !categoryId && 'text-zinc-400'
+              )}
+            >
+              {selectedCategory ? (
+                <>
+                  <span className={cn(
+                    'w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0',
+                    colorIconBg[selectedCategory.cor] || colorIconBg.violet
+                  )}>
+                    <DynamicIcon name={selectedCategory.icone} className="w-3 h-3" />
+                  </span>
+                  <span className="flex-1 truncate">
+                    {selectedCategoryParent ? (
+                      <>
+                        <span className="text-zinc-400">{selectedCategoryParent.nome}</span>
+                        <span className="text-zinc-400 mx-1">›</span>
+                        {selectedCategory.nome}
+                      </>
+                    ) : (
+                      selectedCategory.nome
+                    )}
+                  </span>
+                </>
+              ) : (
+                <span className="flex-1">Seleciona...</span>
+              )}
+              <ChevronDown className="w-4 h-4 text-zinc-400 flex-shrink-0" />
+            </button>
+            {categoryOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setCategoryOpen(false)} />
+                <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                  {categoryTree.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-zinc-400">
+                      Sem categorias de {tipo === 'SAIDA' ? 'despesa' : 'receita'}.
+                    </div>
+                  ) : (
+                    categoryTree.map(({ cat: c, child }) => (
                       <button
-                        key={a.id}
+                        key={c.id}
                         type="button"
-                        onClick={() => { setAccountId(a.id); setAccountOpen(false) }}
+                        onClick={() => { setCategoryId(c.id); setCategoryOpen(false) }}
                         className={cn(
                           'w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2.5 text-sm transition',
-                          a.id === accountId && 'bg-zinc-50 font-semibold'
+                          child && 'pl-8',
+                          c.id === categoryId && 'bg-zinc-50 font-semibold'
                         )}
                       >
+                        {child && <span className="text-zinc-300">└</span>}
                         <span className={cn(
                           'w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0',
-                          colorIconBg[a.cor] || colorIconBg.zinc
+                          colorIconBg[c.cor] || colorIconBg.violet
                         )}>
-                          <DynamicIcon name={a.icone} className="w-3.5 h-3.5" />
+                          <DynamicIcon name={c.icone} className="w-3.5 h-3.5" />
                         </span>
-                        {a.nome}
+                        {c.nome}
                       </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-            {accounts.length === 0 && (
-              <p className="text-xs text-amber-600 mt-1">
-                Cria uma conta primeiro.
-              </p>
+                    ))
+                  )}
+                </div>
+              </>
             )}
-            {errors.accountId && <p className="text-xs text-red-500 mt-1">{errors.accountId}</p>}
           </div>
+          {filteredCategories.length === 0 && (
+            <p className="text-xs text-amber-600 mt-1">
+              Sem categorias de {tipo === 'SAIDA' ? 'despesa' : 'receita'} registadas.
+            </p>
+          )}
+          {errors.categoryId && <p className="text-xs text-red-500 mt-1">{errors.categoryId}</p>}
         </div>
 
         {/* Data */}
@@ -436,110 +435,75 @@ export function TransactionModal({
           />
         </div>
 
-        {/* Pagamento agendado */}
+        {/* Pagamento agendado — largura total para não desalinhar com Data */}
         <div className={cn(
-          'rounded-xl border p-3 transition',
-          agendado ? 'bg-amber-50 border-amber-300' : 'bg-zinc-50 border-zinc-200'
+          'md:col-span-2 rounded-xl border p-3 transition',
+          agendado ? 'bg-amber-50 border-amber-300' : 'bg-white border-zinc-200'
         )}>
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={agendado}
-              onChange={(e) => setAgendado(e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-zinc-300 text-amber-500 focus:ring-amber-400"
-            />
-            <div className="flex-1">
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-zinc-800">
-                <CalendarClock className="w-4 h-4 text-amber-600" />
-                Pagamento agendado?
-              </div>
-              <div className="text-xs text-zinc-500 mt-0.5">
+          <button
+            type="button"
+            onClick={() => setAgendado((current) => !current)}
+            className="w-full flex items-center gap-3 text-left"
+            aria-pressed={agendado}
+          >
+            <span className="w-9 h-9 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
+              <CalendarClock className="w-5 h-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-zinc-900">Pagamento agendado</span>
+              <span className="block text-xs text-zinc-500 mt-0.5">
                 {tipo === 'ENTRADA'
-                  ? 'O valor ainda não entrou na conta — fica em amarelo até confirmares.'
-                  : 'O pagamento ainda não saiu da conta — fica em amarelo até confirmares.'}
-              </div>
-            </div>
-          </label>
-          {agendado && (
-            <div className="mt-3 ml-7">
-              <label className="label">Data prevista *</label>
-              <input
-                type="date"
-                value={dataAgendada}
-                onChange={(e) => setDataAgendada(e.target.value)}
-                required
-                className="input-base"
-              />
-              {errors.dataAgendada && (
-                <p className="text-xs text-red-500 mt-1">{errors.dataAgendada}</p>
+                  ? 'O pagamento ainda nao entrou na conta.'
+                  : 'O pagamento ainda nao saiu da conta.'}
+              </span>
+            </span>
+            <span
+              className={cn(
+                'relative inline-flex h-7 w-12 flex-shrink-0 rounded-full transition-colors',
+                agendado ? 'bg-amber-500' : 'bg-zinc-300'
               )}
+            >
+              <span
+                className={cn(
+                  'absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform',
+                  agendado ? 'translate-x-6' : 'translate-x-1'
+                )}
+              />
+            </span>
+          </button>
+          {agendado && (
+            <div className="mt-3 pt-3 border-t border-amber-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="label">Data prevista *</label>
+                <input
+                  type="date"
+                  value={dataAgendada}
+                  onChange={(e) => setDataAgendada(e.target.value)}
+                  required
+                  className="input-base"
+                />
+                {errors.dataAgendada && (
+                  <p className="text-xs text-red-500 mt-1">{errors.dataAgendada}</p>
+                )}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Folha de obra */}
-        {workOrderOptions.length > 0 && (
-          <div>
-            <label className="label">Folha de obra (opcional)</label>
-            {selectedWO ? (
-              <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <ClipboardList className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-indigo-900 truncate">
-                      #{selectedWO.numero} · {selectedWO.customerNome}
-                    </div>
-                    <div className="text-xs text-indigo-700 truncate">{selectedWO.problema}</div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setWorkOrderId(''); setWoSearch('') }}
-                  className="text-indigo-600 hover:text-red-500 ml-2 flex-shrink-0"
-                >
-                  <XIcon className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="relative">
-                <input
-                  type="text"
-                  value={woSearch}
-                  onChange={(e) => setWoSearch(e.target.value)}
-                  placeholder="Pesquisar por cliente ou descrição..."
-                  className="input-base"
-                />
-                {woSearch && (
-                  <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                    {filteredWOs.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-zinc-400">Sem resultados</div>
-                    ) : (
-                      filteredWOs.slice(0, 8).map((wo) => (
-                        <button
-                          key={wo.id}
-                          type="button"
-                          onClick={() => { setWorkOrderId(wo.id); setWoSearch('') }}
-                          className="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2"
-                        >
-                          <ClipboardList className="w-4 h-4 text-zinc-400 flex-shrink-0" />
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium text-zinc-800">
-                              #{wo.numero} · {wo.customerNome}
-                            </div>
-                            <div className="text-xs text-zinc-500 truncate">{wo.problema}</div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Observação */}
+        <div>
+          <label className="label">Observação (opcional)</label>
+          <textarea
+            value={observacao}
+            onChange={(e) => setObservacao(e.target.value)}
+            rows={4}
+            placeholder="Notas internas..."
+            className="input-base resize-none h-full"
+          />
+        </div>
 
         {/* Upload */}
-        <div>
+        <div className="min-w-0">
           <label className="label">Comprovativo (opcional)</label>
           {file ? (
             <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg p-3">
@@ -557,7 +521,7 @@ export function TransactionModal({
               </button>
             </div>
           ) : (
-            <label className="flex flex-col items-center justify-center gap-1.5 px-3 py-4 bg-zinc-50 border-2 border-dashed border-zinc-200 hover:border-indigo-400 hover:bg-indigo-50/30 rounded-lg cursor-pointer transition">
+            <label className="flex flex-col items-center justify-center gap-1.5 px-3 py-4 bg-zinc-50 border-2 border-dashed border-zinc-200 hover:border-indigo-400 hover:bg-indigo-50/30 rounded-lg cursor-pointer transition h-full">
               <UploadCloud className="w-6 h-6 text-zinc-400" />
               <span className="text-sm font-medium text-zinc-600">Clica para anexar</span>
               <span className="text-[11px] text-zinc-400">JPG, PNG, WebP ou PDF · até 5MB</span>
@@ -573,32 +537,20 @@ export function TransactionModal({
           {errors.attachment && <p className="text-xs text-red-500 mt-1">{errors.attachment}</p>}
         </div>
 
-        {/* Observação */}
-        <div>
-          <label className="label">Observação (opcional)</label>
-          <textarea
-            value={observacao}
-            onChange={(e) => setObservacao(e.target.value)}
-            rows={2}
-            placeholder="Notas internas..."
-            className="input-base resize-none"
-          />
-        </div>
-
         {error && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+          <div className="md:col-span-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
             {error}
           </div>
         )}
 
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 md:col-span-2">
           <button
             type="button"
             onClick={() => {
               onClose()
               reset()
             }}
-            className="btn-secondary flex-1"
+            className="btn-secondary sm:min-w-36"
           >
             Cancelar
           </button>
@@ -606,7 +558,7 @@ export function TransactionModal({
             type="submit"
             disabled={pending || accounts.length === 0 || filteredCategories.length === 0}
             className={cn(
-              'flex-1',
+              'sm:min-w-40',
               tipo === 'SAIDA'
                 ? 'btn-danger'
                 : 'inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg shadow-sm shadow-emerald-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed'

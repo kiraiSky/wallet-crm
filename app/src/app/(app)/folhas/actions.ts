@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { parseEURToCents } from '@/lib/format'
 import { logAudit } from '@/lib/audit'
+import { getCurrentUser } from '@/lib/current-user'
 
 const STATUSES = [
   'ABERTA',
@@ -23,6 +24,7 @@ const WorkOrderSchema = z.object({
   id: z.string().optional(),
   customerId: z.string().min(1, 'Cliente é obrigatório'),
   vehicleId: z.string().optional(),
+  responsibleId: z.string().optional(),
   problema: z.string().min(1, 'Descreve o problema reportado').max(2000),
   diagnostico: z.string().max(2000).optional(),
   trabalho: z.string().max(2000).optional(),
@@ -47,6 +49,7 @@ export async function saveWorkOrder(
     id: formData.get('id')?.toString() || undefined,
     customerId: formData.get('customerId')?.toString() || '',
     vehicleId: formData.get('vehicleId')?.toString() || undefined,
+    responsibleId: formData.get('responsibleId')?.toString() || undefined,
     problema: formData.get('problema')?.toString() || '',
     diagnostico: formData.get('diagnostico')?.toString() || undefined,
     trabalho: formData.get('trabalho')?.toString() || undefined,
@@ -64,6 +67,7 @@ export async function saveWorkOrder(
     return { ok: false, errors }
   }
   const data = parsed.data
+  const currentUser = await getCurrentUser()
 
   const km =
     data.kmEntrada && /^\d+$/.test(data.kmEntrada.replace(/\D/g, ''))
@@ -85,7 +89,13 @@ export async function saveWorkOrder(
   try {
     if (data.id) {
       const before = await prisma.workOrder.findUnique({ where: { id: data.id } })
-      const updated = await prisma.workOrder.update({ where: { id: data.id }, data: payload })
+      const updated = await prisma.workOrder.update({
+        where: { id: data.id },
+        data: {
+          ...payload,
+          ...(data.responsibleId && { responsibleId: data.responsibleId }),
+        },
+      })
       await logAudit({
         entityType: 'WORK_ORDER',
         entityId: updated.id,
@@ -98,7 +108,12 @@ export async function saveWorkOrder(
       revalidatePath(`/folhas/${data.id}`)
       return { ok: true, id: data.id }
     }
-    const created = await prisma.workOrder.create({ data: payload })
+    const created = await prisma.workOrder.create({
+      data: {
+        ...payload,
+        responsibleId: data.responsibleId || currentUser.id,
+      },
+    })
     await logAudit({
       entityType: 'WORK_ORDER',
       entityId: created.id,
@@ -174,6 +189,60 @@ export async function changeStatus(
   }
 }
 
+const ResponsibleSchema = z.object({
+  workOrderId: z.string().min(1),
+  responsibleId: z.string().min(1),
+})
+
+export async function changeResponsible(formData: FormData): Promise<WorkOrderFormState> {
+  const parsed = ResponsibleSchema.safeParse({
+    workOrderId: formData.get('workOrderId')?.toString() || '',
+    responsibleId: formData.get('responsibleId')?.toString() || '',
+  })
+  if (!parsed.success) return { ok: false, message: 'Responsavel invalido' }
+
+  const { workOrderId, responsibleId } = parsed.data
+
+  try {
+    const [before, responsible] = await Promise.all([
+      prisma.workOrder.findUnique({
+        where: { id: workOrderId },
+        select: { id: true, numero: true, customerId: true, responsibleId: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: responsibleId },
+        select: { id: true, nome: true, active: true },
+      }),
+    ])
+
+    if (!before) return { ok: false, message: 'Folha nao encontrada' }
+    if (!responsible || !responsible.active) return { ok: false, message: 'Colaborador invalido' }
+
+    const updated = await prisma.workOrder.update({
+      where: { id: workOrderId },
+      data: { responsibleId },
+      select: { id: true, numero: true, responsibleId: true },
+    })
+
+    await logAudit({
+      entityType: 'WORK_ORDER',
+      entityId: workOrderId,
+      action: 'UPDATE',
+      summary: `Folha #${updated.numero} - responsavel ${responsible.nome}`,
+      before: { responsibleId: before.responsibleId },
+      after: { responsibleId: updated.responsibleId },
+    })
+
+    revalidatePath('/folhas')
+    revalidatePath(`/folhas/${workOrderId}`)
+    revalidatePath(`/clientes/${before.customerId}`)
+    return { ok: true, id: workOrderId }
+  } catch (e) {
+    console.error(e)
+    return { ok: false, message: 'Erro ao trocar responsavel' }
+  }
+}
+
 // === Preview ===
 
 export async function getWorkOrderPreview(id: string) {
@@ -183,6 +252,7 @@ export async function getWorkOrderPreview(id: string) {
       include: {
         customer: { select: { id: true, nome: true, telefone: true, nif: true, createdAt: true } },
         vehicle: { select: { id: true, matricula: true, marca: true, modelo: true, ano: true } },
+        responsible: { select: { id: true, nome: true, photoStoragePath: true } },
         items: { orderBy: { createdAt: 'asc' } },
       },
     }),
@@ -209,6 +279,14 @@ export async function getWorkOrderPreview(id: string) {
     trabalho: wo.trabalho,
     observacoes: wo.observacoes,
     kmEntrada: wo.kmEntrada,
+    responsibleId: wo.responsibleId,
+    responsible: wo.responsible
+      ? {
+          id: wo.responsible.id,
+          nome: wo.responsible.nome,
+          photoUrl: wo.responsible.photoStoragePath ? `/api/users/${wo.responsible.id}/photo` : null,
+        }
+      : null,
     dataAbertura: wo.dataAbertura.toISOString(),
     dataPrevista: wo.dataPrevista?.toISOString() ?? null,
     dataConclusao: wo.dataConclusao?.toISOString() ?? null,

@@ -11,6 +11,7 @@ export type UserRow = {
   email: string
   role: 'OWNER' | 'EMPLOYEE'
   active: boolean
+  photoUrl: string | null
   lastLoginAt: string | null
   createdAt: string
   transactionCount: number
@@ -31,6 +32,7 @@ export default async function UtilizadoresPage() {
     email: u.email,
     role: u.role,
     active: u.active,
+    photoUrl: u.photoStoragePath ? `/api/users/${u.id}/photo` : null,
     lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
     createdAt: u.createdAt.toISOString(),
     transactionCount: u._count.transactions,

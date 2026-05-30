@@ -20,6 +20,7 @@ import { AttachmentViewer, AttachmentThumb, type ViewerTransaction } from '@/com
 import {
   deleteWorkOrder,
   changeStatus,
+  changeResponsible,
   deleteWorkOrderItem,
   updateWorkOrderItemField,
 } from '../actions'
@@ -33,6 +34,7 @@ import { ShareButton } from './ShareButton'
 import { CaucaoButton } from './CaucaoButton'
 import { CaucoesList } from './CaucoesList'
 import { VehiclePhotosSection } from './VehiclePhotosSection'
+import type { UserOption } from '../page'
 
 type AccountOption = { id: string; nome: string; cor: string; icone: string }
 type CategoryOption = {
@@ -51,10 +53,11 @@ interface Props {
   categories: CategoryOption[]
   isOwner: boolean
   templates: TemplateRow[]
+  users: UserOption[]
   automationLogs: AutomationLogRow[]
 }
 
-export function WorkOrderDetailClient({ workOrder, transactions, accounts, categories, isOwner, templates, automationLogs }: Props) {
+export function WorkOrderDetailClient({ workOrder, transactions, accounts, categories, isOwner, templates, users, automationLogs }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [editOpen, setEditOpen] = useState(false)
@@ -87,6 +90,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
     observacoes: workOrder.observacoes,
     kmEntrada: workOrder.kmEntrada,
     dataPrevista: workOrder.dataPrevista,
+    responsibleId: workOrder.responsibleId,
   }
 
   const meta = STATUS_META[workOrder.estado]
@@ -169,6 +173,12 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
             {workOrder.dataPrevista && <span>· Prevista {formatDate(workOrder.dataPrevista)}</span>}
             {workOrder.dataConclusao && <span className="text-emerald-600">· Concluída {formatDate(workOrder.dataConclusao)}</span>}
           </div>
+          <ResponsibleMini
+            workOrderId={workOrder.id}
+            responsible={workOrder.responsible}
+            users={users}
+            className="mt-2"
+          />
         </div>
         <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-2 sm:border-0 sm:bg-transparent sm:p-0 lg:mt-0 lg:min-w-[360px] lg:max-w-[760px]">
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center lg:justify-end">
@@ -554,6 +564,7 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
         onClose={() => setEditOpen(false)}
         workOrder={woForModal}
         customers={[workOrder.customer]}
+        users={users}
       />
       <ItemModal
         open={itemModalOpen}
@@ -621,6 +632,113 @@ export function WorkOrderDetailClient({ workOrder, transactions, accounts, categ
       />
     </>
   )
+}
+
+function ResponsibleMini({
+  workOrderId,
+  responsible,
+  users,
+  className,
+}: {
+  workOrderId: string
+  responsible: { id: string; nome: string; photoUrl?: string | null } | null
+  users: UserOption[]
+  className?: string
+}) {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [pending, startTransition] = useTransition()
+  const name = responsible?.nome ?? 'Sem responsavel'
+  const otherUsers = users.filter((user) => user.id !== responsible?.id)
+
+  function selectResponsible(userId: string) {
+    const fd = new FormData()
+    fd.set('workOrderId', workOrderId)
+    fd.set('responsibleId', userId)
+    startTransition(async () => {
+      const res = await changeResponsible(fd)
+      if (res.ok) {
+        setOpen(false)
+        router.refresh()
+      }
+    })
+  }
+
+  return (
+    <div className={cn('relative inline-flex items-center gap-2 text-xs text-zinc-600', className)}>
+      <span className="w-6 h-6 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700 flex items-center justify-center text-[10px] font-bold">
+        {responsible?.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={responsible.photoUrl} alt={name} className="w-full h-full rounded-full object-cover" />
+        ) : (
+          initials(name)
+        )}
+      </span>
+      <span className="font-medium text-zinc-700">{name}</span>
+      {users.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          disabled={pending}
+          className="w-6 h-6 inline-flex items-center justify-center rounded-md text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+          title="Trocar responsavel"
+          aria-label="Trocar responsavel"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      )}
+      {open && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-20 cursor-default"
+            aria-label="Fechar seletor de responsavel"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute left-0 top-full z-30 mt-2 w-56 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-lg">
+            {otherUsers.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-zinc-400">Sem outros colaboradores.</div>
+            ) : (
+              otherUsers.map((user) => (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => selectResponsible(user.id)}
+                  disabled={pending}
+                  className="w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-zinc-50 disabled:opacity-50"
+                >
+                  <span className="w-7 h-7 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    {user.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={user.photoUrl} alt={user.nome} className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      initials(user.nome)
+                    )}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-zinc-800">{user.nome}</span>
+                    <span className="block text-[10px] uppercase tracking-wide text-zinc-400">
+                      {user.role === 'OWNER' ? 'Admin' : 'Colaborador'}
+                    </span>
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || '--'
 }
 
 function ItemList({

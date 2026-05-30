@@ -17,11 +17,15 @@ model User {
   senha        String // hash bcrypt
   role         UserRole      @default(EMPLOYEE)
   active       Boolean       @default(true)
+  photoFilename    String?   @map("photo_filename")
+  photoStoragePath String?   @map("photo_storage_path")
+  photoMimeType    String?   @map("photo_mime_type")
   lastLoginAt  DateTime?     @map("last_login_at")
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
   transactions Transaction[]
   auditLogs    AuditLog[]
+  assignedWorkOrders WorkOrder[] @relation("WorkOrderResponsible")
 
   @@map("users")
 }
@@ -185,6 +189,7 @@ model WorkOrder {
   numero     Int     @unique @default(autoincrement())
   customerId String  @map("customer_id")
   vehicleId  String? @map("vehicle_id")
+  responsibleId String? @map("responsible_id")
 
   estado      WorkOrderStatus @default(ABERTA)
   problema    String
@@ -214,6 +219,7 @@ model WorkOrder {
 
   customer       Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
   vehicle        Vehicle?          @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  responsible    User?             @relation("WorkOrderResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
   items          WorkOrderItem[]
   transactions   Transaction[]
   automationLogs AutomationLog[]
@@ -223,6 +229,7 @@ model WorkOrder {
   @@index([estado])
   @@index([customerId])
   @@index([vehicleId])
+  @@index([responsibleId])
   @@index([dataAbertura])
   @@map("work_orders")
 }

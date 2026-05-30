@@ -18,6 +18,18 @@ export async function GET(
       cor: true,
       km: true,
       observacoes: true,
+      workOrders: {
+        orderBy: { dataAbertura: 'desc' },
+        take: 4,
+        select: {
+          id: true,
+          numero: true,
+          estado: true,
+          problema: true,
+          dataAbertura: true,
+          dataConclusao: true,
+        },
+      },
     },
   })
   return NextResponse.json({ vehicles })

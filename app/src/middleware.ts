@@ -5,44 +5,47 @@ import { canAccess, EMPLOYEE_HOME, type Role } from '@/lib/access'
 
 const PUBLIC_PATHS = ['/login']
 
-// Nomes dos cookies de sessão do Auth.js
-const SESSION_COOKIE_NAMES = [
-  'authjs.session-token',
-  '__Secure-authjs.session-token',
-]
+// Lê o token de sessão sem assumir o nome do cookie. Auth.js v5 usa o prefixo
+// __Secure- em HTTPS (tunnel Cloudflare/ngrok) e o nome simples em localhost.
+// Atrás de um tunnel o x-forwarded-proto nem sempre bate certo com o protocolo
+// do request, e adivinhar errado faz o getToken devolver null para uma sessão
+// válida. Tentamos as duas variantes — o getToken só encontra um cookie que
+// existe, por isso isto nunca cria sessões falsas. Erros de decode (cookie
+// corrompido) são tratados como "sem sessão", sem apagar nada à força.
+async function readSessionToken(req: NextRequest) {
+  for (const secureCookie of [false, true]) {
+    try {
+      const token = await getToken({
+        req,
+        secret: process.env.AUTH_SECRET,
+        secureCookie,
+      })
+      if (token) return token
+    } catch {
+      // tenta a outra variante; se ambas falharem, segue sem sessão
+    }
+  }
+  return null
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Auth.js v5: cookie name depends on HTTPS, not on NODE_ENV. Behind a HTTPS
-  // tunnel (Cloudflare, ngrok) the cookie is __Secure-authjs.session-token; in
-  // plain localhost dev it's authjs.session-token. Detect via x-forwarded-proto
-  // (trusted because AUTH_TRUST_HOST=true) with a fallback to the request URL.
-  const proto = req.headers.get('x-forwarded-proto') ?? req.nextUrl.protocol.replace(':', '')
-  const useSecureCookie = proto === 'https'
-
-  let token = null
-  let cookieError = false
-  try {
-    token = await getToken({
-      req,
-      secret: process.env.AUTH_SECRET,
-      secureCookie: useSecureCookie,
-    })
-  } catch {
-    cookieError = true
-  }
-
+  const token = await readSessionToken(req)
   const isLogged = !!token
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))
 
-  // Cookie corrompido — apaga via redirect para forçar novo request sem cookie
-  if (cookieError) {
-    const url = req.nextUrl.clone()
-    if (!isPublic) url.pathname = '/login'
-    const res = NextResponse.redirect(url)
-    SESSION_COOKIE_NAMES.forEach((name) => res.cookies.delete(name))
-    return res
+  // Pedidos de prefetch do router nunca devem ser redirecionados: um prefetch
+  // que recebe um 3xx nunca fica em cache como resolvido, por isso o Next volta
+  // a emiti-lo a cada render — um loop infinito de GET /login enquanto a página
+  // está parada. Respondemos com 204 (no-op) para o prefetch; a navegação real
+  // (sem este header) continua a ser barrada normalmente em baixo.
+  const isPrefetch =
+    req.headers.get('next-router-prefetch') === '1' ||
+    req.headers.get('purpose') === 'prefetch' ||
+    (req.headers.get('sec-purpose') ?? '').includes('prefetch')
+  if (isPrefetch && !isLogged && !isPublic) {
+    return new NextResponse(null, { status: 204 })
   }
 
   // Redireciona para login se não autenticado

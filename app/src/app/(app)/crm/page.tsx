@@ -1,10 +1,15 @@
 import Link from 'next/link'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { formatEUR, formatDate } from '@/lib/format'
 import { Sparkline, Donut } from '@/components/Charts'
 import { colorHex } from '@/lib/colors'
-import { Users, Award, TrendingUp, AlertTriangle, Cake, ArrowRight, ClipboardList } from 'lucide-react'
+import { Users, Award, TrendingUp, AlertTriangle, Cake, ArrowRight, ClipboardList, Wrench, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MechanicFilterSelect } from './MechanicFilterSelect'
+import { PeriodFilterSelect, type CrmPeriod } from './PeriodFilterSelect'
+import type { UserOption } from '../folhas/page'
+import type { WorkOrderStatus } from '../folhas/status'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +17,80 @@ const MONTHS_IN_SERIES = 6
 const INACTIVE_THRESHOLD_DAYS = 90
 
 type Tag = 'VIP' | 'RECORRENTE' | 'NOVO' | 'INATIVO'
+type SearchParams = { mechanic?: string; period?: string }
+
+const periodLabels: Record<CrmPeriod, string> = {
+  week: 'esta semana',
+  month: 'este mes',
+  quarter: 'este trimestre',
+  year: 'este ano',
+}
+
+const periodOptions: CrmPeriod[] = ['week', 'month', 'quarter', 'year']
+
+const statusChartMeta: Record<WorkOrderStatus, { label: string; color: string }> = {
+  ABERTA: { label: 'Aberta', color: colorHex.sky },
+  EM_DIAGNOSTICO: { label: 'Em diagnostico', color: colorHex.violet },
+  AGUARDA_PECAS: { label: 'Aguarda pecas', color: colorHex.amber },
+  EM_REPARACAO: { label: 'Em reparacao', color: colorHex.orange },
+  CONCLUIDA: { label: 'Concluida', color: colorHex.emerald },
+  FATURADA: { label: 'Faturada', color: colorHex.teal },
+  CANCELADA: { label: 'Cancelada', color: colorHex.zinc },
+  FINALIZADA: { label: 'Finalizada', color: colorHex.emerald },
+  PERDIDA: { label: 'Perdida', color: colorHex.rose },
+}
+
+const statusChartOrder = Object.keys(statusChartMeta) as WorkOrderStatus[]
+
+function getPeriodRange(period: CrmPeriod, now: Date) {
+  if (period === 'week') {
+    const start = new Date(now)
+    const day = start.getDay() || 7
+    start.setDate(start.getDate() - day + 1)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(start)
+    end.setDate(end.getDate() + 7)
+    return { start, end }
+  }
+
+  if (period === 'quarter') {
+    const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3
+    const start = new Date(now.getFullYear(), quarterStartMonth, 1)
+    const end = new Date(now.getFullYear(), quarterStartMonth + 3, 1)
+    return { start, end }
+  }
+
+  if (period === 'year') {
+    const start = new Date(now.getFullYear(), 0, 1)
+    const end = new Date(now.getFullYear() + 1, 0, 1)
+    return { start, end }
+  }
+
+  const start = new Date(now.getFullYear(), now.getMonth(), 1)
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  return { start, end }
+}
+
+function getPreviousPeriodRange(period: CrmPeriod, current: { start: Date; end: Date }) {
+  const start = new Date(current.start)
+  const end = new Date(current.end)
+
+  if (period === 'week') {
+    start.setDate(start.getDate() - 7)
+    end.setDate(end.getDate() - 7)
+  } else if (period === 'month') {
+    start.setMonth(start.getMonth() - 1)
+    end.setMonth(end.getMonth() - 1)
+  } else if (period === 'quarter') {
+    start.setMonth(start.getMonth() - 3)
+    end.setMonth(end.getMonth() - 3)
+  } else {
+    start.setFullYear(start.getFullYear() - 1)
+    end.setFullYear(end.getFullYear() - 1)
+  }
+
+  return { start, end }
+}
 
 const tagMeta: Record<Tag, { label: string; tone: string; hex: string }> = {
   VIP: { label: 'VIP', tone: 'bg-amber-100 text-amber-700', hex: colorHex.amber },
@@ -20,31 +99,91 @@ const tagMeta: Record<Tag, { label: string; tone: string; hex: string }> = {
   INATIVO: { label: 'Inativo', tone: 'bg-zinc-100 text-zinc-600', hex: colorHex.zinc },
 }
 
-export default async function CrmOverviewPage() {
+export default async function CrmOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const params = await searchParams
   const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const selectedPeriod = periodOptions.includes(params.period as CrmPeriod)
+    ? (params.period as CrmPeriod)
+    : 'month'
+  const periodRange = getPeriodRange(selectedPeriod, now)
+  const previousPeriodRange = getPreviousPeriodRange(selectedPeriod, periodRange)
   const seriesStart = new Date(now.getFullYear(), now.getMonth() - (MONTHS_IN_SERIES - 1), 1)
   const inactiveCutoff = new Date()
   inactiveCutoff.setDate(inactiveCutoff.getDate() - INACTIVE_THRESHOLD_DAYS)
 
+  const users = await prisma.user.findMany({
+    where: { active: true },
+    orderBy: { nome: 'asc' },
+    select: { id: true, nome: true, role: true, photoStoragePath: true },
+  })
+  const userOptions = users.map((u) => ({
+    id: u.id,
+    nome: u.nome,
+    role: u.role as UserOption['role'],
+    photoUrl: u.photoStoragePath ? `/api/users/${u.id}/photo` : null,
+  }))
+  const selectedMechanicId = users.some((u) => u.id === params.mechanic) ? params.mechanic : undefined
+  const selectedMechanic = users.find((u) => u.id === selectedMechanicId) ?? null
+  const mechanicWhere: Prisma.WorkOrderWhereInput = selectedMechanicId
+    ? { responsibleId: selectedMechanicId }
+    : {}
+  const workOrderPeriodWhere: Prisma.WorkOrderWhereInput = {
+    ...mechanicWhere,
+    dataAbertura: { gte: periodRange.start, lt: periodRange.end },
+  }
+  const completedInPeriodWhere: Prisma.WorkOrderWhereInput = {
+    ...mechanicWhere,
+    estado: { in: ['CONCLUIDA', 'FATURADA', 'FINALIZADA'] },
+    total: { gt: 0 },
+    OR: [
+      { dataConclusao: { gte: periodRange.start, lt: periodRange.end } },
+      {
+        dataConclusao: null,
+        dataAbertura: { gte: periodRange.start, lt: periodRange.end },
+      },
+    ],
+  }
+  const completedAnyResponsibleInPeriodWhere: Prisma.WorkOrderWhereInput = {
+    estado: { in: ['CONCLUIDA', 'FATURADA', 'FINALIZADA'] },
+    total: { gt: 0 },
+    OR: [
+      { dataConclusao: { gte: periodRange.start, lt: periodRange.end } },
+      {
+        dataConclusao: null,
+        dataAbertura: { gte: periodRange.start, lt: periodRange.end },
+      },
+    ],
+  }
+
   const [
     customersTotal,
-    customersThisMonth,
-    customersLastMonth,
+    customersThisPeriod,
+    customersPreviousPeriod,
     tagCounts,
     aquisicaoSeries,
     ticketAgg,
     workOrdersTotalCount,
+    mechanicStatusCounts,
+    mechanicCompletedAgg,
     customersWithRecentWO,
     allCustomersWithWOs,
     aniversariantes,
     latestCustomers,
+    productionByResponsible,
   ] = await Promise.all([
     prisma.customer.count({ where: { archived: false } }),
-    prisma.customer.count({ where: { archived: false, createdAt: { gte: startOfMonth } } }),
     prisma.customer.count({
-      where: { archived: false, createdAt: { gte: startOfLastMonth, lt: startOfMonth } },
+      where: { archived: false, createdAt: { gte: periodRange.start, lt: periodRange.end } },
+    }),
+    prisma.customer.count({
+      where: {
+        archived: false,
+        createdAt: { gte: previousPeriodRange.start, lt: previousPeriodRange.end },
+      },
     }),
     prisma.customer.groupBy({
       by: ['tag'],
@@ -56,13 +195,25 @@ export default async function CrmOverviewPage() {
       select: { createdAt: true },
     }),
     prisma.workOrder.aggregate({
-      where: { estado: { in: ['CONCLUIDA', 'FATURADA'] }, total: { gt: 0 } },
+      where: completedInPeriodWhere,
       _avg: { total: true },
       _count: true,
     }),
-    prisma.workOrder.count(),
+    prisma.workOrder.count({ where: workOrderPeriodWhere }),
+    prisma.workOrder.groupBy({
+      by: ['estado'],
+      where: workOrderPeriodWhere,
+      _count: true,
+      _sum: { total: true },
+    }),
+    prisma.workOrder.aggregate({
+      where: completedInPeriodWhere,
+      _avg: { total: true },
+      _sum: { total: true },
+      _count: true,
+    }),
     prisma.workOrder.findMany({
-      where: { dataAbertura: { gte: inactiveCutoff } },
+      where: { ...mechanicWhere, dataAbertura: { gte: inactiveCutoff } },
       select: { customerId: true },
       distinct: ['customerId'],
     }),
@@ -89,6 +240,12 @@ export default async function CrmOverviewPage() {
       take: 5,
       select: { id: true, nome: true, tag: true, createdAt: true, telefone: true },
     }),
+    prisma.workOrder.groupBy({
+      by: ['responsibleId'],
+      where: completedAnyResponsibleInPeriodWhere,
+      _count: true,
+      _sum: { total: true },
+    }),
   ])
 
   // Counts por tag (preencher tags em falta)
@@ -111,11 +268,11 @@ export default async function CrmOverviewPage() {
 
   // Variação mês a mês
   const variacaoMoM =
-    customersLastMonth === 0
-      ? customersThisMonth > 0
+    customersPreviousPeriod === 0
+      ? customersThisPeriod > 0
         ? 100
         : 0
-      : ((customersThisMonth - customersLastMonth) / customersLastMonth) * 100
+      : ((customersThisPeriod - customersPreviousPeriod) / customersPreviousPeriod) * 100
 
   // Taxa de retorno: clientes com >=2 folhas / clientes com >=1 folha
   const comAlgumaFolha = allCustomersWithWOs.filter((c) => c._count.workOrders >= 1).length
@@ -124,6 +281,43 @@ export default async function CrmOverviewPage() {
 
   // Ticket médio (folhas concluídas/faturadas)
   const ticketMedio = Number(ticketAgg._avg.total ?? 0)
+
+  const mechanicCounts = {
+    total: 0,
+    emCurso: 0,
+    concluidas: 0,
+    valorAberto: 0,
+  }
+  for (const c of mechanicStatusCounts) {
+    const estado = c.estado as string
+    mechanicCounts.total += c._count
+    if (['ABERTA', 'EM_DIAGNOSTICO', 'AGUARDA_PECAS', 'EM_REPARACAO'].includes(estado)) {
+      mechanicCounts.emCurso += c._count
+      mechanicCounts.valorAberto += Number(c._sum.total ?? 0)
+    }
+    if (['CONCLUIDA', 'FATURADA', 'FINALIZADA'].includes(estado)) {
+      mechanicCounts.concluidas += c._count
+    }
+  }
+  const mechanicTicketMedio = Number(mechanicCompletedAgg._avg.total ?? 0)
+  const mechanicTotalFaturado = Number(mechanicCompletedAgg._sum.total ?? 0)
+  const statusRows = statusChartOrder.map((status) => {
+    const found = mechanicStatusCounts.find((item) => item.estado === status)
+    return {
+      label: statusChartMeta[status].label,
+      value: found?._count ?? 0,
+      color: statusChartMeta[status].color,
+    }
+  })
+  const productionRows = users.map((user) => {
+    const found = productionByResponsible.find((item) => item.responsibleId === user.id)
+    return {
+      label: user.nome,
+      value: Number(found?._sum.total ?? 0),
+      count: found?._count ?? 0,
+      color: user.id === selectedMechanicId ? '#6366f1' : colorHex.emerald,
+    }
+  })
 
   // Inativos: clientes que têm folhas mas nenhuma nos últimos 90 dias
   const clientesAtivosIds = new Set(customersWithRecentWO.map((c) => c.customerId))
@@ -155,11 +349,50 @@ export default async function CrmOverviewPage() {
 
   return (
     <>
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold text-zinc-900">CRM · Visão geral</h1>
-        <p className="text-zinc-500 text-sm">
-          Saúde da carteira de clientes em {now.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}.
-        </p>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900">CRM · Visão geral</h1>
+          <p className="text-zinc-500 text-sm">
+            Saúde da carteira de clientes em {now.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}.
+            {selectedMechanic && <span> Filtro: {selectedMechanic.nome}.</span>}
+            <span> Periodo: {periodLabels[selectedPeriod]}.</span>
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <PeriodFilterSelect selected={selectedPeriod} />
+          <MechanicFilterSelect users={userOptions} selectedId={selectedMechanicId} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <KpiCard
+          icon={Wrench}
+          label="Folhas"
+          value={mechanicCounts.total.toString()}
+          hint={selectedMechanic ? `Atribuidas a ${selectedMechanic.nome}` : `Abertas ${periodLabels[selectedPeriod]}`}
+          tone="emerald"
+        />
+        <KpiCard
+          icon={ClipboardList}
+          label="Em curso"
+          value={mechanicCounts.emCurso.toString()}
+          hint={`${formatEUR(mechanicCounts.valorAberto)} em aberto`}
+          tone="amber"
+        />
+        <KpiCard
+          icon={Award}
+          label="Concluidas"
+          value={mechanicCounts.concluidas.toString()}
+          hint={`${mechanicCompletedAgg._count} com valor ${periodLabels[selectedPeriod]}`}
+          tone="emerald"
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label="Ticket medio"
+          value={formatEUR(mechanicTicketMedio)}
+          hint={`${formatEUR(mechanicTotalFaturado)} total`}
+          tone="violet"
+        />
       </div>
 
       {/* KPIs */}
@@ -168,16 +401,16 @@ export default async function CrmOverviewPage() {
           icon={Users}
           label="Clientes"
           value={customersTotal.toString()}
-          hint={`${customersThisMonth} novos este mês`}
+          hint={`${customersThisPeriod} novos ${periodLabels[selectedPeriod]}`}
           tone="emerald"
         />
         <KpiCard
           icon={TrendingUp}
-          label="Novos no mês"
-          value={`${customersThisMonth}`}
+          label="Novos no periodo"
+          value={`${customersThisPeriod}`}
           hint={
             variacaoMoM === 0
-              ? 'vs mês passado'
+              ? 'vs periodo anterior'
               : `${variacaoMoM > 0 ? '+' : ''}${variacaoMoM.toFixed(0)}% vs anterior`
           }
           tone={variacaoMoM >= 0 ? 'emerald' : 'rose'}
@@ -198,18 +431,18 @@ export default async function CrmOverviewPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+      <div className="space-y-4 mb-4">
         {/* Aquisição */}
-        <div className="card p-5 lg:col-span-2">
+        <div className="card p-5">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-zinc-900">Aquisição de clientes</h3>
             <span className="text-xs text-zinc-500">{totalNoPeriodo} nos últimos {MONTHS_IN_SERIES} meses</span>
           </div>
-          <Sparkline data={seriesData.length >= 2 ? seriesData : [0, 0]} color={colorHex.emerald} height={100} />
-          <div className="grid grid-cols-6 gap-1 mt-2">
+          <Sparkline data={seriesData.length >= 2 ? seriesData : [0, 0]} color={colorHex.emerald} height={130} />
+          <div className="grid grid-cols-6 gap-1 mt-3">
             {aquisicao.map((m, i) => (
               <div key={i} className="text-center">
-                <div className="text-xs font-semibold text-zinc-700">{m.count}</div>
+                <div className="text-sm font-semibold text-zinc-800">{m.count}</div>
                 <div className="text-[10px] text-zinc-500 uppercase">{m.label}</div>
               </div>
             ))}
@@ -222,24 +455,39 @@ export default async function CrmOverviewPage() {
           {customersTotal === 0 ? (
             <div className="py-8 text-center text-sm text-zinc-400">Sem clientes ainda.</div>
           ) : (
-            <div className="flex items-center gap-4">
-              <Donut segments={donutSegments} size={120} />
-              <div className="flex-1 space-y-2 text-sm">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <div className="flex-shrink-0">
+                <Donut segments={donutSegments} size={136} strokeWidth={18} />
+              </div>
+              <div className="flex-1 grid gap-2 text-sm">
                 {(Object.keys(counts) as Tag[]).map((tag) => (
-                  <div key={tag} className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
+                  <div key={tag} className="grid grid-cols-[1fr_auto] items-center gap-4">
+                    <span className="flex items-center gap-2 min-w-0">
                       <span
-                        className="w-2 h-2 rounded-full"
+                        className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: tagMeta[tag].hex }}
                       />
-                      <span className="text-zinc-700">{tagMeta[tag].label}</span>
+                      <span className="text-zinc-700 truncate">{tagMeta[tag].label}</span>
                     </span>
-                    <span className="font-semibold text-zinc-700">{counts[tag]}</span>
+                    <span className="font-semibold text-zinc-800 tabular-nums">{counts[tag]}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <BarChartCard
+            title="Folhas por estado"
+            subtitle={`Abertas ${periodLabels[selectedPeriod]}`}
+            rows={statusRows}
+          />
+          <BarChartCard
+            title="Producao por colaborador"
+            subtitle={`Folhas concluidas/faturadas ${periodLabels[selectedPeriod]}`}
+            rows={productionRows}
+            formatValue={(value, row) => `${formatEUR(value)} - ${row.count} folhas`}
+          />
         </div>
       </div>
 
@@ -390,6 +638,55 @@ export default async function CrmOverviewPage() {
   )
 }
 
+type BarChartRow = {
+  label: string
+  value: number
+  color: string
+  count?: number
+}
+
+function BarChartCard({
+  title,
+  subtitle,
+  rows,
+  formatValue,
+}: {
+  title: string
+  subtitle: string
+  rows: BarChartRow[]
+  formatValue?: (value: number, row: BarChartRow) => string
+}) {
+  const max = Math.max(...rows.map((row) => row.value), 1)
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <h3 className="font-semibold text-zinc-900">{title}</h3>
+        <span className="text-xs text-zinc-500 text-right">{subtitle}</span>
+      </div>
+      <div className="space-y-3">
+        {rows.map((row) => {
+          const width = row.value === 0 ? 0 : Math.max(6, (row.value / max) * 100)
+          return (
+            <div key={row.label} className="grid grid-cols-[120px_1fr_auto] items-center gap-3 text-sm">
+              <div className="truncate text-zinc-600">{row.label}</div>
+              <div className="h-2 rounded-full bg-zinc-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${width}%`, backgroundColor: row.color }}
+                />
+              </div>
+              <div className="min-w-16 text-right font-semibold tabular-nums text-zinc-800">
+                {formatValue ? formatValue(row.value, row) : row.value}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function KpiCard({
   icon: Icon,
   label,
@@ -397,14 +694,14 @@ function KpiCard({
   hint,
   tone,
 }: {
-  icon: typeof Users
+  icon: LucideIcon
   label: string
   value: string
   hint: string
   tone: 'emerald' | 'rose' | 'amber' | 'violet'
 }) {
   const toneClass: Record<typeof tone, string> = {
-    emerald: 'bg-indigo-50 text-indigo-600',
+    emerald: 'bg-emerald-50 text-emerald-600',
     rose: 'bg-rose-50 text-rose-600',
     amber: 'bg-amber-50 text-amber-600',
     violet: 'bg-violet-50 text-violet-600',

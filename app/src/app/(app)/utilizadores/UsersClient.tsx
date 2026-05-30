@@ -100,9 +100,7 @@ export function UsersClient({ users, currentUserId }: Props) {
                   <tr key={u.id} className={u.active ? '' : 'opacity-60'}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 text-white text-xs font-bold flex items-center justify-center">
-                          {u.nome.slice(0, 2).toUpperCase()}
-                        </div>
+                        <UserAvatar user={u} />
                         <div>
                           <div className="font-medium text-zinc-900">
                             {u.nome} {isMe && <span className="text-xs text-indigo-600 ml-1">(tu)</span>}
@@ -171,5 +169,26 @@ export function UsersClient({ users, currentUserId }: Props) {
         onSaved={onSaved}
       />
     </>
+  )
+}
+
+function UserAvatar({ user }: { user: UserRow }) {
+  const initials = user.nome
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || '--'
+
+  return (
+    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 text-white text-xs font-bold flex items-center justify-center overflow-hidden border border-zinc-200">
+      {user.photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={user.photoUrl} alt={user.nome} className="w-full h-full object-cover" />
+      ) : (
+        initials
+      )}
+    </div>
   )
 }

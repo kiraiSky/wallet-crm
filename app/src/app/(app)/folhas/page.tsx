@@ -16,6 +16,7 @@ export type WorkOrderRow = {
   dataConclusao: string | null
   customer: { id: string; nome: string }
   vehicle: { id: string; matricula: string; marca: string; modelo: string } | null
+  responsible: { id: string; nome: string; photoUrl: string | null } | null
   lastMessage: { templateNome: string; webhookOk: boolean; createdAt: string } | null
 }
 
@@ -27,11 +28,19 @@ export type CustomerOption = {
   createdAt: string
 }
 
+export type UserOption = {
+  id: string
+  nome: string
+  role: 'OWNER' | 'EMPLOYEE'
+  photoUrl: string | null
+}
+
 type SearchParams = Record<string, string | undefined>
 
 const WO_INCLUDE = {
   customer: { select: { id: true, nome: true } },
   vehicle: { select: { id: true, matricula: true, marca: true, modelo: true } },
+  responsible: { select: { id: true, nome: true, photoStoragePath: true } },
   automationLogs: {
     orderBy: { createdAt: 'desc' as const },
     take: 1,
@@ -44,6 +53,7 @@ function toRow(wo: {
   dataAbertura: Date; dataPrevista: Date | null; dataConclusao: Date | null;
   customer: { id: string; nome: string };
   vehicle: { id: string; matricula: string; marca: string; modelo: string } | null;
+  responsible: { id: string; nome: string; photoStoragePath: string | null } | null;
   automationLogs: { templateNome: string; webhookOk: boolean; createdAt: Date }[];
 }): WorkOrderRow {
   return {
@@ -57,6 +67,13 @@ function toRow(wo: {
     dataConclusao: wo.dataConclusao ? wo.dataConclusao.toISOString() : null,
     customer: wo.customer,
     vehicle: wo.vehicle,
+    responsible: wo.responsible
+      ? {
+          id: wo.responsible.id,
+          nome: wo.responsible.nome,
+          photoUrl: wo.responsible.photoStoragePath ? `/api/users/${wo.responsible.id}/photo` : null,
+        }
+      : null,
     lastMessage: wo.automationLogs[0]
       ? { ...wo.automationLogs[0], createdAt: wo.automationLogs[0].createdAt.toISOString() }
       : null,
@@ -98,7 +115,7 @@ export default async function FolhasPage({
     ...searchWhere,
   }
 
-  const [workOrders, archivedOrders, statusCounts, customers] = await Promise.all([
+  const [workOrders, archivedOrders, statusCounts, customers, users] = await Promise.all([
     prisma.workOrder.findMany({
       where: activeWhere,
       orderBy: { dataAbertura: 'desc' },
@@ -116,6 +133,11 @@ export default async function FolhasPage({
       where: { archived: false },
       orderBy: { createdAt: 'desc' },
       select: { id: true, nome: true, telefone: true, nif: true, createdAt: true },
+    }),
+    prisma.user.findMany({
+      where: { active: true },
+      orderBy: { nome: 'asc' },
+      select: { id: true, nome: true, role: true, photoStoragePath: true },
     }),
   ])
 
@@ -143,6 +165,12 @@ export default async function FolhasPage({
       workOrders={workOrders.map(toRow)}
       archivedOrders={archivedOrders.map(toRow)}
       customers={customers.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() }))}
+      users={users.map((u) => ({
+        id: u.id,
+        nome: u.nome,
+        role: u.role as UserOption['role'],
+        photoUrl: u.photoStoragePath ? `/api/users/${u.id}/photo` : null,
+      }))}
       counts={counts}
       valorEmAberto={valorEmAberto}
       filters={{ search, estado: estadoFilter, customerId: customerFilter }}
